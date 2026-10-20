@@ -1,0 +1,19 @@
+pin,package_position,signal,role,zone,status
+PB3,27,SPI1_SCK,RADIO_SCK,radio,candidate
+PB4,28,SPI1_MISO,RADIO_MISO,radio,candidate
+PB5,29,SPI1_MOSI,RADIO_MOSI,radio,candidate
+PA15,26,GPIO_Output,RADIO_CS,radio,idle_high_candidate
+PB7,31,GPIO_Input,RADIO_BUSY,radio,candidate
+PB6,30,GPIO_EXTI6,RADIO_DIO1,radio,rising_edge_candidate
+PA8,18,GPIO_Output,RADIO_NRESET,radio,idle_high_candidate
+PB8,32,I2C1_SCL,OLED_SCL,OLED,address_pullups_unbound
+PB9,1,I2C1_SDA,OLED_SDA,OLED,address_pullups_unbound
+PA0,7,TIM2_CH1,ENCODER_A,input,filter_unbound
+PA1,8,TIM2_CH2,ENCODER_B,input,filter_unbound
+PA2,9,GPIO_Input,ENCODER_PRESS,input,polarity_unbound
+PA3,10,GPIO_Input,OPERATION_KEY,input,polarity_unbound
+PA4,11,ADC1_IN4,CONTROLLER_BATTERY,power,divider_unbound
+PA13,24,SYS_SWDIO,SWDIO,debug,reserved_debug
+PA14-BOOT0,25,SYS_SWCLK,SWCLK,debug,reserved_debug
+PA9,19,USART1_TX,DEBUG_UART_TX,debug serial,3v3_logic_candidate_not_bound
+PA10,21,USART1_RX,DEBUG_UART_RX,debug serial,3v3_logic_candidate_not_bound

@@ -1,0 +1,211 @@
+{
+  "version": "4.1",
+  "name": "SwiftThrust_Controller_LINK_CHECK",
+  "type": "ARM",
+  "deviceName": "STM32G071KB",
+  "packDir": null,
+  "srcDirs": [],
+  "virtualFolder": {
+    "name": "<virtual_root>",
+    "files": [
+      {
+        "path": "board/link_check_main.c"
+      },
+      {
+        "path": "src/st_oled.c"
+      },
+      {
+        "path": "src/st_raster.c"
+      },
+      {
+        "path": "src/st_ui.c"
+      },
+      {
+        "path": "ports/st_g0_oled.c"
+      },
+      {
+        "path": "../Acquisition/src/st_core.c"
+      },
+      {
+        "path": "../Acquisition/src/st_protocol.c"
+      },
+      {
+        "path": "../Acquisition/src/st_radio.c"
+      },
+      {
+        "path": "../Acquisition/src/st_debug.c"
+      },
+      {
+        "path": "../Acquisition/ports/st_debug_uart_hal.c"
+      },
+      {
+        "path": "../Acquisition/vendor/semtech_sx128x/sx128x.c"
+      },
+      {
+        "path": "${SDK_ROOT}/g0-sdk/Src/stm32g0xx_hal.c"
+      },
+      {
+        "path": "${SDK_ROOT}/g0-sdk/Src/stm32g0xx_hal_adc.c"
+      },
+      {
+        "path": "${SDK_ROOT}/g0-sdk/Src/stm32g0xx_hal_adc_ex.c"
+      },
+      {
+        "path": "${SDK_ROOT}/g0-sdk/Src/stm32g0xx_hal_cortex.c"
+      },
+      {
+        "path": "${SDK_ROOT}/g0-sdk/Src/stm32g0xx_hal_dma.c"
+      },
+      {
+        "path": "${SDK_ROOT}/g0-sdk/Src/stm32g0xx_hal_dma_ex.c"
+      },
+      {
+        "path": "${SDK_ROOT}/g0-sdk/Src/stm32g0xx_hal_flash.c"
+      },
+      {
+        "path": "${SDK_ROOT}/g0-sdk/Src/stm32g0xx_hal_flash_ex.c"
+      },
+      {
+        "path": "${SDK_ROOT}/g0-sdk/Src/stm32g0xx_hal_gpio.c"
+      },
+      {
+        "path": "${SDK_ROOT}/g0-sdk/Src/stm32g0xx_hal_i2c.c"
+      },
+      {
+        "path": "${SDK_ROOT}/g0-sdk/Src/stm32g0xx_hal_i2c_ex.c"
+      },
+      {
+        "path": "${SDK_ROOT}/g0-sdk/Src/stm32g0xx_hal_pwr.c"
+      },
+      {
+        "path": "${SDK_ROOT}/g0-sdk/Src/stm32g0xx_hal_pwr_ex.c"
+      },
+      {
+        "path": "${SDK_ROOT}/g0-sdk/Src/stm32g0xx_hal_rcc.c"
+      },
+      {
+        "path": "${SDK_ROOT}/g0-sdk/Src/stm32g0xx_hal_rcc_ex.c"
+      },
+      {
+        "path": "${SDK_ROOT}/g0-sdk/Src/stm32g0xx_hal_spi.c"
+      },
+      {
+        "path": "${SDK_ROOT}/g0-sdk/Src/stm32g0xx_hal_tim.c"
+      },
+      {
+        "path": "${SDK_ROOT}/g0-sdk/Src/stm32g0xx_hal_tim_ex.c"
+      },
+      {
+        "path": "${SDK_ROOT}/g0-sdk/Src/stm32g0xx_hal_uart.c"
+      },
+      {
+        "path": "${SDK_ROOT}/g0-sdk/Src/stm32g0xx_hal_uart_ex.c"
+      },
+      {
+        "path": "${SDK_ROOT}/g0-device-full/Source/Templates/system_stm32g0xx.c"
+      },
+      {
+        "path": "${SDK_ROOT}/g0-device-full/Source/Templates/gcc/startup_stm32g071xx.s"
+      },
+      {
+        "path": "../Acquisition/src/st_link2.c"
+      },
+      {
+        "path": "src/st_ui2.c"
+      }
+    ],
+    "folders": []
+  },
+  "dependenceList": [],
+  "outDir": "build/eide",
+  "miscInfo": {
+    "uid": "de7215a3d7d849c1a22af0d50c65c98f"
+  },
+  "targets": {
+    "LinkCheck": {
+      "cppPreprocessAttrs": {
+        "defineList": [
+          "USE_HAL_DRIVER",
+          "STM32G071xx",
+          "ST_BOARD_BOUND=0"
+        ],
+        "incList": [
+          "board",
+          "include",
+          "ports",
+          "../Acquisition/include",
+          "../Acquisition/ports",
+          "../Acquisition/ports/fatfs_config",
+          "../Controller/include",
+          "../Acquisition/vendor/semtech_sx128x",
+          "${SDK_ROOT}/g0-sdk/Inc",
+          "${SDK_ROOT}/g0-device-full/Include",
+          "${SDK_ROOT}/cmsis-core/Include"
+        ],
+        "libList": []
+      },
+      "excludeList": [],
+      "toolchain": "GCC",
+      "settings": {
+        "debugger": "cortex-debug"
+      },
+      "toolchainConfigMap": {
+        "GCC": {
+          "cpuType": "Cortex-M0+",
+          "floatingPointHardware": "none",
+          "archExtensions": "",
+          "useCustomScatterFile": true,
+          "scatterFilePath": "board/memory.ld",
+          "storageLayout": {
+            "RAM": [],
+            "ROM": []
+          },
+          "options": {
+            "version": 5,
+            "beforeBuildTasks": [],
+            "afterBuildTasks": [],
+            "global": {
+              "$float-abi-type": "soft",
+              "arm-thumb-mode": "thumb",
+              "use-newlib-nano": true,
+              "not-use-syscalls": true,
+              "output-debug-info": "enable",
+              "misc-control": "",
+              "toolPrefix": "arm-none-eabi-",
+              "microcontroller-cpu": "cortex-m0+",
+              "microcontroller-fpu": "cortex-m0+",
+              "microcontroller-float": "cortex-m0+",
+              "$arch-extensions": "",
+              "$clang-arch-extensions": "",
+              "$armlink-arch-extensions": ""
+            },
+            "c/cpp-compiler": {
+              "language-c": "c11",
+              "optimization": "level-debug",
+              "warnings": "all-warnings",
+              "one-elf-section-per-function": true,
+              "one-elf-section-per-data": true,
+              "C_FLAGS": "-Wall -Wextra -Werror -Wno-error=unused-parameter"
+            },
+            "asm-compiler": {
+              "ASM_FLAGS": ""
+            },
+            "linker": {
+              "output-format": "elf",
+              "remove-unused-input-sections": true,
+              "use-float-printf": false,
+              "LIB_FLAGS": "-lc -lm -lnosys",
+              "LD_FLAGS": "-nostartfiles -Wl,--undefined=st_crc16,--undefined=st_radio_tick,--undefined=st_debug_service,--undefined=st_debug_uart_configure,--undefined=st_ui_handle,--undefined=st_ui_raster,--undefined=st_oled_service,--undefined=st_g0_oled_i2c,--undefined=st2_client_receive,--undefined=st_ui2_handle,--undefined=st_ui2_render"
+            }
+          }
+        }
+      },
+      "uploader": "Custom",
+      "uploadConfigMap": {
+        "Custom": {
+          "commandLine": "python ../Models/refuse_linkcheck_flash.py"
+        }
+      }
+    }
+  }
+}

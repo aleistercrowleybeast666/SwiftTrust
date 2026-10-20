@@ -1,0 +1,126 @@
+load STM32F411RCTx
+get version
+project name SwiftThrust_Acquisition_Candidate
+project path ${PROJECT_ROOT}\Acquisition
+project toolchain STM32CubeIDE
+set userconst SWIFTTHRUST_BOARD_BOUND 0
+set mode SPI1 Full_Duplex_Master
+set mode SPI2 Full_Duplex_Master
+set mode SDIO SD_4_bits_Wide_bus
+set ip parameters SPI1 CLKPolarity SPI_POLARITY_LOW
+set ip parameters SPI1 CLKPhase SPI_PHASE_2EDGE
+set pin PA5 SPI1_SCK
+lock pin PA5 true
+set gpio parameters PA5 GPIO_Label CAND_ADC_SCK
+set pin PA6 SPI1_MISO
+lock pin PA6 true
+set gpio parameters PA6 GPIO_Label CAND_ADC_DOUT
+set pin PA7 SPI1_MOSI
+lock pin PA7 true
+set gpio parameters PA7 GPIO_Label CAND_ADC_DIN
+set pin PA4 GPIO_Output
+lock pin PA4 true
+set gpio parameters PA4 GPIO_Label CAND_ADC_CS
+set gpio parameters PA4 PinState GPIO_PIN_SET
+set pin PC4 GPIO_EXTI4
+lock pin PC4 true
+set gpio parameters PC4 GPIO_Label CAND_ADC_DRDY
+set gpio parameters PC4 GPIO_ModeDefaultEXTI GPIO_MODE_IT_FALLING
+set pin PC5 GPIO_Output
+lock pin PC5 true
+set gpio parameters PC5 GPIO_Label CAND_ADC_SYNC_RESET
+set gpio parameters PC5 PinState GPIO_PIN_SET
+set pin PC8 SDIO_D0
+lock pin PC8 true
+set gpio parameters PC8 GPIO_Label CAND_TF_D0
+set pin PC9 SDIO_D1
+lock pin PC9 true
+set gpio parameters PC9 GPIO_Label CAND_TF_D1
+set pin PC10 SDIO_D2
+lock pin PC10 true
+set gpio parameters PC10 GPIO_Label CAND_TF_D2
+set pin PC11 SDIO_D3
+lock pin PC11 true
+set gpio parameters PC11 GPIO_Label CAND_TF_D3
+set pin PC12 SDIO_CK
+lock pin PC12 true
+set gpio parameters PC12 GPIO_Label CAND_TF_CLK
+set pin PD2 SDIO_CMD
+lock pin PD2 true
+set gpio parameters PD2 GPIO_Label CAND_TF_CMD
+set pin PB5 GPIO_Input
+lock pin PB5 true
+set gpio parameters PB5 GPIO_Label CAND_TF_CARD_DETECT
+set pin PB13 SPI2_SCK
+lock pin PB13 true
+set gpio parameters PB13 GPIO_Label CAND_RADIO_SCK
+set pin PB14 SPI2_MISO
+lock pin PB14 true
+set gpio parameters PB14 GPIO_Label CAND_RADIO_MISO
+set pin PB15 SPI2_MOSI
+lock pin PB15 true
+set gpio parameters PB15 GPIO_Label CAND_RADIO_MOSI
+set pin PB12 GPIO_Output
+lock pin PB12 true
+set gpio parameters PB12 GPIO_Label CAND_RADIO_CS
+set gpio parameters PB12 PinState GPIO_PIN_SET
+set pin PC6 GPIO_Input
+lock pin PC6 true
+set gpio parameters PC6 GPIO_Label CAND_RADIO_BUSY
+set pin PC7 GPIO_EXTI7
+lock pin PC7 true
+set gpio parameters PC7 GPIO_Label CAND_RADIO_DIO1
+set gpio parameters PC7 GPIO_ModeDefaultEXTI GPIO_MODE_IT_RISING
+set pin PB2 GPIO_Output
+lock pin PB2 true
+set gpio parameters PB2 GPIO_Label CAND_RADIO_NRESET
+set gpio parameters PB2 PinState GPIO_PIN_SET
+set pin PC0 ADC1_IN10
+lock pin PC0 true
+set gpio parameters PC0 GPIO_Label CAND_ACQUISITION_BATTERY
+set pin PB6 GPIO_Input
+lock pin PB6 true
+set gpio parameters PB6 GPIO_Label CAND_LED_VOLT_1
+set pin PB7 GPIO_Input
+lock pin PB7 true
+set gpio parameters PB7 GPIO_Label CAND_LED_VOLT_2
+set pin PB8 GPIO_Input
+lock pin PB8 true
+set gpio parameters PB8 GPIO_Label CAND_LED_VOLT_3
+set pin PA13 SYS_JTMS-SWDIO
+lock pin PA13 true
+set gpio parameters PA13 GPIO_Label CAND_SWDIO
+set pin PA14 SYS_JTCK-SWCLK
+lock pin PA14 true
+set gpio parameters PA14 GPIO_Label CAND_SWCLK
+set mode SYS Serial_Wire
+set userconst SWIFTTHRUST_ADC_AVDD_MV_CANDIDATE 3300
+set userconst SWIFTTHRUST_ADC_DVDD_MV_CANDIDATE 3300
+set userconst SWIFTTHRUST_BRIDGE_EXC_MV_CANDIDATE 2500
+set userconst SWIFTTHRUST_CH2_SCALE_PPM_CANDIDATE 400000
+set pin PB6 GPIO_Input
+lock pin PB6 true
+set gpio parameters PB6 GPIO_Label CAND_LED_VOLT_1
+set pin PB7 GPIO_Input
+lock pin PB7 true
+set gpio parameters PB7 GPIO_Label CAND_LED_VOLT_2
+set pin PB8 GPIO_Input
+lock pin PB8 true
+set gpio parameters PB8 GPIO_Label CAND_LED_VOLT_3
+set pin PB9 GPIO_Input
+lock pin PB9 true
+set gpio parameters PB9 GPIO_Label CAND_LED_VOLT_4
+get mode active SPI1
+get mode active SPI2
+get mode active SDIO
+set pin PA9 USART1_TX
+lock pin PA9 true
+set gpio parameters PA9 GPIO_Label CAND_DEBUG_UART_TX
+set pin PA10 USART1_RX
+lock pin PA10 true
+set gpio parameters PA10 GPIO_Label CAND_DEBUG_UART_RX
+set mode USART1 Asynchronous
+isPluginError "Pinout & Configuration"
+get pinout
+config save ${PROJECT_ROOT}\Acquisition\SwiftThrust_Acquisition_Candidate.ioc
+exit

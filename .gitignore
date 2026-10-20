@@ -1,0 +1,24 @@
+# Generated/large/local/private artifacts
+**/build/
+**/.work/
+**/__pycache__/
+*.pyc
+*.o
+*.elf
+*.axf
+*.bin
+*.hex
+*.map
+*.zip
+*.stlog
+*.csv.tmp
+**/.eide/env.ini
+**/.eide/*.log
+**/.eide/*.lock
+**/.eide/*.db
+**/.eide/obj/
+**/.vscode/launch.json
+**/.vscode/settings.json
+*.pem
+*.key
+.env

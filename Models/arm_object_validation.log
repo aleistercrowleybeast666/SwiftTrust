@@ -1,0 +1,174 @@
+2026-10-20T01:43:10.451040+00:00
+arm-none-eabi-gcc.exe (Arm GNU Toolchain 14.3.Rel1 (Build arm-14.174)) 14.3.1 20250623
+Object compilation only. No startup, linker script, HAL library link, image generation or hardware access.
+SDK headers: official ST files, 13 files / 1922604 bytes; no full Cube package installed.
+PASS F411 Acquisition/src/st_core.c
+text	   data	    bss	    dec	    hex	filename
+   1140	      0	      0	   1140	    474	<USER>\AppData\Local\Temp\swiftthrust-arm-sh3yd8vq\F411_st_core.o
+PASS F411 Acquisition/src/st_logger.c
+text	   data	    bss	    dec	    hex	filename
+   2159	      0	      0	   2159	    86f	<USER>\AppData\Local\Temp\swiftthrust-arm-sh3yd8vq\F411_st_logger.o
+PASS F411 Acquisition/src/st_protocol.c
+text	   data	    bss	    dec	    hex	filename
+   1896	      0	      0	   1896	    768	<USER>\AppData\Local\Temp\swiftthrust-arm-sh3yd8vq\F411_st_protocol.o
+PASS F411 Acquisition/ports/st_f4_capture.c
+text	   data	    bss	    dec	    hex	filename
+    536	      0	      0	    536	    218	<USER>\AppData\Local\Temp\swiftthrust-arm-sh3yd8vq\F411_st_f4_capture.o
+PASS F411 Acquisition/ports/st_fatfs_worker.c
+text	   data	    bss	    dec	    hex	filename
+    389	      0	      0	    389	    185	<USER>\AppData\Local\Temp\swiftthrust-arm-sh3yd8vq\F411_st_fatfs_worker.o
+F411 ARM ABI structure sizes (hex nm size):
+00000000 00000080 B client_bytes
+00000000 0000043c B oled_bytes
+00000000 0000a2d8 B logger_bytes
+PASS G071 Acquisition/src/st_core.c
+text	   data	    bss	    dec	    hex	filename
+   1338	      0	      0	   1338	    53a	<USER>\AppData\Local\Temp\swiftthrust-arm-sh3yd8vq\G071_st_core.o
+PASS G071 Acquisition/src/st_protocol.c
+text	   data	    bss	    dec	    hex	filename
+   1988	      0	      0	   1988	    7c4	<USER>\AppData\Local\Temp\swiftthrust-arm-sh3yd8vq\G071_st_protocol.o
+PASS G071 Controller/src/st_oled.c
+text	   data	    bss	    dec	    hex	filename
+    469	      0	      0	    469	    1d5	<USER>\AppData\Local\Temp\swiftthrust-arm-sh3yd8vq\G071_st_oled.o
+PASS G071 Controller/src/st_raster.c
+text	   data	    bss	    dec	    hex	filename
+    352	      0	      0	    352	    160	<USER>\AppData\Local\Temp\swiftthrust-arm-sh3yd8vq\G071_st_raster.o
+PASS G071 Controller/src/st_ui.c
+text	   data	    bss	    dec	    hex	filename
+   1892	      0	      0	   1892	    764	<USER>\AppData\Local\Temp\swiftthrust-arm-sh3yd8vq\G071_st_ui.o
+PASS G071 Controller/ports/st_g0_oled.c
+text	   data	    bss	    dec	    hex	filename
+    296	      0	      0	    296	    128	<USER>\AppData\Local\Temp\swiftthrust-arm-sh3yd8vq\G071_st_g0_oled.o
+G071 ARM ABI structure sizes (hex nm size):
+00000000 00000080 B client_bytes
+00000000 0000043c B oled_bytes
+00000000 0000a2d8 B logger_bytes
+Compiler static stack-usage estimates, excludes callee/HAL/IRQ/RTOS stack:
+F411_layout.su
+
+F411_st_core.su
+<PROJECT>\Acquisition\src\st_core.c:22:16:signed24	0	static
+<PROJECT>\Acquisition\src\st_core.c:4:10:st_get16	0	static
+<PROJECT>\Acquisition\src\st_core.c:5:10:st_get32	0	static
+<PROJECT>\Acquisition\src\st_core.c:6:10:st_get64	8	static
+<PROJECT>\Acquisition\src\st_core.c:7:6:st_put16	0	static
+<PROJECT>\Acquisition\src\st_core.c:8:6:st_put32	0	static
+<PROJECT>\Acquisition\src\st_core.c:9:6:st_put64	16	static
+<PROJECT>\Acquisition\src\st_core.c:10:10:st_crc16	12	static
+<PROJECT>\Acquisition\src\st_core.c:16:10:st_crc32	12	static
+<PROJECT>\Acquisition\src\st_core.c:21:6:st_seq_newer	0	static
+<PROJECT>\Acquisition\src\st_core.c:26:15:st_adc_decode	32	static
+<PROJECT>\Acquisition\src\st_core.c:34:6:st_record	40	static
+<PROJECT>\Acquisition\src\st_core.c:41:6:st_ring_init	0	static
+<PROJECT>\Acquisition\src\st_core.c:42:10:st_ring_count	0	static
+<PROJECT>\Acquisition\src\st_core.c:45:6:st_ring_push	20	static
+<PROJECT>\Acquisition\src\st_core.c:56:6:st_ring_pop	20	static
+<PROJECT>\Acquisition\src\st_core.c:62:12:st_voltage_from_adc	40	static
+<PROJECT>\Acquisition\src\st_core.c:72:6:st_voltage_policy_valid	12	static
+<PROJECT>\Acquisition\src\st_core.c:80:17:st_voltage_evaluate	24	static
+F411_st_f4_capture.su
+<PROJECT>\Acquisition\ports\st_f4_capture.c:3:13:increment	0	static
+<PROJECT>\Acquisition\ports\st_f4_capture.c:7:6:st_f4_capture_init	32	static
+<PROJECT>\Acquisition\ports\st_f4_capture.c:12:6:st_f4_capture_drdy	24	static
+<PROJECT>\Acquisition\ports\st_f4_capture.c:27:6:st_f4_capture_complete	40	static
+<PROJECT>\Acquisition\ports\st_f4_capture.c:35:6:st_f4_capture_error	8	static
+<PROJECT>\Acquisition\ports\st_f4_capture.c:42:6:st_f4_voltage_leds	40	static
+F411_st_fatfs_worker.su
+<PROJECT>\Acquisition\ports\st_fatfs_worker.c:15:24:poll	0	static
+<PROJECT>\Acquisition\ports\st_fatfs_worker.c:8:24:submit	8	static
+<PROJECT>\Acquisition\ports\st_fatfs_worker.c:5:6:st_fatfs_init	16	static
+<PROJECT>\Acquisition\ports\st_fatfs_worker.c:21:14:st_fatfs_port	0	static
+<PROJECT>\Acquisition\ports\st_fatfs_worker.c:22:6:st_fatfs_worker_step	40	static
+F411_st_logger.su
+<PROJECT>\Acquisition\src\st_logger.c:62:13:stage_available	0	static
+<PROJECT>\Acquisition\src\st_logger.c:54:13:submit.isra	24	static
+<PROJECT>\Acquisition\src\st_logger.c:16:6:st_logger_init	24	static
+<PROJECT>\Acquisition\src\st_logger.c:21:6:st_logger_start	168	static
+<PROJECT>\Acquisition\src\st_logger.c:34:6:st_logger_stop	0	static
+<PROJECT>\Acquisition\src\st_logger.c:39:6:st_logger_source_error_isr	0	static
+<PROJECT>\Acquisition\src\st_logger.c:43:10:st_logger_error_count	0	static
+<PROJECT>\Acquisition\src\st_logger.c:65:13:footer	24	static
+<PROJECT>\Acquisition\src\st_logger.c:47:6:st_logger_offer_isr	0	static
+<PROJECT>\Acquisition\src\st_logger.c:73:6:st_logger_service	96	static
+F411_st_protocol.su
+<PROJECT>\Acquisition\src\st_protocol.c:4:12:payload_length	0	static
+<PROJECT>\Acquisition\src\st_protocol.c:9:8:st_packet_encode	16	static
+<PROJECT>\Acquisition\src\st_protocol.c:15:6:st_packet_decode	24	static
+<PROJECT>\Acquisition\src\st_protocol.c:21:6:st_status_pack	16	static
+<PROJECT>\Acquisition\src\st_protocol.c:27:6:st_status_unpack	56	static
+<PROJECT>\Acquisition\src\st_protocol.c:35:6:st_server_init	24	static
+<PROJECT>\Acquisition\src\st_protocol.c:54:8:st_server_handle	168	static
+<PROJECT>\Acquisition\src\st_protocol.c:73:6:st_client_init	24	static
+<PROJECT>\Acquisition\src\st_protocol.c:76:6:st_client_fresh	0	static
+<PROJECT>\Acquisition\src\st_protocol.c:77:6:st_client_command	32	static
+<PROJECT>\Acquisition\src\st_protocol.c:87:6:st_client_receive	112	static
+<PROJECT>\Acquisition\src\st_protocol.c:115:6:st_client_tx_due	16	static
+<PROJECT>\Acquisition\src\st_protocol.c:122:6:st_client_tx_sent	0	static
+<PROJECT>\Acquisition\src\st_protocol.c:123:10:st_client_voltage_age	0	static
+G071_layout.su
+
+G071_st_core.su
+<PROJECT>\Acquisition\src\st_core.c:22:16:signed24	0	static
+<PROJECT>\Acquisition\src\st_core.c:4:10:st_get16	0	static
+<PROJECT>\Acquisition\src\st_core.c:5:10:st_get32	0	static
+<PROJECT>\Acquisition\src\st_core.c:6:10:st_get64	16	static
+<PROJECT>\Acquisition\src\st_core.c:7:6:st_put16	0	static
+<PROJECT>\Acquisition\src\st_core.c:8:6:st_put32	0	static
+<PROJECT>\Acquisition\src\st_core.c:9:6:st_put64	16	static
+<PROJECT>\Acquisition\src\st_core.c:10:10:st_crc16	12	static
+<PROJECT>\Acquisition\src\st_core.c:16:10:st_crc32	16	static
+<PROJECT>\Acquisition\src\st_core.c:21:6:st_seq_newer	0	static
+<PROJECT>\Acquisition\src\st_core.c:26:15:st_adc_decode	32	static
+<PROJECT>\Acquisition\src\st_core.c:34:6:st_record	48	static
+<PROJECT>\Acquisition\src\st_core.c:41:6:st_ring_init	0	static
+<PROJECT>\Acquisition\src\st_core.c:42:10:st_ring_count	0	static
+<PROJECT>\Acquisition\src\st_core.c:45:6:st_ring_push	16	static
+<PROJECT>\Acquisition\src\st_core.c:56:6:st_ring_pop	16	static
+<PROJECT>\Acquisition\src\st_core.c:62:12:st_voltage_from_adc	40	static
+<PROJECT>\Acquisition\src\st_core.c:72:6:st_voltage_policy_valid	12	static
+<PROJECT>\Acquisition\src\st_core.c:80:17:st_voltage_evaluate	72	static
+G071_st_g0_oled.su
+<PROJECT>\Controller\ports\st_g0_oled.c:20:24:poll	8	static
+<PROJECT>\Controller\ports\st_g0_oled.c:8:24:submit	24	static
+<PROJECT>\Controller\ports\st_g0_oled.c:4:6:st_g0_oled_init	24	static
+<PROJECT>\Controller\ports\st_g0_oled.c:31:13:st_g0_oled_i2c	0	static
+<PROJECT>\Controller\ports\st_g0_oled.c:32:6:st_g0_oled_complete	0	static
+<PROJECT>\Controller\ports\st_g0_oled.c:36:6:st_g0_oled_error	0	static
+G071_st_oled.su
+<PROJECT>\Controller\src\st_oled.c:7:6:st_oled_init	32	static
+<PROJECT>\Controller\src\st_oled.c:11:6:st_oled_present	16	static
+<PROJECT>\Controller\src\st_oled.c:15:6:st_oled_service	40	static
+G071_st_protocol.su
+<PROJECT>\Acquisition\src\st_protocol.c:4:12:payload_length	0	static
+<PROJECT>\Acquisition\src\st_protocol.c:9:8:st_packet_encode	16	static
+<PROJECT>\Acquisition\src\st_protocol.c:15:6:st_packet_decode	32	static
+<PROJECT>\Acquisition\src\st_protocol.c:21:6:st_status_pack	16	static
+<PROJECT>\Acquisition\src\st_protocol.c:27:6:st_status_unpack	56	static
+<PROJECT>\Acquisition\src\st_protocol.c:35:6:st_server_init	24	static
+<PROJECT>\Acquisition\src\st_protocol.c:54:8:st_server_handle	160	static
+<PROJECT>\Acquisition\src\st_protocol.c:73:6:st_client_init	24	static
+<PROJECT>\Acquisition\src\st_protocol.c:76:6:st_client_fresh	0	static
+<PROJECT>\Acquisition\src\st_protocol.c:77:6:st_client_command	40	static
+<PROJECT>\Acquisition\src\st_protocol.c:87:6:st_client_receive	120	static
+<PROJECT>\Acquisition\src\st_protocol.c:115:6:st_client_tx_due	16	static
+<PROJECT>\Acquisition\src\st_protocol.c:122:6:st_client_tx_sent	0	static
+<PROJECT>\Acquisition\src\st_protocol.c:123:10:st_client_voltage_age	0	static
+G071_st_raster.su
+<PROJECT>\Controller\src\st_raster.c:47:6:st_ui_raster	32	static
+G071_st_ui.su
+<PROJECT>\Controller\src\st_ui.c:39:13:voltage.constprop	48	static
+<PROJECT>\Controller\src\st_ui.c:5:6:st_ui_init	8	static
+<PROJECT>\Controller\src\st_ui.c:10:6:st_ui_handle	16	static
+<PROJECT>\Controller\src\st_ui.c:48:6:st_ui_render	48	static
+<PROJECT>\Controller\src\st_ui.c:98:9:st_encoder_update	8	static
+<PROJECT>\Controller\src\st_ui.c:105:6:st_button_press	8	static
+Source SHA256:
+b432842c1317668a9d207184b680d2e0adbddf5b06c2e5b5a4e190b4af574dd7 Acquisition/ports/st_f4_capture.c
+5b55967361315623fa90e9b8f6fdf4fcfe7cd3c6efed14e89dfd1a87ad2bf5c0 Acquisition/ports/st_fatfs_worker.c
+4eb9838dd6ce3c5938cf82c6142bbaa2918c170beec1c150170d0ed103d12a07 Acquisition/src/st_core.c
+576d8550d358c0f7749117d46108dde9dbd1dd4aced50f7bf1ee597c80527a34 Acquisition/src/st_logger.c
+6c5e344ba2194b1045f26240438f9168d98feed3561b3a3f0921be7ba7d7e6c8 Acquisition/src/st_protocol.c
+5dc9f7d9c1cb70eae86e438a02d1005ffdf5ec3681b27c6aa6cf056346801be3 Controller/ports/st_g0_oled.c
+7dcb341832b15418c43815e46690c024d3ef8e6f4a0a49a964fa4b47f4974af1 Controller/src/st_oled.c
+4bb4833c35b74bf0b0d8e6928db231ae840e1bde7ceebb70a62f6ffb994c24db Controller/src/st_raster.c
+f2c1862349e85f3509ba31b422831ff15df2dccb4845ab0be0e849ed04cac33e Controller/src/st_ui.c

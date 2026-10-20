@@ -1,0 +1,19 @@
+config load ${PROJECT_ROOT}\Controller\SwiftThrust_Controller_Candidate\SwiftThrust_Controller_Candidate.ioc
+get version
+set pin PB6 GPIO_EXTI6
+lock pin PB6 true
+set gpio parameters PB6 GPIO_Label CAND_RADIO_DIO1
+set gpio parameters PB6 GPIO_ModeDefaultEXTI GPIO_MODE_IT_RISING
+set mode SYS Serial_Wire
+get mode active .*
+set pin PA9 USART1_TX
+lock pin PA9 true
+set gpio parameters PA9 GPIO_Label CAND_DEBUG_UART_TX
+set pin PA10 USART1_RX
+lock pin PA10 true
+set gpio parameters PA10 GPIO_Label CAND_DEBUG_UART_RX
+set mode USART1 Asynchronous
+isPluginError "Pinout & Configuration"
+get pinout
+config save ${PROJECT_ROOT}\Controller\SwiftThrust_Controller_Candidate\SwiftThrust_Controller_Candidate.ioc
+exit

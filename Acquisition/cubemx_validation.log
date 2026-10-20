@@ -1,0 +1,163 @@
+log4j user configuration file not found: <USER>/.stm32cubemx/log4j2.xml
+Configure log4j with default settings from jar:file:/C:/Program%20Files/STMicroelectronics/STM32Cube/STM32CubeMX/STM32CubeMX.exe!/log4j/log4j2.stm32cubemx.xml
+config load <PROJECT>\Acquisition\SwiftThrust_Acquisition_Candidate\SwiftThrust_Acquisition_Candidate.ioc
+2026-10-20 10:17:52,991 [ERROR] Engine:466 - <USER>\.stm32cubemx\thirdparties\pdsc\STMicroelectronics.X-CUBE-SMBUS.2.1.1.pdsc: PDSC version is not supported
+2026-10-20 10:17:53,247 [ERROR] Engine:466 - <USER>\.stm32cubemx\thirdparties\pdsc\STMicroelectronics.X-CUBE-WBA.1.1.0.pdsc: PDSC version is not supported
+1 : Invalid condition id : UX_CORESTACK_Condition cause : null
+1 : Invalid condition id : UX_CORESTACK_Condition cause : null
+1 : Invalid condition id : UX_CORESTACK_Condition cause : null
+1 : Invalid condition id : UX_CORESTACK_Condition cause : null
+1 : Invalid condition id : UX_CORESTACK_Condition cause : null
+2026-10-20 10:17:54,804 [ERROR] Engine:466 - <USER>\.stm32cubemx\thirdparties\pdsc\STMicroelectronics.FP-SNS-STAIOTCFT.2.0.0.pdsc: PDSC version is not supported
+2026-10-20 10:17:55,107 [ERROR] Engine:466 - <USER>\.stm32cubemx\thirdparties\pdsc\STMicroelectronics.X-CUBE-ST67W61.1.3.0.pdsc: PDSC version is not supported
+2026-10-20 10:17:55,535 [ERROR] Engine:466 - <USER>\.stm32cubemx\thirdparties\pdsc\STMicroelectronics.X-CUBE-BLEMGR.4.2.0.pdsc: PDSC version is not supported
+OK
+get version
+6.15.0
+OK
+set pin PC4 GPIO_EXTI4
+OK
+lock pin PC4 true
+OK
+set gpio parameters PC4 GPIO_Label CAND_ADC_DRDY
+OK
+set gpio parameters PC4 GPIO_ModeDefaultEXTI GPIO_MODE_IT_FALLING
+OK
+set pin PC7 GPIO_EXTI7
+OK
+lock pin PC7 true
+OK
+set gpio parameters PC7 GPIO_Label CAND_RADIO_DIO1
+OK
+set gpio parameters PC7 GPIO_ModeDefaultEXTI GPIO_MODE_IT_RISING
+OK
+set mode SYS Serial_Wire
+OK
+set userconst SWIFTTHRUST_ADC_AVDD_MV_CANDIDATE 3300
+OK
+set userconst SWIFTTHRUST_ADC_DVDD_MV_CANDIDATE 3300
+OK
+set userconst SWIFTTHRUST_BRIDGE_EXC_MV_CANDIDATE 2500
+OK
+set userconst SWIFTTHRUST_CH2_SCALE_PPM_CANDIDATE 400000
+OK
+set pin PB6 GPIO_Input
+OK
+lock pin PB6 true
+OK
+set gpio parameters PB6 GPIO_Label CAND_LED_VOLT_1
+OK
+set pin PB7 GPIO_Input
+OK
+lock pin PB7 true
+OK
+set gpio parameters PB7 GPIO_Label CAND_LED_VOLT_2
+OK
+set pin PB8 GPIO_Input
+OK
+lock pin PB8 true
+OK
+set gpio parameters PB8 GPIO_Label CAND_LED_VOLT_3
+OK
+set pin PB9 GPIO_Input
+OK
+lock pin PB9 true
+OK
+set gpio parameters PB9 GPIO_Label CAND_LED_VOLT_4
+OK
+get mode active .*
+Mode: active | ADC1 | IN10 | IN10:Set
+Mode: active | SDIO | SD_4_bits_Wide_bus | Mode:SD 4 bits Wide bus
+Mode: active | SPI1 | Full_Duplex_Master | Mode:Full-Duplex Master
+Mode: active | SPI2 | Full_Duplex_Master | Mode:Full-Duplex Master
+Mode: active | SYS | Serial_Wire | Debug:Serial Wire
+Mode: active | SYS | SysTick | Timebase Source:SysTick
+OK
+set pin PA9 USART1_TX
+OK
+lock pin PA9 true
+OK
+set gpio parameters PA9 GPIO_Label CAND_DEBUG_UART_TX
+OK
+set pin PA10 USART1_RX
+OK
+lock pin PA10 true
+OK
+set gpio parameters PA10 GPIO_Label CAND_DEBUG_UART_RX
+OK
+set mode USART1 Asynchronous
+OK
+isPluginError "Pinout & Configuration"
+Pinout & Configuration Error: false
+OK
+get pinout
+VBAT: Power
+PC13-ANTI_TAMP: Reset_State
+PC14-OSC32_IN: Reset_State
+PC15-OSC32_OUT: Reset_State
+PH0 - OSC_IN: Reset_State
+PH1 - OSC_OUT: Reset_State
+NRST: Reset_State
+PC0: ADC1_IN10PC0: ADC1_IN10
+PC1: Reset_State
+PC2: Reset_State
+PC3: Reset_State
+VSSA: Power
+VDDA: Power
+PA0-WKUP: Reset_State
+PA1: Reset_State
+PA2: Reset_State
+PA3: Reset_State
+VSS: Power
+VDD: Power
+PA4: GPIO_OutputPA4: GPIO_Output
+PA5: SPI1_SCKPA5: SPI1_SCK
+PA6: SPI1_MISOPA6: SPI1_MISO
+PA7: SPI1_MOSIPA7: SPI1_MOSI
+PC4: GPIO_EXTI4PC4: GPIO_EXTI4
+PC5: GPIO_OutputPC5: GPIO_Output
+PB0: Reset_State
+PB1: Reset_State
+PB2: GPIO_OutputPB2: GPIO_Output
+PB10: Reset_State
+VCAP1: Power
+VSS: Power
+VDD: Power
+PB12: GPIO_OutputPB12: GPIO_Output
+PB13: SPI2_SCKPB13: SPI2_SCK
+PB14: SPI2_MISOPB14: SPI2_MISO
+PB15: SPI2_MOSIPB15: SPI2_MOSI
+PC6: GPIO_InputPC6: GPIO_Input
+PC7: GPIO_EXTI7PC7: GPIO_EXTI7
+PC8: SDIO_D0PC8: SDIO_D0
+PC9: SDIO_D1PC9: SDIO_D1
+PA8: Reset_State
+PA9: USART1_TXPA9: USART1_TX
+PA10: USART1_RXPA10: USART1_RX
+PA11: Reset_State
+PA12: Reset_State
+PA13: SYS_JTMS-SWDIOPA13: SYS_JTMS-SWDIO
+VSS: Power
+VDD: Power
+PA14: SYS_JTCK-SWCLKPA14: SYS_JTCK-SWCLK
+PA15: Reset_State
+PC10: SDIO_D2PC10: SDIO_D2
+PC11: SDIO_D3PC11: SDIO_D3
+PC12: SDIO_CKPC12: SDIO_CK
+PD2: SDIO_CMDPD2: SDIO_CMD
+PB3: Reset_State
+PB4: Reset_State
+PB5: GPIO_InputPB5: GPIO_Input
+PB6: GPIO_InputPB6: GPIO_Input
+PB7: GPIO_InputPB7: GPIO_Input
+BOOT0: Reset_State
+PB8: GPIO_InputPB8: GPIO_Input
+PB9: GPIO_InputPB9: GPIO_Input
+VSS: Power
+VDD: Power
+OK
+config save <PROJECT>\Acquisition\SwiftThrust_Acquisition_Candidate\SwiftThrust_Acquisition_Candidate.ioc
+OK
+exit
+Bye bye
+CUBEMX_PROCESS_EXIT=0

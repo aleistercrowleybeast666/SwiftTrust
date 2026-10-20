@@ -1,0 +1,60 @@
+2026-10-20T03:25:54.163004+00:00
+Host-only synthetic regression. No MCU/RF/SD/OLED hardware accessed.
+Official vendor source compiled separately with -Wall -Wextra -Werror; project code retains conversion/shadow checks; vendor remains unmodified.
+Compiler: gcc.exe (Rev5, Built by MSYS2 project) 16.1.0
+Flags: -std=c11 -O2 -Wall -Wextra -Werror -Wpedantic -Wconversion -Wshadow
+PASS CRC vectors / ADS signed24 / bad CRC-status-padding / record CRC
+PASS SPSC FIFO / full-drop-new / 32-bit index wrap
+PASS voltage missing/stale/real-zero / four tiers / hysteresis / unbound policy
+PASS async open/header-sync/capture/drain/footer-sync/close / two retained staging buffers / durable sequence
+PASS sequence-gap count / nonmonotonic timestamp / corrupt ADC preserved and flagged
+PASS slow-card backlog / bounded SRAM / exact overflow count / complete footer ordering
+PASS short write latches fault / no false durable / no automatic overwrite restart
+PASS submit and asynchronous storage errors
+PASS STOP during STARTING / empty file closes / no capture enable
+PASS wire sizes / duplicate-idempotence survives QUERY / conflicting ID / ACK != actual state / stale status replay
+PASS lost ACK recovered by fresh actual STATUS / stale-link start blocked / voltage preserved after STOP
+PASS immutable retries / retry interval and attempt budget / bounded transaction timeout
+PASS new boot cancels pending / old-boot command and old STATUS rejected
+PASS mutated/truncated packets and unknown type never change acquisition
+PASS menu rotate/select/back / safe-default confirmation / static reserved pages / rendered 128x64 framebuffers
+PASS SSD1306 init/display-on-after-clear / 0x3C / address window / 16-byte chunks / retained buffer / bus fault
+PASS encoder wrap/detents / button bounce / held-at-boot suppression / one event per press
+PASS ADS hardware-reset timing / full 24-bit frames / delayed command response / ID / three write ACKs and readbacks / LOCK / startup drain
+PASS ADS CRC/readback rejection / timer wrap / unverified analog profile never ready
+PASS SH1106 0x3C / eight page addresses / two-column offset / all 1024 bytes / SSD1306 profile separation
+PASS official SX128x LoRa init and SF erratum / reset despite BUSY / variable-length TX-RX / IRQ-CRC / timeout / BUSY latch / unverified profile (v2 short framing)
+PASS debug UART foreground queue / nonblocking busy / retained TX bytes / 256B-per-second limit / overflow drop
+PASS R2 exact lengths / every byte corruption / short frames / unknown voltage versus measured zero / reserved values
+PASS R2 paired UID handshake / durable reservation once / boot rejects old counter and epoch / renewal / persistence failure and exhaustion
+PASS R2 stop idempotence / terminal ACK loss and retry / status never completes command / conflicting ID / async failure / no transaction wrap / TX_DONE retry anchor
+PASS R2 10s heartbeat / freshness event / sticky quality / stale or duplicate status rejected / time wrap / status sequence exhaustion / bounded handshake timeout
+PASS R2 consistent two-fragment diagnostic snapshot / reorder and duplicate / changed duplicate rejection / request ID isolation / menu emits only R2 START
+PASS total: 27 groups, 21469 assertions; host sizeof(logger)=41720, sizeof(oled)=1104
+
+PASS Python exporter: clean/uncalibrated/calibrated/invalid-ADC/truncated-tail/record-CRC/header-CRC/exclusive-output
+Preview panels: HOME, CAPTURE ONLY, STATUS, RESERVED COMBINED (synthetic values).
+Source SHA256:
+85c8921a5d8042d6b417e361f8b00301751742ace178881db9beb376076ae486 Acquisition/src/st_ads.c
+f030b589b888984c48f5fd99c74f75376a61d0c6384bda27900cc5930f90ce7e Acquisition/src/st_core.c
+5a83f4be52f3d1f5cf6150d40e104ff9be3754a68794df27618fb4a78ceb1a64 Acquisition/src/st_debug.c
+0ec51a97eb4f37d837786efdd1997bc768a0e6bf2b112b6329e1aa95fb61ff76 Acquisition/src/st_link2.c
+c12df0288ba0f48bb64d671457535e8111347818837ec3725e0044a3e6e3a4a6 Acquisition/src/st_logger.c
+cf4674098beea581aed9c8ee120a39e6ee2768600ae5c1e391f1fcf10d5d35c9 Acquisition/src/st_protocol.c
+35e36047a1036552e5174bfca53877442391944304b5cb3e0b3d3e7ff0703c3d Acquisition/src/st_radio.c
+b62c7def77658e989c69bcd0f32140aa61b619ce8e1b11519661cefd78061f9c Controller/src/st_oled.c
+88f61b11e1e874fbc9441afd72ae557d38ebdba3726639ee8af3b46353810297 Controller/src/st_raster.c
+710bc8caa44e0617ff392bb094075d8aff5d20f9c276dac53a013c67aa12b015 Controller/src/st_ui.c
+5d12cd14a1af2237baa892d19b7aa306e9db9092996498e2865bd297e44064ee Controller/src/st_ui2.c
+468ce452a4da73aebb7316aca67d6b02ca1066249e0629cb5a559cbe5921ce01 Models/test_core.c
+451f0570abd3bab5aba093edba090cc71e36fe40b3de0787d63ff16cb03db5fe Models/test_lowlevel.c
+6a6f8f63a91b1810c76c93232d35acbcc4bad64e159631c0ede60087468e0b9a Models/test_r2.c
+601b65e1b20b1f634495ab481e10d5ae9e3ca39b6b88eef46dcafdc72146a8ce Acquisition/vendor/semtech_sx128x/sx128x.c
+e8b37ff483637167208fa12916541ea96a9b8c8d59e3a12b2026af0a8fdde300 Acquisition/include/st_ads.h
+46edaac876109c0d071a73bc766c5fa2ad8be5bb48afdd03637cb75ef7203b39 Acquisition/include/st_bsp.h
+818501040e351c95eee6ffe64b87206236fc03ff9542fcc625a62e4be10fe9b5 Acquisition/include/st_core.h
+1761f0eb5bd3d7f208afe2b45b29a9a9d9e363ce7602d67a07cc4698a88855d8 Acquisition/include/st_debug.h
+df75a27863bdcb7297d99ab77e339a3e9f7d57b52e405014b0e9ca482ed2bb09 Acquisition/include/st_link2.h
+d02afbaafb84d17af43bc56c3cc8483af54e3de5fd338b38fe8c6c2eb1911664 Acquisition/include/st_radio.h
+e4e601548fcd6ec4842fa2ed623eb53e36e1a02d7d745865c593ccf9bed95701 Controller/include/st_controller_bsp.h
+fc1c0c962ba9bcf734af48118c799a08c2ac0bcff2ed4eb908b278daede82264 Controller/include/st_ui.h

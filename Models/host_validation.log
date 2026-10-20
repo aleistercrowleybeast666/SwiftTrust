@@ -1,0 +1,29 @@
+2026-10-20T03:18:46.127898+00:00
+Resource/pinout math and CubeMX database checks; no hardware access.
+test_3v0_high_gain_bridge_common_mode_fails (__main__.Regression.test_3v0_high_gain_bridge_common_mode_fails) ... ok
+test_3v3_nominal_bridge_math_only (__main__.Regression.test_3v3_nominal_bridge_math_only) ... ok
+test_actual_cube_saved_pinout_matches_plan (__main__.Regression.test_actual_cube_saved_pinout_matches_plan) ... ok
+test_all_exact_package_pins (__main__.Regression.test_all_exact_package_pins) ... ok
+test_analog_candidate_stays_unverified_and_unbound (__main__.Regression.test_analog_candidate_stays_unverified_and_unbound) ... ok
+test_avdd_2v5_is_not_normal_supply (__main__.Regression.test_avdd_2v5_is_not_normal_supply) ... ok
+test_bsp_host_syntax_and_target_rejection (__main__.Regression.test_bsp_host_syntax_and_target_rejection) ... ok
+test_candidate_tolerance_budget_example (__main__.Regression.test_candidate_tolerance_budget_example) ... ok
+test_differential_full_scale_still_limits (__main__.Regression.test_differential_full_scale_still_limits) ... ok
+test_dma_plan_in_official_database (__main__.Regression.test_dma_plan_in_official_database) ... ok
+test_dma_stream_conflict_even_when_channel_differs (__main__.Regression.test_dma_stream_conflict_even_when_channel_differs) ... ok
+test_dma_wrong_channel_rejected (__main__.Regression.test_dma_wrong_channel_rejected) ... ok
+test_duplicate_physical_pin_rejected (__main__.Regression.test_duplicate_physical_pin_rejected) ... ok
+test_example_attenuation_math_only (__main__.Regression.test_example_attenuation_math_only) ... ok
+test_excitation_direct_input_fails (__main__.Regression.test_excitation_direct_input_fails) ... ok
+test_gp_pinout_rejects_n_substitution (__main__.Regression.test_gp_pinout_rejects_n_substitution) ... ok
+test_invalid_alternate_function_rejected (__main__.Regression.test_invalid_alternate_function_rejected) ... ok
+test_pending_values_not_silently_selected (__main__.Regression.test_pending_values_not_silently_selected) ... ok
+test_replaceable_sensor_profile_does_not_claim_auto_identification (__main__.Regression.test_replaceable_sensor_profile_does_not_claim_auto_identification) ... ok
+test_requested_rate_is_not_a_clock_selection (__main__.Regression.test_requested_rate_is_not_a_clock_selection) ... ok
+test_same_exti_line_on_different_ports_rejected (__main__.Regression.test_same_exti_line_on_different_ports_rejected) ... ok
+test_voltage_leds_unbound_and_oled_exact_module (__main__.Regression.test_voltage_leds_unbound_and_oled_exact_module) ... ok
+
+----------------------------------------------------------------------
+Ran 22 tests in 0.634s
+
+OK

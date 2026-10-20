@@ -1,0 +1,32 @@
+[
+  {
+    "file": "sx128x.c",
+    "url": "https://raw.githubusercontent.com/Lora-net/SWL2001/master/lbm_lib/smtc_modem_core/radio_drivers/sx128x_driver/src/sx128x.c",
+    "sha256": "601b65e1b20b1f634495ab481e10d5ae9e3ca39b6b88eef46dcafdc72146a8ce",
+    "bytes": 60048
+  },
+  {
+    "file": "sx128x.h",
+    "url": "https://raw.githubusercontent.com/Lora-net/SWL2001/master/lbm_lib/smtc_modem_core/radio_drivers/sx128x_driver/src/sx128x.h",
+    "sha256": "df7ca50435c762d15574eb3f28cfe8d205e1ce144f2f2485fbd47781ee198f85",
+    "bytes": 66656
+  },
+  {
+    "file": "sx128x_hal.h",
+    "url": "https://raw.githubusercontent.com/Lora-net/SWL2001/master/lbm_lib/smtc_modem_core/radio_drivers/sx128x_driver/src/sx128x_hal.h",
+    "sha256": "7d6e914f94bc04f0624456846842b46da917abac65101e8e9c113f09b93f96e2",
+    "bytes": 5460
+  },
+  {
+    "file": "sx128x_regs.h",
+    "url": "https://raw.githubusercontent.com/Lora-net/SWL2001/master/lbm_lib/smtc_modem_core/radio_drivers/sx128x_driver/src/sx128x_regs.h",
+    "sha256": "76789662727b0d0df8d0a9dfb3bf64fd063bed72fdd4d25b5e688c826f09ccb9",
+    "bytes": 8998
+  },
+  {
+    "file": "LICENSE.txt",
+    "url": "https://raw.githubusercontent.com/Lora-net/SWL2001/master/LICENSE.txt",
+    "sha256": "688937874ec069e4be6e5626b780dde688aacbecd59182ece2ad540f22e6b561",
+    "bytes": 1672
+  }
+]

@@ -1,0 +1,212 @@
+{
+  "version": "4.1",
+  "name": "SwiftThrust_Acquisition_LINK_CHECK",
+  "type": "ARM",
+  "deviceName": "STM32F411RC",
+  "packDir": null,
+  "srcDirs": [],
+  "virtualFolder": {
+    "name": "<virtual_root>",
+    "files": [
+      {
+        "path": "board/link_check_main.c"
+      },
+      {
+        "path": "board/link_check_diskio.c"
+      },
+      {
+        "path": "src/st_ads.c"
+      },
+      {
+        "path": "src/st_core.c"
+      },
+      {
+        "path": "src/st_debug.c"
+      },
+      {
+        "path": "src/st_logger.c"
+      },
+      {
+        "path": "src/st_protocol.c"
+      },
+      {
+        "path": "src/st_radio.c"
+      },
+      {
+        "path": "ports/st_f4_capture.c"
+      },
+      {
+        "path": "ports/st_fatfs_worker.c"
+      },
+      {
+        "path": "ports/st_debug_uart_hal.c"
+      },
+      {
+        "path": "vendor/semtech_sx128x/sx128x.c"
+      },
+      {
+        "path": "${SDK_ROOT}/fatfs/src/ff.c"
+      },
+      {
+        "path": "${SDK_ROOT}/f4-sdk/Src/stm32f4xx_hal.c"
+      },
+      {
+        "path": "${SDK_ROOT}/f4-sdk/Src/stm32f4xx_hal_adc.c"
+      },
+      {
+        "path": "${SDK_ROOT}/f4-sdk/Src/stm32f4xx_hal_adc_ex.c"
+      },
+      {
+        "path": "${SDK_ROOT}/f4-sdk/Src/stm32f4xx_hal_cortex.c"
+      },
+      {
+        "path": "${SDK_ROOT}/f4-sdk/Src/stm32f4xx_hal_dma.c"
+      },
+      {
+        "path": "${SDK_ROOT}/f4-sdk/Src/stm32f4xx_hal_dma_ex.c"
+      },
+      {
+        "path": "${SDK_ROOT}/f4-sdk/Src/stm32f4xx_hal_flash.c"
+      },
+      {
+        "path": "${SDK_ROOT}/f4-sdk/Src/stm32f4xx_hal_flash_ex.c"
+      },
+      {
+        "path": "${SDK_ROOT}/f4-sdk/Src/stm32f4xx_hal_gpio.c"
+      },
+      {
+        "path": "${SDK_ROOT}/f4-sdk/Src/stm32f4xx_hal_pwr.c"
+      },
+      {
+        "path": "${SDK_ROOT}/f4-sdk/Src/stm32f4xx_hal_pwr_ex.c"
+      },
+      {
+        "path": "${SDK_ROOT}/f4-sdk/Src/stm32f4xx_hal_rcc.c"
+      },
+      {
+        "path": "${SDK_ROOT}/f4-sdk/Src/stm32f4xx_hal_rcc_ex.c"
+      },
+      {
+        "path": "${SDK_ROOT}/f4-sdk/Src/stm32f4xx_hal_sd.c"
+      },
+      {
+        "path": "${SDK_ROOT}/f4-sdk/Src/stm32f4xx_hal_spi.c"
+      },
+      {
+        "path": "${SDK_ROOT}/f4-sdk/Src/stm32f4xx_hal_tim.c"
+      },
+      {
+        "path": "${SDK_ROOT}/f4-sdk/Src/stm32f4xx_hal_tim_ex.c"
+      },
+      {
+        "path": "${SDK_ROOT}/f4-sdk/Src/stm32f4xx_hal_uart.c"
+      },
+      {
+        "path": "${SDK_ROOT}/f4-sdk/Src/stm32f4xx_ll_sdmmc.c"
+      },
+      {
+        "path": "${SDK_ROOT}/f4-device-full/Source/Templates/system_stm32f4xx.c"
+      },
+      {
+        "path": "${SDK_ROOT}/f4-device-full/Source/Templates/gcc/startup_stm32f411xe.s"
+      },
+      {
+        "path": "src/st_link2.c"
+      }
+    ],
+    "folders": []
+  },
+  "dependenceList": [],
+  "outDir": "build/eide",
+  "miscInfo": {
+    "uid": "1dd32c0541b24548b838089708899c6c"
+  },
+  "targets": {
+    "LinkCheck": {
+      "cppPreprocessAttrs": {
+        "defineList": [
+          "USE_HAL_DRIVER",
+          "STM32F411xE",
+          "ST_BOARD_BOUND=0"
+        ],
+        "incList": [
+          "board",
+          "include",
+          "ports",
+          "../Acquisition/include",
+          "../Acquisition/ports",
+          "../Acquisition/ports/fatfs_config",
+          "../Controller/include",
+          "../Acquisition/vendor/semtech_sx128x",
+          "${SDK_ROOT}/f4-sdk/Inc",
+          "${SDK_ROOT}/f4-device-full/Include",
+          "${SDK_ROOT}/cmsis-core/Include",
+          "${SDK_ROOT}/fatfs/src"
+        ],
+        "libList": []
+      },
+      "excludeList": [],
+      "toolchain": "GCC",
+      "settings": {
+        "debugger": "cortex-debug"
+      },
+      "toolchainConfigMap": {
+        "GCC": {
+          "cpuType": "Cortex-M4",
+          "floatingPointHardware": "none",
+          "archExtensions": "",
+          "useCustomScatterFile": true,
+          "scatterFilePath": "board/memory.ld",
+          "storageLayout": {
+            "RAM": [],
+            "ROM": []
+          },
+          "options": {
+            "version": 5,
+            "beforeBuildTasks": [],
+            "afterBuildTasks": [],
+            "global": {
+              "$float-abi-type": "soft",
+              "arm-thumb-mode": "thumb",
+              "use-newlib-nano": true,
+              "not-use-syscalls": true,
+              "output-debug-info": "enable",
+              "misc-control": "",
+              "toolPrefix": "arm-none-eabi-",
+              "microcontroller-cpu": "cortex-m4",
+              "microcontroller-fpu": "cortex-m4",
+              "microcontroller-float": "cortex-m4",
+              "$arch-extensions": "",
+              "$clang-arch-extensions": "",
+              "$armlink-arch-extensions": ""
+            },
+            "c/cpp-compiler": {
+              "language-c": "c11",
+              "optimization": "level-debug",
+              "warnings": "all-warnings",
+              "one-elf-section-per-function": true,
+              "one-elf-section-per-data": true,
+              "C_FLAGS": "-Wall -Wextra -Werror -Wno-error=unused-parameter"
+            },
+            "asm-compiler": {
+              "ASM_FLAGS": ""
+            },
+            "linker": {
+              "output-format": "elf",
+              "remove-unused-input-sections": true,
+              "use-float-printf": false,
+              "LIB_FLAGS": "-lc -lm -lnosys",
+              "LD_FLAGS": "-nostartfiles -Wl,--undefined=st_crc16,--undefined=st_radio_tick,--undefined=st_debug_service,--undefined=st_debug_uart_configure,--undefined=st_logger_service,--undefined=st_ads_tick,--undefined=st_server_handle,--undefined=st_f4_capture_drdy,--undefined=st_fatfs_worker_step,--undefined=st2_server_receive,--undefined=st2_client_receive"
+            }
+          }
+        }
+      },
+      "uploader": "Custom",
+      "uploadConfigMap": {
+        "Custom": {
+          "commandLine": "python ../Models/refuse_linkcheck_flash.py"
+        }
+      }
+    }
+  }
+}

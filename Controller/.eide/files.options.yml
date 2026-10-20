@@ -1,0 +1,7 @@
+version: "2.1"
+options:
+  LinkCheck:
+    files:
+      "**/vendor/**/*.c": "-Wno-unused-parameter"
+      "**/Src/*.c": "-Wno-unused-parameter"
+    virtualPathFiles: {}

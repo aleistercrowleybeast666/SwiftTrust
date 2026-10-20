@@ -1,0 +1,21 @@
+{
+  "folders": [
+    {
+      "name": "Acquisition F411",
+      "path": "Acquisition"
+    },
+    {
+      "name": "Controller G071",
+      "path": "Controller"
+    },
+    {
+      "name": "Models and protocol",
+      "path": "Models"
+    }
+  ],
+  "settings": {
+    "files.exclude": {
+      "**/build": true
+    }
+  }
+}

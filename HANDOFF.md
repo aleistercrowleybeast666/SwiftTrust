@@ -1,0 +1,68 @@
+# SwiftThrust 当前交接
+
+2026-10-20。源码、协议、四页面和原OLED选择已同步。无线包无版本字段或版本位，TYPE=0x01…0x09；`st2_`只是代码内部名称。当前目标为组件LINK_CHECK，**不是可运行整板固件**。所有硬件均未测试，未访问串口/SWD或机械臂设备。
+
+## 逐模块状态
+
+| 模块、真实入口 | 已实现且验证 | 已实现但待验证 | 尚未实现 |
+|---|---|---|---|
+| ADC解析/记录：`Acquisition/src/st_core.c`，`st_adc_decode`、`st_record` | Host：24bit符号扩展、CRC/状态/填充、记录CRC；两端ARM构建 | 真实ADS数据、SPI完整性及时间性能 | 实际电气/时钟/增益绑定 |
+| ADS配置：`Acquisition/src/st_ads.c`，`st_ads_init`、`st_ads_tick` | Host总线模型：复位时序、延迟ACK、寄存器写入/读回、LOCK、启动排空、失败分支；F411 ARM构建 | 实物复位/配置/读回和稳定采样 | ADC配置SPI HAL端口与板级初始化 |
+| DRDY采集：`Acquisition/ports/st_f4_capture.c`，`st_f4_capture_drdy/complete/error` | F411真实HAL编译链接；Host仅验证其下游队列和记录核心 | DMA/EXTI序列化、空闲排空、64bit时钟扩展、停止边界和实时性，未作HAL模型/板测 | 实际IRQ/DMA初始化与回调接线 |
+| 环形与日志：`st_core.c`、`st_logger.c`，`st_ring_push/pop`、`st_logger_start/stop/service` | Host：SPSC溢出、双缓冲、保留在途内存、短写/异步故障、头/尾/同步/关闭顺序、恢复有效前缀；F411 ARM构建 | 真实卡延迟、分配簇、sync最坏停顿、掉电恢复 | 完整应用存储调度与持久化验收 |
+| FatFs适配：`ports/st_fatfs_worker.c`，`st_fatfs_worker_step` | F411与真实FatFs R0.12c编译链接 | 真实f_open/write/sync/close运行；本适配没有Host运行回归，logger测试用的是测试文件端口 | 实际SDIO diskio和低优先级任务；`board/link_check_diskio.c`明确NOT_READY，仅链接用途 |
+| 无线短包：`src/st_link2.c`，`st2_server_receive/poll`、`st2_client_*`、`st2_details_*` | Host：长度/坏CRC/未知型、配对UID握手、持久化失败拒绝、幂等/终态ACK、状态心跳/年龄/不回绕、诊断一致快照/乱序/重读；两端ARM构建 | 与实际radio队列、TX_DONE、测量年龄及运行任务接线 | 实际Flash/EEPROM NV后端、配对配置与掉电原子性；无后端即拒绝建链，测试RAM模型不等于持久化 |
+| SX128x：`src/st_radio.c`，`st_radio_init/tick/send/receive` | 未修改Semtech源；Host总线模型和两端ARM构建，G071用有界PRIMASK标志交换 | 真实BUSY/SPI/DIO/复位/空中收发、超时恢复 | 两板实际SPI HAL端口及应用收发调度 |
+| 电压/LED：`st_core.c`电压函数、`ports/st_f4_capture.c`的`st_f4_voltage_leds` | Host：未知/过期/真实零、四级阈值与回差；F411 GPIO适配ARM构建 | 真实参考/分压/校准、LED极性和阈值 | 两板供电ADC采样绑定；未确认时UNKNOWN，GPIO未验证不驱动 |
+| UI/OLED：`Controller/src/st_ui2.c`、`st_ui.c`、`st_raster.c`、`st_oled.c`，`st_ui2_handle/render` | Host：四入口浏览/返回、开始确认默认返回、仅采集启停、禁用页面不创建事务；SSD1306/SH1106总线模型；G071 ARM构建与真实C帧缓冲目视核查 | 实际屏幕/编码器电气和按键手感 | 板级输入/显示事件循环接线；当前字体ASCII，不冒充中文或实物照片 |
+| UART：`src/st_debug.c`、`ports/st_debug_uart_hal.c`，`st_debug_write/service`、`st_debug_uart_configure` | Host验证有界发送队列/保留内存/满丢弃/限速；两板真实UART HAL编译链接 | 实际115200 8N1 TX/RX及错误恢复；UART HAL本身未做Host模拟/板测 | USART1 IRQ与HAL回调接线；没有RX命令执行器 |
+| 导出：`Models/export_stlog.py`，`read_log`、`export` | Python：CRC、截断、未校准/已校准、坏ADC禁止力值、独占输出等边界 | 真实采集文件与UNDERLINE端到端导入 | 专用TR_F导出模式/原生STLOG解析器；现有CSV可用通用表格映射 |
+
+## 最新证据与复现
+
+- Host：`python -B Models/run_host_tests.py`，**27组/21,469次C断言**，附Python导出边界；报告`Models/firmware_host_validation.log`含源码SHA256。`HOST_CC`指定Host GCC或将gcc加入PATH。
+- ARM：`python -B Models/check_eide_link.py`，真实EIDE native builder读取两份实际工程源清单；**两端各34个C文件＋1个启动汇编，均成功链接且无未解析符号**。报告`Models/eide_link_validation.log`，时间2026-10-20T03:16 UTC。
+- 本轮链接Flash/RAM：F411 **22,144/47,224 B**；G071 **20,748/6,800 B**。RAM含代表性静态上下文及链接脚本堆栈预留，未包含尚未接入的整板任务/运行栈，不是最终RAM或实时性证明。
+- 引脚/资源：`python -B Models/validate_candidates.py`，**22项通过**，需本机CubeMX数据库。候选IOC曾由CubeMX实际保存核对，无代码生成或依赖整包下载。
+- 两端`.eide/eide.yml`都有独立name/uid/output；打开`SwiftThrust.code-workspace`分别选目标构建。Custom烧录仅拒绝执行；不得将LINK_CHECK当成整板程序烧录。
+- SDK为外部共享缓存，清单155文件/12,810,494 B，哈希本轮全数核对；SDK、工具链和产物不提交仓库。脚本临时构建目录自动清理，未在项目内留构建副本。
+
+## 硬件与界面约定
+
+采集器F411RCT6，控制器G071KBT6非N版。两板USART1都是PA9=TX、PA10=RX，与PA13/PA14 SWD独立；3.3V逻辑，TX/RX交叉、共地，VTREF不是外部供电入口。封装物理脚位及接线见`Models/DEBUG_UART.md`。
+
+只读核实原机械臂文档/驱动/board_config，OLED恢复SSD1306、128×64、0x3C，旧硬件说明1.3寸；不锁定特殊卖家，不修改机械臂工程。主菜单状态/仅点火/仅采集/点火并采集，编码器进入/返回完整。两个点火页只有可浏览静态未实现说明和返回；没有启动空函数、触发调用链、点火包或输出接口。
+
+## 记录与标定：事实及本轮方案
+
+TF当前写`STLOG001`二进制：512B头、每样本32B、正常停止再32B尾。它不是XLSX/CSV/TR_F表格。原始ADC双通道、DRDY时间、序号、状态/质量/缺失数及CRC保留；不是只存计算后的力。
+
+缓存为1024×32B环形队列=32KiB，加2×4096B写缓冲=8KiB，名义共1280条记录/40KiB。不是整个logger结构或整个应用RAM。下表是**纯记录容量计算上限**，默认缓冲从空开始；在途写不能重用、部分缓冲/同步/调度会缩短实际可承受停顿。不能直接把这个上限当TF卡延迟保证。
+
+| 采样率 | 记录负载B/s | 环形队列时间 | 环形＋双缓冲名义时间 | 每4096B数据生成间隔 |
+|---:|---:|---:|---:|---:|
+| 2kSPS | 64,000 | 512ms | 640ms | 64ms |
+| 8kSPS | 256,000 | 128ms | 160ms | 16ms |
+| 16kSPS | 512,000 | 64ms | 80ms | 8ms |
+| 32kSPS | 1,024,000 | 32ms | 40ms | 4ms |
+| 64kSPS | 2,048,000 | 16ms | 20ms | 2ms |
+
+2k是目标默认，8k是第一扩展候选；16/32/64k仅边界预算，不代表当前时钟、ADC、DMA或TF已支持。2k连续1小时约230.4MB（约219.7MiB），另加头/尾和文件系统开销。记录负载不含FAT/簇分配/元数据/同步成本。
+
+写策略：4KiB满块优先，低速时约500ms允许刷部分块；每次service最多处理64条。文件创建与头写入/sync完成后才开采集；停止先关入口，再排空、写尾、sync、close。`f_sync`在已有完成写且距离上次同步≥1s时具备调度条件，但待写块优先，持续积压可能推迟同步，**不是硬性每秒落盘保证**。真实FatFs操作必须放独立低优先级存储任务，DRDY ISR不写卡。
+
+丢帧可观察：环形满时drop-new计数、DRDY序号缺口、DMA忙/错误计数、ADC CRC/状态标志、时间倒退标志、日志CRC32及干净关闭尾记录。不会凭空恢复丢样；没有触发或未服务的硬件DRDY、首尾边界及一切漏采并不都能仅凭软件序号证明。sync完成也不证明卡内部在掉电时已永久保存。必须测实际卡的持续吞吐、最长write/sync停顿、队列高水位及最终序号/尾计数，不能以Host慢卡模型或标称卡速声称2k已板测通过。
+
+建议后续加最小校准功能，但本轮**只构思、未实现新向导/参数库、未更改记录格式**：
+
+1. 选择并绑定传感器profile，保存身份/修订、单位N、线数、量程、ADC增益/时钟/OSR/滤波、激励方案。条件变化标记失效，不能悄悄复用旧系数。
+2. 空载稳定采样检查噪声/饱和/CRC后求零点r0；施加可追溯已知力Fref求r1，`k=Fref/(r1-r0)`，`F=k*(raw-r0)`；拒绝分母太小/不稳定/超范围结果，可选额外载荷点复核。静态校准不证明动态带宽。
+3. 校准完成后明确审阅确认，保留旧profile；采集期间锁定快照，停止后才允许更改。保留原始raw以便重算，不能覆盖原始通道。
+4. TF参数文件建议双槽/带序号和CRC的记录：写新内容、sync、关闭、读回验证后再切换有效记录；掉电恢复选最新完整有效项，失败保留旧项，缺失/损坏显示未校准。FatFs rename/卡缓存不是天然掉电原子保证，需实测。该参数库与无线NV计数后端分别管理，不能混用。
+5. 现有日志头已含profile ID/修订、zero、nN/count斜率、两路增益、线数、时钟/OSR及calibration_valid；没有完整传感器序号/日期/激励/滤波资料。未来可把完整profile作为TF伴随文件、在采集时固定关联；记录格式若需扩展，先单独说明兼容影响。
+
+UNDERLINE只读核实：TR_F是无表头两列`时间,原始值`，默认秒，单位raw，无内置标定系数；现有STLOG导出CSV为多列，可用Generic Delimited映射时间us、raw或已验证force_N。直接TR_F兼容需另行导出两列raw＋配套标定profile，不能只改扩展名；本轮未添加该转换功能或修改UNDERLINE。
+
+## 完成整板固件仍需
+
+真实原理图/时钟/分压/LED/传感器参数确认；板级初始化、中断、独立存储任务和完整应用循环；SDIO diskio、ADC/RF HAL端口；可靠NV配对计数与epoch恢复；电气、实时性、掉电与射频实测。当前源码可审阅和组件构建，不宣称整板完成。第三方保持原许可，未擅自添加项目新许可。

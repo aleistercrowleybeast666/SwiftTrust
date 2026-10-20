@@ -1,0 +1,76 @@
+config load ${PROJECT_ROOT}\Controller\SwiftThrust_Controller_Candidate\SwiftThrust_Controller_Candidate.ioc
+get version
+project name SwiftThrust_Controller_Candidate
+project path ${PROJECT_ROOT}\Controller
+project toolchain STM32CubeIDE
+set userconst SWIFTTHRUST_BOARD_BOUND 0
+set mode SPI1 Full_Duplex_Master
+set mode I2C1 I2C
+set mode TIM2 Encoder_Interface
+set pin PB3 SPI1_SCK
+lock pin PB3 true
+set gpio parameters PB3 GPIO_Label CAND_RADIO_SCK
+set pin PB4 SPI1_MISO
+lock pin PB4 true
+set gpio parameters PB4 GPIO_Label CAND_RADIO_MISO
+set pin PB5 SPI1_MOSI
+lock pin PB5 true
+set gpio parameters PB5 GPIO_Label CAND_RADIO_MOSI
+set pin PA15 GPIO_Output
+lock pin PA15 true
+set gpio parameters PA15 GPIO_Label CAND_RADIO_CS
+set gpio parameters PA15 PinState GPIO_PIN_SET
+set pin PB7 GPIO_Input
+lock pin PB7 true
+set gpio parameters PB7 GPIO_Label CAND_RADIO_BUSY
+set pin PB6 GPIO_EXTI6
+lock pin PB6 true
+set gpio parameters PB6 GPIO_Label CAND_RADIO_DIO1
+set gpio parameters PB6 GPIO_ModeDefaultEXTI GPIO_MODE_IT_RISING
+set pin PA8 GPIO_Output
+lock pin PA8 true
+set gpio parameters PA8 GPIO_Label CAND_RADIO_NRESET
+set gpio parameters PA8 PinState GPIO_PIN_SET
+set pin PB8 I2C1_SCL
+lock pin PB8 true
+set gpio parameters PB8 GPIO_Label CAND_OLED_SCL
+set pin PB9 I2C1_SDA
+lock pin PB9 true
+set gpio parameters PB9 GPIO_Label CAND_OLED_SDA
+set pin PA0 TIM2_CH1
+lock pin PA0 true
+set gpio parameters PA0 GPIO_Label CAND_ENCODER_A
+set pin PA1 TIM2_CH2
+lock pin PA1 true
+set gpio parameters PA1 GPIO_Label CAND_ENCODER_B
+set pin PA2 GPIO_Input
+lock pin PA2 true
+set gpio parameters PA2 GPIO_Label CAND_ENCODER_PRESS
+set pin PA3 GPIO_Input
+lock pin PA3 true
+set gpio parameters PA3 GPIO_Label CAND_OPERATION_KEY
+set pin PA4 ADC1_IN4
+lock pin PA4 true
+set gpio parameters PA4 GPIO_Label CAND_CONTROLLER_BATTERY
+set pin PA13 SYS_SWDIO
+lock pin PA13 true
+set gpio parameters PA13 GPIO_Label CAND_SWDIO
+set pin PA14-BOOT0 SYS_SWCLK
+lock pin PA14-BOOT0 true
+set gpio parameters PA14-BOOT0 GPIO_Label CAND_SWCLK
+set mode TIM2 Encoder_Interface
+set mode SYS Serial_Wire
+get mode active SPI1
+get mode active I2C1
+get mode active TIM2
+set pin PA9 USART1_TX
+lock pin PA9 true
+set gpio parameters PA9 GPIO_Label CAND_DEBUG_UART_TX
+set pin PA10 USART1_RX
+lock pin PA10 true
+set gpio parameters PA10 GPIO_Label CAND_DEBUG_UART_RX
+set mode USART1 Asynchronous
+isPluginError "Pinout & Configuration"
+get pinout
+config save ${PROJECT_ROOT}\Controller\SwiftThrust_Controller_Candidate.ioc
+exit
