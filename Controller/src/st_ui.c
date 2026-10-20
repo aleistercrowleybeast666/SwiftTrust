@@ -2,6 +2,10 @@
 #include <limits.h>
 #include <stdio.h>
 #include <string.h>
+void st_ui_attach_calibration(st_ui *u, st_cal_ui *cal)
+{
+    u->calibration = cal;
+}
 void st_ui_init(st_ui *u)
 {
     *u = (st_ui){.page = ST_UI_HOME};
@@ -13,6 +17,7 @@ static unsigned count(const st_ui *u)
     case ST_UI_HOME:
         return 4;
     case ST_UI_CAPTURE:
+        return 4;
     case ST_UI_SETTINGS:
         return 3;
     case ST_UI_CONFIRM:
@@ -26,6 +31,12 @@ bool st_ui_handle(st_ui *u, st_ui_event e, st_client *c, uint32_t now)
     u->unavailable = false;
     if (e == ST_UI_BACK)
     {
+        if (u->page == ST_UI_CALIBRATION)
+        {
+            u->page = ST_UI_CAPTURE;
+            u->selection = 2;
+            return false;
+        }
         if (u->page == ST_UI_CONFIRM)
         {
             u->page = ST_UI_CAPTURE;
@@ -74,6 +85,12 @@ bool st_ui_handle(st_ui *u, st_ui_event e, st_client *c, uint32_t now)
         }
         if (u->selection == 1)
             return st_client_command(c, ST_MSG_STOP, now);
+        if (u->selection == 2)
+        {
+            u->page = ST_UI_CALIBRATION;
+            u->selection = 0;
+            return false;
+        }
         u->page = ST_UI_HOME;
         u->selection = 2;
         return false;
@@ -85,6 +102,10 @@ bool st_ui_handle(st_ui *u, st_ui_event e, st_client *c, uint32_t now)
             return st_client_command(c, ST_MSG_START, now);
         }
         u->selection = 0;
+        return false;
+    case ST_UI_CALIBRATION:
+        u->page = ST_UI_CAPTURE;
+        u->selection = 2;
         return false;
     case ST_UI_SETTINGS:
         if (u->selection < 2)
@@ -167,7 +188,8 @@ void st_ui_render(const st_ui *u, const st_client *c, st_voltage_view own, uint3
                        c->known ? state_name(c->status.state) : "UNKNOWN", fresh ? "" : " OLD");
         (void)snprintf(m->rows[3], 22, "%c START", u->selection == 0 ? '>' : ' ');
         (void)snprintf(m->rows[4], 22, "%c STOP", u->selection == 1 ? '>' : ' ');
-        (void)snprintf(m->rows[5], 22, "%c BACK", u->selection == 2 ? '>' : ' ');
+        (void)snprintf(m->rows[5], 22, "%c CALIBRATION", u->selection == 2 ? '>' : ' ');
+        (void)snprintf(m->rows[6], 22, "%c BACK", u->selection == 3 ? '>' : ' ');
         break;
     case ST_UI_CONFIRM:
         (void)snprintf(m->rows[2], 22, "START CAPTURE?");
@@ -180,6 +202,11 @@ void st_ui_render(const st_ui *u, const st_client *c, st_voltage_view own, uint3
                        u->page == ST_UI_IGNITION_ONLY ? "IGNITION ONLY" : "IGNITION + CAPTURE");
         (void)snprintf(m->rows[3], 22, "NOT IMPLEMENTED");
         (void)snprintf(m->rows[4], 22, "VIEW ONLY");
+        (void)snprintf(m->rows[6], 22, "> BACK");
+        break;
+    case ST_UI_CALIBRATION:
+        (void)snprintf(m->rows[2], 22, "CALIBRATION");
+        (void)snprintf(m->rows[3], 22, "SERVICE UNBOUND");
         (void)snprintf(m->rows[6], 22, "> BACK");
         break;
     case ST_UI_SETTINGS:

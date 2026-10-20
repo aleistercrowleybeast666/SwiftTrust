@@ -18,11 +18,13 @@
 | UART：`src/st_debug.c`、`ports/st_debug_uart_hal.c`，`st_debug_write/service`、`st_debug_uart_configure` | Host验证有界发送队列/保留内存/满丢弃/限速；两板真实UART HAL编译链接 | 实际115200 8N1 TX/RX及错误恢复；UART HAL本身未做Host模拟/板测 | USART1 IRQ与HAL回调接线；没有RX命令执行器 |
 | 导出：`Models/export_stlog.py`，`read_log`、`export` | Python：CRC、截断、未校准/已校准、坏ADC禁止力值、独占输出等边界 | 真实采集文件与UNDERLINE端到端导入 | 专用TR_F导出模式/原生STLOG解析器；现有CSV可用通用表格映射 |
 
+| 标定：`src/st_cal.c`、`st_cal_service.c`、`Controller/src/st_cal_ui.c` | Host：g/kg/N与重力、归零/加载、噪声/跨度/超时、配置绑定、保存失败/取消旧值保留、反色选位/改数与常用砝码；两端ARM构建 | 实际加载准确度/稳定阈值、ADC只读tap、真实TF保存与掉电恢复、两板RPC尚未验证 | 当前只完成核心/离线菜单；实际无线标定传输、TF参数库和完整应用接线未实现，详见`Models/CALIBRATION.md` |
+
 ## 最新证据与复现
 
-- Host：`python -B Models/run_host_tests.py`，**32组/33,482次C断言**，附Python导出边界；报告`Models/firmware_host_validation.log`含源码SHA256。`HOST_CC`指定Host GCC或将gcc加入PATH；`SDK_ROOT`还须提供真实FatFs R0.12c头/源码。
-- ARM：`python -B Models/check_eide_link.py`，真实EIDE native builder读取两份实际工程源清单；**F41139个C文件＋1个启动汇编、G07136个C文件＋1个启动汇编，均成功链接且无未解析符号**。报告`Models/eide_link_validation.log`，时间2026-10-20T03:42 UTC。
-- 本轮链接Flash/RAM：F411 **30,932/47,896 B**；G071 **25,632/6,896 B**。RAM含代表性静态上下文及链接脚本堆栈预留，未包含尚未接入的整板任务/运行栈，不是最终RAM或实时性证明。
+- Host：`python -B Models/run_host_tests.py`，**37组/35,988次C断言**，附Python导出边界；报告`Models/firmware_host_validation.log`含源码SHA256。`HOST_CC`指定Host GCC或将gcc加入PATH；`SDK_ROOT`还须提供真实FatFs R0.12c头/源码。
+- ARM：`python -B Models/check_eide_link.py`，真实EIDE native builder读取两份实际工程源清单；**F41141个C文件＋1个启动汇编、G07139个C文件＋1个启动汇编，均成功链接且无未解析符号**。报告`Models/eide_link_validation.log`，时间2026-10-20T04:32 UTC。
+- 本轮链接Flash/RAM：F411 **35,240/48,528 B**；G071 **35,304/7,040 B**。RAM含代表性静态上下文及链接脚本堆栈预留，未包含尚未接入的整板任务/运行栈，不是最终RAM或实时性证明。
 - 引脚/资源：`python -B Models/validate_candidates.py`，**22项通过**，需本机CubeMX数据库。候选IOC曾由CubeMX实际保存核对，无代码生成或依赖整包下载。
 - 两端`.eide/eide.yml`都有独立name/uid/output；打开`SwiftThrust.code-workspace`分别选目标构建。Custom烧录仅拒绝执行；不得将LINK_CHECK当成整板程序烧录。
 - SDK为外部共享缓存，清单155文件/12,810,494 B，哈希本轮全数核对；SDK、工具链和产物不提交仓库。脚本临时构建目录自动清理，未在项目内留构建副本。
@@ -53,7 +55,7 @@ TF当前写`STLOG001`二进制：512B头、每样本32B、正常停止再32B尾�
 
 丢帧可观察：环形满时drop-new计数、DRDY序号缺口、DMA忙/错误计数、ADC CRC/状态标志、时间倒退标志、日志CRC32及干净关闭尾记录。不会凭空恢复丢样；没有触发或未服务的硬件DRDY、首尾边界及一切漏采并不都能仅凭软件序号证明。sync完成也不证明卡内部在掉电时已永久保存。必须测实际卡的持续吞吐、最长write/sync停顿、队列高水位及最终序号/尾计数，不能以Host慢卡模型或标称卡速声称2k已板测通过。
 
-建议后续加最小校准功能，但本轮**只构思、未实现新向导/参数库、未更改记录格式**：
+已按后续用户授权实现标定核心和单编码器反色输入菜单，详见[CALIBRATION](Models/CALIBRATION.md)。真实参数库/TF保存与无线标定接线仍未完成；STLOG001布局未改。此前的构思保留如下作为物理实现要求：
 
 1. 选择并绑定传感器profile，保存身份/修订、单位N、线数、量程、ADC增益/时钟/OSR/滤波、激励方案。条件变化标记失效，不能悄悄复用旧系数。
 2. 空载稳定采样检查噪声/饱和/CRC后求零点r0；施加可追溯已知力Fref求r1，`k=Fref/(r1-r0)`，`F=k*(raw-r0)`；拒绝分母太小/不稳定/超范围结果，可选额外载荷点复核。静态校准不证明动态带宽。
@@ -67,4 +69,4 @@ UNDERLINE只读核实：TR_F是无表头两列`时间,原始值`，默认秒，�
 
 真实原理图/时钟/分压/LED/传感器参数确认；板级初始化、中断、独立存储任务和完整应用循环；SDIO/ADC/RF适配器的板级初始化和IRQ/任务接入；双槽记录的实际NV介质、配对与epoch恢复/写入窗口；电气、实时性、掉电与射频实测。当前源码可审阅和组件构建，不宣称整板完成。第三方保持原许可，未擅自添加项目新许可。
 
-本阶段新增块设备占512B对齐bounce，不能把其中的重复写入数据再算为额外日志队列容量；前述40KiB/1280条记录预算保持不变。无新增校准向导、点火行为或协议字段。
+块设备512B对齐bounce不算额外日志队列容量；前述40KiB/1280条记录预算保持不变。本轮新增标定核心/离线菜单；无点火行为或无线协议字段变化。

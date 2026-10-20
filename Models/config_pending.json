@@ -220,14 +220,15 @@
     "logger_format": "STLOG001",
     "ring_bytes": 32768,
     "staging_bytes": 8192,
-    "host_test_groups": 32,
-    "host_assertions": 33482,
+    "host_test_groups": 37,
+    "host_assertions": 35988,
     "arm_object_compile": true,
     "full_firmware_linked": false,
     "hardware_tested": false,
     "component_targets_linked": true,
     "fatfs_worker_diskio_host_integration": true,
     "hal_adapters": "implemented_arm_linked_board_initialization_unbound",
-    "nv_journal_core": "dual_slot96B_host_tested_physical_backend_unbound"
+    "nv_journal_core": "dual_slot96B_host_tested_physical_backend_unbound",
+    "calibration": "core_and_encoder_menu_host_tested_arm_linked_physical_sample_wire_storage_unbound"
   }
 }

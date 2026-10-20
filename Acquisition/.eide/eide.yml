@@ -127,6 +127,12 @@
       },
       {
         "path": "ports/st_radio_hal.c"
+      },
+      {
+        "path": "src/st_cal.c"
+      },
+      {
+        "path": "src/st_cal_service.c"
       }
     ],
     "folders": []
@@ -211,7 +217,7 @@
               "remove-unused-input-sections": true,
               "use-float-printf": false,
               "LIB_FLAGS": "-lc -lm -lnosys",
-              "LD_FLAGS": "-nostartfiles -Wl,--undefined=st_crc16,--undefined=st_radio_tick,--undefined=st_debug_service,--undefined=st_debug_uart_configure,--undefined=st_logger_service,--undefined=st_ads_tick,--undefined=st_server_handle,--undefined=st_f4_capture_drdy,--undefined=st_fatfs_worker_step,--undefined=st2_server_receive,--undefined=st2_client_receive,--undefined=st_radio_hal_bind,--undefined=st_radio_hal_port,--undefined=st_nv_link_port,--undefined=st_ads_hal_bind,--undefined=st_ads_hal_port,--undefined=st_sdio_hal_bind,--undefined=st_sdio_hal_port,--undefined=disk_initialize,--undefined=disk_read,--undefined=disk_write,--undefined=disk_ioctl"
+              "LD_FLAGS": "-nostartfiles -Wl,--undefined=st_crc16,--undefined=st_radio_tick,--undefined=st_debug_service,--undefined=st_debug_uart_configure,--undefined=st_logger_service,--undefined=st_ads_tick,--undefined=st_server_handle,--undefined=st_f4_capture_drdy,--undefined=st_fatfs_worker_step,--undefined=st2_server_receive,--undefined=st2_client_receive,--undefined=st_radio_hal_bind,--undefined=st_radio_hal_port,--undefined=st_nv_link_port,--undefined=st_ads_hal_bind,--undefined=st_ads_hal_port,--undefined=st_sdio_hal_bind,--undefined=st_sdio_hal_port,--undefined=disk_initialize,--undefined=disk_read,--undefined=disk_write,--undefined=disk_ioctl,--undefined=st_cal_begin,--undefined=st_cal_commit,--undefined=st_cal_service_port,--undefined=st_cal_apply_logger"
             }
           }
         }

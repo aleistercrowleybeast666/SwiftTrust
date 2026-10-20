@@ -12,7 +12,7 @@
 | 射频 | `ports/st_radio_hal.c`：两板真实HAL SPI mode0/8bit命令、BUSY和复位、CS出错释放、任务上下文检查 | 两板候选SPI/CS/BUSY/RESET/DIO，时钟和SCLK时序、reset低/稳定等待、HAL tick与有界yield；LoRa最终频点/功率/参数 |
 | SDIO/FatFs | `st_block.c`＋`ports/st_diskio.c`＋`ports/st_sdio_hal.c`：实际DMA扇区传输及FAT接口，512B对齐bounce、请求总超时、错误/拔卡锁存、真实sync等待 | 已完成HAL_SD_Init的卡、SDIO/DMA/IRQ、卡几何，PB5检测极性、存储任务。disk_initialize仅验证已初始化设备，不擅自开电源/重初始化/格式化 |
 | 链路参数持久化 | `st_nv.c`：双槽96B记录、CRC/身份/计数、显式空白provision、读回、损坏拒绝；client/server初始化恢复高水位 | 两个独立可更新存储区域、Flash几何/保留区或其他介质驱动、提交与掉电语义、磨损/写入时机；没有选择Flash地址或实现Flash擦写后端 |
-| 校准/通用参数库 | 仍仅方案 | 传感器与配置绑定、用户确认、TF参数文件持久化和硬件校准验收；没有新校准向导 |
+| 校准/通用参数库 | 归零/已知载荷核心、g/kg/N和常用砝码、反色输入、配置绑定/用户确认、256B参数记录已Host/ARM验证 | 真实ADC tap、无线标定适配、TF参数文件保存/恢复及硬件验收仍未接；详见CALIBRATION.md |
 
 ## 实际端口的接入顺序
 
@@ -40,4 +40,4 @@ Flash尤其需要先决定保留区、擦除粒度、与升级程序的关系、
 
 `python -B Models/run_host_tests.py`需HOST_CC、SDK_ROOT；采用真实FatFs R0.12c和本项目ffconf，不使用伪SDK头。合成4MiB FAT16只在测试进程RAM中创建：真实logger→worker→FatFs→diskio→块设备模型完成1500样本、文件尺寸、每记录CRC和END检查；测试后释放，没有创建D盘卡镜像。
 
-Host总计32组/33,482断言。块设备检查非对齐缓冲、超时/时间回绕、拔卡、停止tick、错误锁存与几何；NV检查身份、范围、重开及切断位置。HAL端口本身仅通过真实SDK ARM编译链接，尚无物理总线或DMA实测。F41139C＋1汇编、G07136C＋1汇编均链接，无未解析符号。无额外SDK下载，复用已有共享缓存，构建产物仅临时目录。
+Host总计37组/35,988断言。块设备检查非对齐缓冲、超时/时间回绕、拔卡、停止tick、错误锁存与几何；NV检查身份、范围、重开及切断位置。HAL端口本身仅通过真实SDK ARM编译链接，尚无物理总线或DMA实测。F41141C＋1汇编、G07139C＋1汇编均链接，无未解析符号。无额外SDK下载，复用已有共享缓存，构建产物仅临时目录。

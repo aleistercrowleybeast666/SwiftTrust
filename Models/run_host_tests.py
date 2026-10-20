@@ -18,7 +18,7 @@ GCC=executable('HOST_CC','gcc')
 
 def png_preview(frames,target):
     # Directly visualize the C renderer's SSD1306 page bytes, no substituted UI.
-    scale=3;w=128*2*scale;h=64*2*scale;raw=bytearray()
+    scale=3;w=128*2*scale;h=64*((len(frames)//1024+1)//2)*scale;raw=bytearray()
     for y in range(h):
         raw.append(0)
         for x in range(w):
@@ -33,8 +33,8 @@ def png_preview(frames,target):
 def main():
     reports=[datetime.datetime.now(datetime.timezone.utc).isoformat(), 'Host-only synthetic regression. No MCU/RF/SD/OLED hardware accessed.']
     with tempfile.TemporaryDirectory(prefix='swiftthrust-host-') as temporary:
-        t=Path(temporary);exe=t/'tests.exe';fixture=t/'synthetic.stlog';frames=t/'ui.raw'
-        sources=sorted((ROOT/'Acquisition/src').glob('*.c'))+sorted((ROOT/'Controller/src').glob('*.c'))+[ROOT/'Models/test_core.c',ROOT/'Models/test_lowlevel.c',ROOT/'Models/test_r2.c',ROOT/'Models/test_storage.c',ROOT/'Acquisition/ports/st_diskio.c',ROOT/'Acquisition/ports/st_fatfs_worker.c']
+        t=Path(temporary);exe=t/'tests.exe';fixture=t/'synthetic.stlog';frames=t/'ui.raw';calframes=t/'calibration.raw'
+        sources=sorted((ROOT/'Acquisition/src').glob('*.c'))+sorted((ROOT/'Controller/src').glob('*.c'))+[ROOT/'Models/test_core.c',ROOT/'Models/test_lowlevel.c',ROOT/'Models/test_r2.c',ROOT/'Models/test_storage.c',ROOT/'Models/test_calibration.c',ROOT/'Acquisition/ports/st_diskio.c',ROOT/'Acquisition/ports/st_fatfs_worker.c']
         sdk=sdk_root()
         fatfs=sdk/'fatfs/src/ff.c';fobj=t/'fatfs.o'
         frun=subprocess.run([str(GCC),'-std=c11','-O2','-Wall','-Wextra','-Werror','-I',str(ROOT/'Acquisition/ports/fatfs_config'),'-I',str(fatfs.parent),'-c',str(fatfs),'-o',str(fobj)],capture_output=True,text=True,timeout=60)
@@ -51,7 +51,7 @@ def main():
                   'Flags: -std=c11 -O2 -Wall -Wextra -Werror -Wpedantic -Wconversion -Wshadow',built.stdout,built.stderr]
         if built.returncode:
             print('\n'.join(reports));return built.returncode
-        run=subprocess.run([str(exe),str(fixture),str(frames)],capture_output=True,text=True,timeout=60)
+        run=subprocess.run([str(exe),str(fixture),str(frames),str(calframes)],capture_output=True,text=True,timeout=60)
         reports += [run.stdout,run.stderr]
         if run.returncode:
             print('\n'.join(reports));return run.returncode
@@ -80,6 +80,7 @@ def main():
         reports+=['PASS Python exporter: clean/uncalibrated/calibrated/invalid-ADC/truncated-tail/record-CRC/header-CRC/exclusive-output',
                   'Preview panels: HOME, CAPTURE ONLY, STATUS, RESERVED COMBINED (synthetic values).']
         png_preview(frames.read_bytes(),ROOT/'Models/ui_host_preview.png')
+        png_preview(calframes.read_bytes(),ROOT/'Models/calibration_ui_preview.png')
         reports.append('FatFs R0.12c external SDK SHA256: '+hashlib.sha256(fatfs.read_bytes()).hexdigest())
         reports.append('Source SHA256:')
         for p in sources+sorted((ROOT/'Acquisition/include').glob('*.h'))+sorted((ROOT/'Controller/include').glob('*.h')):

@@ -2,6 +2,7 @@
 #define ST_UI_H
 #include "st_core.h"
 #include "st_link2.h"
+#include "st_cal_ui.h"
 typedef enum
 {
     ST_UI_HOME,
@@ -10,7 +11,8 @@ typedef enum
     ST_UI_SETTINGS,
     ST_UI_CONFIRM,
     ST_UI_IGNITION_ONLY,
-    ST_UI_COMBINED
+    ST_UI_COMBINED,
+    ST_UI_CALIBRATION
 } st_ui_page;
 typedef enum
 {
@@ -24,12 +26,16 @@ typedef struct
     st_ui_page page;
     unsigned selection, return_selection;
     bool unavailable;
+    st_cal_ui *calibration;
 } st_ui;
 typedef struct
 {
     char rows[8][22];
+    bool inverse;
+    uint8_t inverse_row, inverse_column;
 } st_ui_model;
 void st_ui_init(st_ui *u);
+void st_ui_attach_calibration(st_ui *, st_cal_ui *);
 /* Returns true only when a START/STOP transaction was actually created. */
 bool st_ui_handle(st_ui *u, st_ui_event e, st_client *c, uint32_t now_ms);
 void st_ui_render(const st_ui *u, const st_client *c, st_voltage_view own, uint32_t now_ms,

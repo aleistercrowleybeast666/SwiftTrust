@@ -1,8 +1,101 @@
-2026-10-20T03:42:40.874972+00:00
+2026-10-20T04:32:36.676438+00:00
 Actual EIDE unify_builder; component LINK_CHECK targets only, NOT operational firmware.
 No hardware access. All outputs in automatically removed temporary directories.
 BOARD Acquisition
-[ INFO ] start building at 2026-10-20 11:42:41
+[ INFO ] start building at 2026-10-20 12:32:37
+
+[ TOOL ] arm-none-eabi-gcc.exe (Arm GNU Toolchain 14.3.Rel1 (Build arm-14.174)) 14.3.1 20250623
+
+[ INFO ] file statistics (rebuild mode)
+
++---------+-----------+-----------+---------------+--------+
+| C Files | Cpp Files | Asm Files | Lib/Obj Files | Totals |
++---------+-----------+-----------+---------------+--------+
+| 41      | 0         | 1         | 0             | 42     |
++---------+-----------+-----------+---------------+--------+
+
+[ INFO ] start compiling (jobs: 2) ...
+
+>> [  2%] CC 'link_check_main.c'
+>> [  4%] CC 'st_ads.c'
+>> [  7%] CC 'st_debug.c'
+>> [  9%] CC 'st_core.c'
+>> [ 11%] CC 'st_logger.c'
+>> [ 14%] CC 'st_protocol.c'
+>> [ 16%] CC 'st_radio.c'
+>> [ 19%] CC 'st_f4_capture.c'
+>> [ 21%] CC 'st_fatfs_worker.c'
+>> [ 23%] CC 'st_debug_uart_hal.c'
+>> [ 26%] CC 'sx128x.c'
+>> [ 28%] CC 'ff.c'
+>> [ 30%] CC 'stm32f4xx_hal.c'
+>> [ 33%] CC 'stm32f4xx_hal_adc.c'
+>> [ 35%] CC 'stm32f4xx_hal_adc_ex.c'
+>> [ 38%] CC 'stm32f4xx_hal_cortex.c'
+>> [ 40%] CC 'stm32f4xx_hal_dma.c'
+>> [ 42%] CC 'stm32f4xx_hal_dma_ex.c'
+>> [ 45%] CC 'stm32f4xx_hal_flash.c'
+>> [ 47%] CC 'stm32f4xx_hal_flash_ex.c'
+<SDK>/f4-sdk/Src/stm32f4xx_hal_flash_ex.c: In function 'FLASH_MassErase':
+<SDK>/f4-sdk/Src/stm32f4xx_hal_flash_ex.c:948:60: [33;22mwarning: [0munused parameter 'Banks' [35;22m[-Wunused-parameter][0m
+  948 | static void FLASH_MassErase(uint8_t VoltageRange, uint32_t Banks)
+[35;22m      |                                                   ~~~~~~~~~^~~~~[0m
+<SDK>/f4-sdk/Src/stm32f4xx_hal_flash_ex.c: In function 'FLASH_OB_EnableWRP':
+<SDK>/f4-sdk/Src/stm32f4xx_hal_flash_ex.c:1027:74: [33;22mwarning: [0munused parameter 'Banks' [35;22m[-Wunused-parameter][0m
+ 1027 | static HAL_StatusTypeDef FLASH_OB_EnableWRP(uint32_t WRPSector, uint32_t Banks)
+[35;22m      |                                                                 ~~~~~~~~~^~~~~[0m
+<SDK>/f4-sdk/Src/stm32f4xx_hal_flash_ex.c: In function 'FLASH_OB_DisableWRP':
+<SDK>/f4-sdk/Src/stm32f4xx_hal_flash_ex.c:1063:75: [33;22mwarning: [0munused parameter 'Banks' [35;22m[-Wunused-parameter][0m
+ 1063 | static HAL_StatusTypeDef FLASH_OB_DisableWRP(uint32_t WRPSector, uint32_t Banks)
+[35;22m      |                                                                  ~~~~~~~~~^~~~~[0m
+>> [ 50%] CC 'stm32f4xx_hal_gpio.c'
+>> [ 52%] CC 'stm32f4xx_hal_pwr.c'
+>> [ 54%] CC 'stm32f4xx_hal_pwr_ex.c'
+>> [ 57%] CC 'stm32f4xx_hal_rcc_ex.c'
+>> [ 59%] CC 'stm32f4xx_hal_rcc.c'
+>> [ 61%] CC 'stm32f4xx_hal_sd.c'
+>> [ 64%] CC 'stm32f4xx_hal_spi.c'
+>> [ 66%] CC 'stm32f4xx_hal_tim_ex.c'
+>> [ 69%] CC 'stm32f4xx_hal_tim.c'
+>> [ 71%] CC 'stm32f4xx_hal_uart.c'
+>> [ 73%] CC 'stm32f4xx_ll_sdmmc.c'
+>> [ 76%] AS 'startup_stm32f411xe.s'
+>> [ 78%] CC 'system_stm32f4xx.c'
+>> [ 80%] CC 'st_block.c'
+>> [ 83%] CC 'st_link2.c'
+>> [ 85%] CC 'st_nv.c'
+>> [ 88%] CC 'st_diskio.c'
+>> [ 90%] CC 'st_sdio_hal.c'
+>> [ 92%] CC 'st_ads_hal.c'
+>> [ 95%] CC 'st_radio_hal.c'
+>> [ 97%] CC 'st_cal.c'
+>> [100%] CC 'st_cal_service.c'
+
+[ INFO ] start linking ...
+
+Memory region         Used Size  Region Size  %age Used
+           FLASH:       35240 B       256 KB     13.44%
+             RAM:       48528 B       128 KB     37.02%
+
+[ INFO ] start outputting files ...
+
+>> output hex file		[done]
+
+file path: "<TEMP>\Acquisition\SwiftThrust_Acquisition_LINK_CHECK.hex"
+
+>> output bin file		[done]
+
+file path: "<TEMP>\Acquisition\SwiftThrust_Acquisition_LINK_CHECK.bin"
+
+[ DONE ] build successfully !, elapsed time 0:0:7
+
+
+   text	   data	    bss	    dec	    hex	filename
+  35120	    112	  48416	  83648	  146c0	<TEMP>\Acquisition\SwiftThrust_Acquisition_LINK_CHECK.elf
+
+PASS linked ELF with no undefined symbols; binaries removed after validation.
+BOARD Controller
+[ INFO ] start building at 2026-10-20 12:32:44
 
 [ TOOL ] arm-none-eabi-gcc.exe (Arm GNU Toolchain 14.3.Rel1 (Build arm-14.174)) 14.3.1 20250623
 
@@ -17,139 +110,51 @@ BOARD Acquisition
 [ INFO ] start compiling (jobs: 2) ...
 
 >> [  2%] CC 'link_check_main.c'
->> [  5%] CC 'st_ads.c'
->> [  7%] CC 'st_debug.c'
->> [ 10%] CC 'st_core.c'
->> [ 12%] CC 'st_logger.c'
->> [ 15%] CC 'st_protocol.c'
->> [ 17%] CC 'st_radio.c'
->> [ 20%] CC 'st_f4_capture.c'
->> [ 22%] CC 'st_fatfs_worker.c'
+>> [  5%] CC 'st_oled.c'
+>> [  7%] CC 'st_raster.c'
+>> [ 10%] CC 'st_ui.c'
+>> [ 12%] CC 'st_g0_oled.c'
+>> [ 15%] CC 'st_core.c'
+>> [ 17%] CC 'st_protocol.c'
+>> [ 20%] CC 'st_radio.c'
+>> [ 22%] CC 'st_debug.c'
 >> [ 25%] CC 'st_debug_uart_hal.c'
 >> [ 27%] CC 'sx128x.c'
->> [ 30%] CC 'ff.c'
->> [ 32%] CC 'stm32f4xx_hal.c'
->> [ 35%] CC 'stm32f4xx_hal_adc.c'
->> [ 37%] CC 'stm32f4xx_hal_adc_ex.c'
->> [ 40%] CC 'stm32f4xx_hal_cortex.c'
->> [ 42%] CC 'stm32f4xx_hal_dma.c'
->> [ 45%] CC 'stm32f4xx_hal_dma_ex.c'
->> [ 47%] CC 'stm32f4xx_hal_flash.c'
->> [ 50%] CC 'stm32f4xx_hal_flash_ex.c'
-<SDK>/f4-sdk/Src/stm32f4xx_hal_flash_ex.c: In function 'FLASH_MassErase':
-<SDK>/f4-sdk/Src/stm32f4xx_hal_flash_ex.c:948:60: [33;22mwarning: [0munused parameter 'Banks' [35;22m[-Wunused-parameter][0m
-  948 | static void FLASH_MassErase(uint8_t VoltageRange, uint32_t Banks)
-[35;22m      |                                                   ~~~~~~~~~^~~~~[0m
-<SDK>/f4-sdk/Src/stm32f4xx_hal_flash_ex.c: In function 'FLASH_OB_EnableWRP':
-<SDK>/f4-sdk/Src/stm32f4xx_hal_flash_ex.c:1027:74: [33;22mwarning: [0munused parameter 'Banks' [35;22m[-Wunused-parameter][0m
- 1027 | static HAL_StatusTypeDef FLASH_OB_EnableWRP(uint32_t WRPSector, uint32_t Banks)
-[35;22m      |                                                                 ~~~~~~~~~^~~~~[0m
-<SDK>/f4-sdk/Src/stm32f4xx_hal_flash_ex.c: In function 'FLASH_OB_DisableWRP':
-<SDK>/f4-sdk/Src/stm32f4xx_hal_flash_ex.c:1063:75: [33;22mwarning: [0munused parameter 'Banks' [35;22m[-Wunused-parameter][0m
- 1063 | static HAL_StatusTypeDef FLASH_OB_DisableWRP(uint32_t WRPSector, uint32_t Banks)
-[35;22m      |                                                                  ~~~~~~~~~^~~~~[0m
->> [ 52%] CC 'stm32f4xx_hal_gpio.c'
->> [ 55%] CC 'stm32f4xx_hal_pwr.c'
->> [ 57%] CC 'stm32f4xx_hal_pwr_ex.c'
->> [ 60%] CC 'stm32f4xx_hal_rcc.c'
->> [ 62%] CC 'stm32f4xx_hal_rcc_ex.c'
->> [ 65%] CC 'stm32f4xx_hal_sd.c'
->> [ 67%] CC 'stm32f4xx_hal_spi.c'
->> [ 70%] CC 'stm32f4xx_hal_tim_ex.c'
->> [ 72%] CC 'stm32f4xx_hal_tim.c'
->> [ 75%] CC 'stm32f4xx_hal_uart.c'
->> [ 77%] CC 'stm32f4xx_ll_sdmmc.c'
->> [ 80%] AS 'startup_stm32f411xe.s'
->> [ 82%] CC 'system_stm32f4xx.c'
->> [ 85%] CC 'st_block.c'
+>> [ 30%] CC 'stm32g0xx_hal.c'
+>> [ 32%] CC 'stm32g0xx_hal_adc_ex.c'
+>> [ 35%] CC 'stm32g0xx_hal_adc.c'
+>> [ 37%] CC 'stm32g0xx_hal_cortex.c'
+>> [ 40%] CC 'stm32g0xx_hal_dma.c'
+>> [ 42%] CC 'stm32g0xx_hal_dma_ex.c'
+>> [ 45%] CC 'stm32g0xx_hal_flash.c'
+>> [ 47%] CC 'stm32g0xx_hal_flash_ex.c'
+>> [ 50%] CC 'stm32g0xx_hal_gpio.c'
+>> [ 52%] CC 'stm32g0xx_hal_i2c_ex.c'
+>> [ 55%] CC 'stm32g0xx_hal_i2c.c'
+>> [ 57%] CC 'stm32g0xx_hal_pwr.c'
+>> [ 60%] CC 'stm32g0xx_hal_pwr_ex.c'
+>> [ 62%] CC 'stm32g0xx_hal_rcc.c'
+>> [ 65%] CC 'stm32g0xx_hal_rcc_ex.c'
+>> [ 67%] CC 'stm32g0xx_hal_spi.c'
+>> [ 70%] CC 'stm32g0xx_hal_tim_ex.c'
+>> [ 72%] CC 'stm32g0xx_hal_tim.c'
+>> [ 75%] CC 'stm32g0xx_hal_uart_ex.c'
+>> [ 77%] CC 'stm32g0xx_hal_uart.c'
+>> [ 80%] CC 'system_stm32g0xx.c'
+>> [ 82%] AS 'startup_stm32g071xx.s'
+>> [ 85%] CC 'st_ui2.c'
 >> [ 87%] CC 'st_link2.c'
->> [ 90%] CC 'st_diskio.c'
->> [ 92%] CC 'st_nv.c'
->> [ 95%] CC 'st_ads_hal.c'
->> [ 97%] CC 'st_sdio_hal.c'
->> [100%] CC 'st_radio_hal.c'
+>> [ 90%] CC 'st_nv.c'
+>> [ 92%] CC 'st_radio_hal.c'
+>> [ 95%] CC 'st_cal_service.c'
+>> [ 97%] CC 'st_cal.c'
+>> [100%] CC 'st_cal_ui.c'
 
 [ INFO ] start linking ...
 
 Memory region         Used Size  Region Size  %age Used
-           FLASH:       30932 B       256 KB     11.80%
-             RAM:       47896 B       128 KB     36.54%
-
-[ INFO ] start outputting files ...
-
->> output hex file		[done]
-
-file path: "<TEMP>\Acquisition\SwiftThrust_Acquisition_LINK_CHECK.hex"
-
->> output bin file		[done]
-
-file path: "<TEMP>\Acquisition\SwiftThrust_Acquisition_LINK_CHECK.bin"
-
-[ DONE ] build successfully !, elapsed time 0:0:6
-
-
-   text	   data	    bss	    dec	    hex	filename
-  30820	    104	  47792	  78716	  1337c	<TEMP>\Acquisition\SwiftThrust_Acquisition_LINK_CHECK.elf
-
-PASS linked ELF with no undefined symbols; binaries removed after validation.
-BOARD Controller
-[ INFO ] start building at 2026-10-20 11:42:48
-
-[ TOOL ] arm-none-eabi-gcc.exe (Arm GNU Toolchain 14.3.Rel1 (Build arm-14.174)) 14.3.1 20250623
-
-[ INFO ] file statistics (rebuild mode)
-
-+---------+-----------+-----------+---------------+--------+
-| C Files | Cpp Files | Asm Files | Lib/Obj Files | Totals |
-+---------+-----------+-----------+---------------+--------+
-| 36      | 0         | 1         | 0             | 37     |
-+---------+-----------+-----------+---------------+--------+
-
-[ INFO ] start compiling (jobs: 2) ...
-
->> [  2%] CC 'link_check_main.c'
->> [  5%] CC 'st_oled.c'
->> [  8%] CC 'st_raster.c'
->> [ 10%] CC 'st_ui.c'
->> [ 13%] CC 'st_g0_oled.c'
->> [ 16%] CC 'st_core.c'
->> [ 18%] CC 'st_protocol.c'
->> [ 21%] CC 'st_radio.c'
->> [ 24%] CC 'st_debug.c'
->> [ 27%] CC 'st_debug_uart_hal.c'
->> [ 29%] CC 'sx128x.c'
->> [ 32%] CC 'stm32g0xx_hal.c'
->> [ 35%] CC 'stm32g0xx_hal_adc_ex.c'
->> [ 37%] CC 'stm32g0xx_hal_adc.c'
->> [ 40%] CC 'stm32g0xx_hal_cortex.c'
->> [ 43%] CC 'stm32g0xx_hal_dma.c'
->> [ 45%] CC 'stm32g0xx_hal_dma_ex.c'
->> [ 48%] CC 'stm32g0xx_hal_flash.c'
->> [ 51%] CC 'stm32g0xx_hal_flash_ex.c'
->> [ 54%] CC 'stm32g0xx_hal_gpio.c'
->> [ 56%] CC 'stm32g0xx_hal_i2c_ex.c'
->> [ 59%] CC 'stm32g0xx_hal_pwr.c'
->> [ 62%] CC 'stm32g0xx_hal_i2c.c'
->> [ 64%] CC 'stm32g0xx_hal_pwr_ex.c'
->> [ 67%] CC 'stm32g0xx_hal_rcc.c'
->> [ 70%] CC 'stm32g0xx_hal_rcc_ex.c'
->> [ 72%] CC 'stm32g0xx_hal_spi.c'
->> [ 75%] CC 'stm32g0xx_hal_tim_ex.c'
->> [ 78%] CC 'stm32g0xx_hal_tim.c'
->> [ 81%] CC 'stm32g0xx_hal_uart_ex.c'
->> [ 83%] CC 'stm32g0xx_hal_uart.c'
->> [ 86%] CC 'system_stm32g0xx.c'
->> [ 89%] AS 'startup_stm32g071xx.s'
->> [ 91%] CC 'st_ui2.c'
->> [ 94%] CC 'st_link2.c'
->> [ 97%] CC 'st_nv.c'
->> [100%] CC 'st_radio_hal.c'
-
-[ INFO ] start linking ...
-
-Memory region         Used Size  Region Size  %age Used
-           FLASH:       25632 B       128 KB     19.56%
-             RAM:        6896 B        32 KB     21.04%
+           FLASH:       35304 B       128 KB     26.93%
+             RAM:        7040 B        32 KB     21.48%
 
 [ INFO ] start outputting files ...
 
@@ -165,7 +170,7 @@ file path: "<TEMP>\Controller\SwiftThrust_Controller_LINK_CHECK.bin"
 
 
    text	   data	    bss	    dec	    hex	filename
-  25528	    104	   6792	  32424	   7ea8	<TEMP>\Controller\SwiftThrust_Controller_LINK_CHECK.elf
+  35192	    108	   6928	  42228	   a4f4	<TEMP>\Controller\SwiftThrust_Controller_LINK_CHECK.elf
 
 PASS linked ELF with no undefined symbols; binaries removed after validation.
 Both EIDE targets linked. The entry point performs only a CRC self-check and WFI. No board functionality is claimed.
