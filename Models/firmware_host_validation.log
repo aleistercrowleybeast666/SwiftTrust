@@ -1,4 +1,4 @@
-2026-10-20T07:08:21.069728+00:00
+2026-10-20T10:08:49.509655+00:00
 Host-only synthetic regression. No MCU/RF/SD/OLED hardware accessed.
 Official vendor source compiled separately with -Wall -Wextra -Werror; project code retains conversion/shadow checks; vendor remains unmodified.
 Compiler: gcc.exe (Rev5, Built by MSYS2 project) 16.1.0
@@ -30,6 +30,11 @@ PASS R2 paired UID handshake / durable reservation once / boot rejects old count
 PASS R2 stop idempotence / terminal ACK loss and retry / status never completes command / conflicting ID / async failure / no transaction wrap / TX_DONE retry anchor
 PASS R2 10s heartbeat / freshness event / sticky quality / stale or duplicate status rejected / time wrap / status sequence exhaustion / bounded handshake timeout
 PASS R2 consistent two-fragment diagnostic snapshot / reorder and duplicate / changed duplicate rejection / request ID isolation / menu emits only R2 START
+PASS STOP ordering: lost/late START ACK, STOP before delayed START, STARTING/REC/source-cancel, same-ID retries, held close, lost terminal ACK, IDLE status cannot confirm, explicit restart
+PASS STOP sync failure reports FAILED, never CLOSED or restart-ready
+PASS STOP bounded retries/timeout, already-IDLE barrier, retained uncertainty blocks START, explicit same-ID retry recovers lost completion
+PASS STOP fresh-state gate, queue expiry across timer wrap, malformed completion rejected, failed reconnect retains intent, explicit reconnect cancels without START replay
+PASS STOP UI distinguishes busy/link/state/exhaustion from reserved NOT IMPLEMENTED
 PASS block DMA-aligned retained bounce / unaligned caller / two-sector roundtrip / bounds / wrap timeout / removal / frozen tick / latched failure
 PASS real FatFs diskio interface / unbound and wrong drive / geometry / unknown erase size / read-write-sync / hot removal
 PASS unmodified FatFs R0.12c + real worker + logger + diskio on synthetic RAM FAT16 / 1500 records / file size / per-record CRC / END / durable close (no physical SD)
@@ -48,7 +53,7 @@ PASS cal profile CRC roundtrip and every-byte corruption / negative polarity / b
 PASS cal CRC/noise/gap/timeout/expired-zero rejection / reference range / save failure or unbound storage / cancellation / changed config and concurrent profile preserve old active values
 PASS cal encoder-only preset/custom workflow / safe-default confirmations / full value and unit / select-versus-edit / monochrome inverse digit / no RF transaction / save only after reviewed candidate
 PASS cal editor0..9 wrap and fixed decimal / nine-digit upper bound / zero and over-range refusal / unit switch explicitly clears draft / visible return paths / busy gate and cancel retain old profile
-PASS total: 45 groups, 54109 assertions; host sizeof(logger)=41720, sizeof(oled)=1104
+PASS total: 50 groups, 54398 assertions; host sizeof(logger)=41720, sizeof(oled)=1104
 
 PASS Python exporter: clean/uncalibrated/calibrated/invalid-ADC/truncated-tail/record-CRC/header-CRC/exclusive-output
 Preview panels: HOME, CAPTURE ONLY, STATUS, RESERVED COMBINED (synthetic values).
@@ -65,8 +70,8 @@ b67d76c3fb581ce7555777dde6f6967e64444148be0a25a842f31a9a6dd8c4a7 Acquisition/src
 f030b589b888984c48f5fd99c74f75376a61d0c6384bda27900cc5930f90ce7e Acquisition/src/st_core.c
 5a83f4be52f3d1f5cf6150d40e104ff9be3754a68794df27618fb4a78ceb1a64 Acquisition/src/st_debug.c
 aa19671b7c7a0206c6c14c027661043bbe88b3ec5ef4ce06042238fd718d8b1c Acquisition/src/st_journal.c
-f39f412d7bcc800faf0fd1d7c9399884d2bfbbd2f101eb82554c5a8c9737fd2e Acquisition/src/st_link2.c
-3e509972c45ed4c9459e354fb3b209115c485e418b7461db6513b220ee13d15f Acquisition/src/st_link_runtime.c
+031edb88fc92591a7b74a16de1cc393117b1bccbc976b5c736796e3d02b46901 Acquisition/src/st_link2.c
+f5e5e128cced9a5b98316d79227112dc1d5d10499947539205cbdff21d10c64d Acquisition/src/st_link_runtime.c
 c12df0288ba0f48bb64d671457535e8111347818837ec3725e0044a3e6e3a4a6 Acquisition/src/st_logger.c
 7a143df7af7c8ed706e28dd038bbaf5251e8384e2881eee5bc89225b28ba0fdc Acquisition/src/st_nv.c
 cc563ab4618ab53c6b2a2bdb928217a1f310f630cf80a0cc1d3069aab88b7ef4 Acquisition/src/st_pairing.c
@@ -78,10 +83,11 @@ ac4d8c02993738920e1971ed71e082135ff702766ecf27e39d61185afef5be95 Acquisition/src
 b62c7def77658e989c69bcd0f32140aa61b619ce8e1b11519661cefd78061f9c Controller/src/st_oled.c
 05769ef73ab2084bf53e597e91030494e37d21752252a23fad113f73e52e56ba Controller/src/st_raster.c
 0b24ce8d4565b714501f64dcc0393acf23d3bb45a2da8d9029ea3523ae507313 Controller/src/st_ui.c
-24b818325e8b688f196d62751d5be2ccc843cc357faab6a79a69738f9028779d Controller/src/st_ui2.c
-0d6e4a8e09e233c50fe1b4f9f0eb4aefd75cbbcbfca5304333ea8113eaf1df15 Models/test_core.c
+fe740185ba8f674eb111b698a0e85597594aafc65e2a80a8e71c55b1d8070496 Controller/src/st_ui2.c
+0d1bdd5bab5c8b90374836c850d42fdf155288dfb826580913db3d284e2790a2 Models/test_core.c
 451f0570abd3bab5aba093edba090cc71e36fe40b3de0787d63ff16cb03db5fe Models/test_lowlevel.c
 ff391a72e1608c0252fb9f9818159bb7fbbbf2bbcd5fb0e6f5df774405db43cf Models/test_r2.c
+48c0250c37e6a01cf5884c34ecbdeae5520f51a0cd1eb81b89e46417abda1429 Models/test_stop.c
 9e202bec9fa3dd41a20ed007525c33a7e3674e5933dec20e3f66ec04185043bc Models/test_storage.c
 1209e73d800f354a3de299c74f58d526dedc5ebf1b0da8b61fa40de61e8c4ddf Models/test_calibration.c
 6e83666d557634404362aa74afba3ba436f98a0f4e957d9796df1e7465545121 Acquisition/ports/st_diskio.c
@@ -101,7 +107,7 @@ d55302ec43394ba43ef8499e0a1989feb1ddabd8d5c9317d24ca8aa0eb5f5b7d Acquisition/inc
 818501040e351c95eee6ffe64b87206236fc03ff9542fcc625a62e4be10fe9b5 Acquisition/include/st_core.h
 1761f0eb5bd3d7f208afe2b45b29a9a9d9e363ce7602d67a07cc4698a88855d8 Acquisition/include/st_debug.h
 648c5ebabf9244f3b6c3f85425848c98755893c4c1a1361fa0f9063039ee9379 Acquisition/include/st_journal.h
-96c9e2ae644034f3d7496b81bd52bf5d9e5c11502b601e116b383dd4c556e922 Acquisition/include/st_link2.h
+2a4b73a40424ce54c72e1957fb1c6b22eb152fdcd3c524be1ed4957d74334f92 Acquisition/include/st_link2.h
 1034b61c3cb288e5f311a157447dc83521ed9b35c5a2d6102f4f1299bc4a33ac Acquisition/include/st_link_runtime.h
 a5e4240c40b5254c7bdda55c6f35c01b6b39027aa1b40a66d9e5ae835eef8004 Acquisition/include/st_nv.h
 0d82b065bd80fa4076507a88799e74d6d9fd40b6c77461ae2590a20d4c7ee998 Acquisition/include/st_pairing.h
@@ -110,7 +116,7 @@ bda4a0aa148e99de43f71c6909ce080f8165d506dfa04e5d1294b953f9536569 Acquisition/inc
 30ef1772fe0d57d35d328755643f9adc8bf32db7ce3264723e7cae5675bd5b8c Controller/include/st_cal_remote.h
 eb5bc15f81d4674e1d33af43fb4727500bbb1076325d0999259dbadb7ce37161 Controller/include/st_cal_ui.h
 e4e601548fcd6ec4842fa2ed623eb53e36e1a02d7d745865c593ccf9bed95701 Controller/include/st_controller_bsp.h
-14dbc897091dc8293013b88a4d6ab7dcd1c8fd1d67b4ec043a94dbe0d00cf44e Controller/include/st_ui.h
+5f5c88c0a91337ece41bd0e428b5794d3f51be50f67cdd1b71d1862da780cced Controller/include/st_ui.h
 34ea22cf74dc2c21172929a7d8373cced945b1803ef56e52d7127fb1f42973f7 Acquisition/ports/fatfs_config/ffconf.h
 1a4698f7bbf13aeb856a7843b430289d5f06813849f459891c3b59ef740647f5 Acquisition/ports/st_ads_hal.h
 a6448905c8c3240043c9e2cd2973e22a316f3cca34e50efe5b7738ad7e503e39 Acquisition/ports/st_cal_fatfs.h

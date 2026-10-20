@@ -298,7 +298,8 @@ static void event(st_ui_event e, uint32_t ms)
         radio_init();
     if (connect && !paired)
     {
-        ui.unavailable = true;
+        ui.unavailable = false;
+        ui.notice = ST_UI_NOTICE_CONNECT;
         return;
     }
     (void)st_ui2_handle(&ui, e, &client, ms);

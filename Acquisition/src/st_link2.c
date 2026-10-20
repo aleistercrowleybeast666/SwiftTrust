@@ -406,7 +406,11 @@ size_t st2_server_receive(st2_server *s, const uint8_t *in, size_t n, st2_measur
         else
             return send_ack(s, p.id, s->last_flags, out);
     }
-    else if (s->have_command && s->last_result == ST2_ACCEPTED)
+    /* A newer STOP may cancel STARTING. Once cached, its greater ID fences
+     * every late/retried START, even if STOP arrived before START itself.
+     * No other command can supersede an accepted operation. */
+    else if (s->have_command && s->last_result == ST2_ACCEPTED &&
+             !(p.type == ST2_STOP && s->last_type == ST2_START))
         result = ST2_STATE_REJECT;
     else
     {
@@ -475,6 +479,7 @@ bool st2_client_connect(st2_client *c, uint32_t now)
     if (c->pending)
         c->transaction = ST_TX_REBOOT;
     c->counter = counter;
+    c->stop = ST2_STOP_NONE; /* Explicit successful reconnect cancels local intent. */
     c->link = ST2_LINK_HELLO;
     c->epoch = 0;
     c->have_status = false;
@@ -554,6 +559,9 @@ bool st2_client_receive(st2_client *c, const uint8_t *in, size_t n, uint32_t now
     if (p.type == ST2_ACK && c->link == ST2_LINK_UP && c->pending && p.id == c->request.id)
     {
         uint8_t result = p.flags & 7u;
+        if (c->request.type == ST2_STOP && result == ST2_COMPLETED &&
+            ((p.flags >> 3) & 7u) != ST_IDLE)
+            return false;
         if (result == ST2_ACCEPTED)
         {
             c->transaction = ST_TX_WAIT_STATE;
@@ -563,20 +571,15 @@ bool st2_client_receive(st2_client *c, const uint8_t *in, size_t n, uint32_t now
         {
             c->pending = false;
             c->transaction = result == ST2_COMPLETED ? ST_TX_COMPLETE : ST_TX_REJECTED;
+            if (c->request.type == ST2_STOP)
+                c->stop = result == ST2_COMPLETED ? ST2_STOP_NONE : ST2_STOP_UNCONFIRMED;
         }
         return true; /* ACK does not refresh telemetry age */
     }
     return false;
 }
-bool st2_client_command(st2_client *c, uint8_t type, uint32_t now)
+static void begin_command(st2_client *c, uint8_t type, uint32_t now)
 {
-    if (c->pending || !st2_client_fresh(c, now) || !c->next_command ||
-        (type != ST2_START && type != ST2_STOP))
-        return false;
-    unsigned state = c->flags & 7u;
-    if ((type == ST2_START && state != ST_IDLE) ||
-        (type == ST2_STOP && state != ST_CAPTURING && state != ST_STARTING))
-        return false;
     c->request = (st2_packet){.type = type, .epoch = c->epoch, .id = c->next_command};
     c->next_command = c->next_command == 65535 ? 0 : (uint16_t)(c->next_command + 1);
     c->pending = true;
@@ -585,6 +588,51 @@ bool st2_client_command(st2_client *c, uint8_t type, uint32_t now)
     c->have_sent = false;
     c->waiting_tx_done = false;
     c->started_ms = now;
+    if (type == ST2_STOP)
+        c->stop = ST2_STOP_ACTIVE;
+}
+bool st2_client_command(st2_client *c, uint8_t type, uint32_t now)
+{
+    if (type != ST2_START && type != ST2_STOP)
+        return false;
+    if (type == ST2_STOP &&
+        (c->stop == ST2_STOP_QUEUED || (c->pending && c->request.type == ST2_STOP)))
+        return true; /* No new ID, retry-budget reset or deadline extension. */
+    if (type == ST2_STOP && c->pending && c->request.type == ST2_START)
+    {
+        if (!c->next_command)
+            return false;
+        /* Intent may be recorded while telemetry is stale. Its transmission
+         * still waits for fresh state and expires at the bounded deadline. */
+        c->stop = ST2_STOP_QUEUED;
+        c->stop_requested_ms = now;
+        return true;
+    }
+    if (!st2_client_fresh(c, now))
+        return false;
+    if (type == ST2_STOP && c->stop == ST2_STOP_UNCONFIRMED && !c->pending &&
+        c->request.type == ST2_STOP)
+    {
+        /* Explicit recovery retries the identical command, including after a
+         * lost terminal ACK. Never let old telemetry trigger a new START. */
+        c->pending = true;
+        c->stop = ST2_STOP_ACTIVE;
+        c->transaction = ST_TX_WAIT_ACK;
+        c->attempts = 0;
+        c->have_sent = false;
+        c->waiting_tx_done = false;
+        c->started_ms = now;
+        return true;
+    }
+    if (!c->next_command)
+        return false;
+    if (c->pending || (type == ST2_START && c->stop != ST2_STOP_NONE))
+        return false;
+    unsigned state = c->flags & 7u;
+    if ((type == ST2_START && state != ST_IDLE) || (type == ST2_STOP && state > ST_STOPPING))
+        return false;
+    /* STOP at IDLE is also a command barrier, confirmed by its matching ACK. */
+    begin_command(c, type, now);
     return true;
 }
 bool st2_client_cal_command(st2_client *c, const uint8_t data[14], uint32_t now)
@@ -593,7 +641,7 @@ bool st2_client_cal_command(st2_client *c, const uint8_t data[14], uint32_t now)
      * already in flight must complete or hit its bounded timeout first. */
     if (c->pending && c->request.type == ST2_CAL_QUERY && data)
         c->pending = false;
-    if (c->pending || !st2_client_fresh(c, now) || !c->next_command ||
+    if (c->stop != ST2_STOP_NONE || c->pending || !st2_client_fresh(c, now) || !c->next_command ||
         c->timing.operation_ms < c->timing.ack_rto_ms + 4u * c->timing.max_airtime_ms ||
         (data && (c->flags & 7u) != ST_IDLE))
         return false;
@@ -621,6 +669,19 @@ bool st2_client_cal_command(st2_client *c, const uint8_t data[14], uint32_t now)
  * when an ACCEPTED reply resets the per-round retry budget. */
 bool st2_client_tx_due(st2_client *c, uint32_t now, uint8_t out[ST2_MAX], size_t *n)
 {
+    if (c->stop == ST2_STOP_QUEUED)
+    {
+        if ((uint32_t)(now - c->stop_requested_ms) > c->timing.operation_ms)
+        {
+            c->stop = ST2_STOP_UNCONFIRMED;
+            c->pending = false;
+            c->transaction = ST_TX_TIMEOUT;
+            return false;
+        }
+        if (!st2_client_fresh(c, now) || c->waiting_tx_done)
+            return false; /* Do not replay START while stop intent is queued. */
+        begin_command(c, ST2_STOP, c->stop_requested_ms);
+    }
     if (c->link == ST2_LINK_DOWN || (c->link == ST2_LINK_UP && !c->pending))
         return false;
     if ((uint32_t)(now - c->started_ms) > c->timing.operation_ms)
@@ -629,6 +690,8 @@ bool st2_client_tx_due(st2_client *c, uint32_t now, uint8_t out[ST2_MAX], size_t
         {
             c->pending = false;
             c->transaction = ST_TX_TIMEOUT;
+            if (c->request.type == ST2_STOP)
+                c->stop = ST2_STOP_UNCONFIRMED;
         }
         else
             c->link = ST2_LINK_DOWN;

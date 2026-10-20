@@ -21,11 +21,21 @@ typedef enum
     ST_UI_PRESS,
     ST_UI_BACK
 } st_ui_event;
+typedef enum
+{
+    ST_UI_NOTICE_NONE,
+    ST_UI_NOTICE_BUSY,
+    ST_UI_NOTICE_LINK,
+    ST_UI_NOTICE_STATE,
+    ST_UI_NOTICE_RECONNECT,
+    ST_UI_NOTICE_CONNECT
+} st_ui_notice;
 typedef struct
 {
     st_ui_page page;
     unsigned selection, return_selection;
     bool unavailable;
+    st_ui_notice notice;
     st_cal_ui *calibration;
 } st_ui;
 typedef struct
@@ -40,7 +50,8 @@ void st_ui_attach_calibration(st_ui *, st_cal_ui *);
 bool st_ui_handle(st_ui *u, st_ui_event e, st_client *c, uint32_t now_ms);
 void st_ui_render(const st_ui *u, const st_client *c, st_voltage_view own, uint32_t now_ms,
                   st_ui_model *m);
-/* Active compact RF protocol entry points; legacy functions remain regression references. */
+/* Active compact RF entry points; true also means a STOP intent was queued or
+ * was already pending. Legacy functions remain regression references. */
 bool st_ui2_handle(st_ui *, st_ui_event, st2_client *, uint32_t now_ms);
 void st_ui2_render(const st_ui *, const st2_client *, st_voltage_view, uint32_t now_ms,
                    st_ui_model *);

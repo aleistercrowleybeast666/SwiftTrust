@@ -2,6 +2,7 @@
 #include <stdio.h>
 bool st_ui2_handle(st_ui *u, st_ui_event e, st2_client *c, uint32_t now)
 {
+    u->notice = ST_UI_NOTICE_NONE;
     if (u->page == ST_UI_CALIBRATION)
     {
         bool idle = st2_client_fresh(c, now) && (c->flags & 7u) == ST_IDLE &&
@@ -24,7 +25,9 @@ bool st_ui2_handle(st_ui *u, st_ui_event e, st2_client *c, uint32_t now)
         }
         if (e == ST_UI_PRESS && u->selection == 1)
         {
-            u->unavailable = !st2_client_connect(c, now);
+            u->unavailable = false;
+            if (!st2_client_connect(c, now))
+                u->notice = ST_UI_NOTICE_CONNECT;
             return false;
         }
     }
@@ -38,7 +41,12 @@ bool st_ui2_handle(st_ui *u, st_ui_event e, st2_client *c, uint32_t now)
     if (start || stop)
     {
         bool ok = st2_client_command(c, start ? ST2_START : ST2_STOP, now);
-        u->unavailable = !ok;
+        u->unavailable = false;
+        if (!ok)
+            u->notice = !st2_client_fresh(c, now) ? ST_UI_NOTICE_LINK
+                        : c->pending              ? ST_UI_NOTICE_BUSY
+                        : !c->next_command        ? ST_UI_NOTICE_RECONNECT
+                                                  : ST_UI_NOTICE_STATE;
         return ok;
     }
     return false;
@@ -57,6 +65,35 @@ void st_ui2_render(const st_ui *u, const st2_client *c, st_voltage_view own, uin
     view.status.voltage_flags = c->mv == 65535 ? 0 : 3;
     view.status.voltage_age_ms = (c->flags & 32u) ? 0 : 65535;
     st_ui_render(u, &view, own, now, m);
+    const char *notice = NULL;
+    switch (u->notice)
+    {
+    case ST_UI_NOTICE_BUSY:
+        notice = "BUSY / WAIT COMMAND";
+        break;
+    case ST_UI_NOTICE_LINK:
+        notice = "LINK LOST / CONNECT";
+        break;
+    case ST_UI_NOTICE_STATE:
+        notice = "STATE UNAVAILABLE";
+        break;
+    case ST_UI_NOTICE_RECONNECT:
+        notice = "RECONNECT REQUIRED";
+        break;
+    case ST_UI_NOTICE_CONNECT:
+        notice = "CONNECT FAILED";
+        break;
+    default:
+        break;
+    }
+    if (c->stop == ST2_STOP_QUEUED)
+        notice = fresh ? "STOP QUEUED" : "LINK LOST / STOP ?";
+    else if (c->stop == ST2_STOP_ACTIVE)
+        notice = fresh ? "WAIT STOP CONFIRM" : "LINK LOST / STOP ?";
+    else if (c->stop == ST2_STOP_UNCONFIRMED)
+        notice = c->transaction == ST_TX_REJECTED ? "STOP FAILED / CHECK" : "STOP UNCONFIRMED";
+    if (notice && u->page != ST_UI_STATUS)
+        (void)snprintf(m->rows[7], 22, "%s", notice);
     if (u->page == ST_UI_CALIBRATION && u->calibration)
     {
         st_cal_panel panel;
@@ -70,6 +107,8 @@ void st_ui2_render(const st_ui *u, const st2_client *c, st_voltage_view own, uin
     }
     if (u->page == ST_UI_STATUS)
     {
+        if (notice)
+            (void)snprintf(m->rows[2], 22, "%s", notice);
         const char *names[] = {"UNKNOWN", "READY/CLOSED", "OPEN", "ERROR"};
         (void)snprintf(m->rows[4], 22, "TF %s", c->have_status ? names[tf] : "UNKNOWN");
         (void)snprintf(m->rows[5], 22, "QUALITY %s",

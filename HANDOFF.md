@@ -2,9 +2,11 @@
 
 当前工作已经从组件链接推进为两板ReferenceApp实际应用：两个 `board/reference_main.c` 是可执行入口，包含初始化、调度与IRQ，不再以CRC/WFI当完成。说明与接线以 [Models/REFERENCE_APPLICATION.md](Models/REFERENCE_APPLICATION.md) 为准。普通提交/推送后由交接回复给出实际SHA。
 
-完整离线45组/54,109断言、无线6组/313断言和新增参考Flash模型均通过；有两板ARM构建日志及本地dist稀疏HEX/ELF。没有连接、测试或烧录硬件。后续需要真实板来验证电气、时钟、卡延迟、标定与RF性能；自动烧录入口保持拒绝。
+完整离线50组/54,398断言、无线7组/383断言和新增参考Flash模型均通过；有两板ARM构建日志及本地dist稀疏HEX/ELF。没有连接、测试或烧录硬件。后续需要真实板来验证电气、时钟、卡延迟、标定与RF性能；自动烧录入口保持拒绝。
 
 选择ReferenceApp，首次通过本地UART INFO读取UID后双端PAIR，遥控STATUS→CONNECT，再采集页START/STOP。未配置真实传感器则raw-only。参考使用片内Flash，升级保留F411 sector2/3、G071 page62/63；不要烧录旧LinkCheck或跨NV区域BIN。点火只有静态菜单/未配置预留引脚。
+
+本次仅修复 START 待确认时的 STOP 意图、顺序和提示，新增5组停止回归及1组无线运行时回归；详见 [STOP_ORDER_REVIEW](Models/STOP_ORDER_REVIEW.md)。代码交付后冻结，等待用户上板反馈；本轮未访问硬件。
 
 以下是早期阶段的历史交接，描述的“缺少main/NV/集成”等已由本次实现替代；历史验证不等于当前硬件测试。
 

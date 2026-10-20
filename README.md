@@ -8,6 +8,8 @@
 
 默认无传感器规格时记录原始ADC，不伪造力值；标定需按真实传感器填写 [SENSOR.CFG.example](Models/SENSOR.CFG.example)。电压显示是MCU VDDA，不是电池SOC。点火仅保留静态菜单和未配置PA11/PA12标记，没有执行、协议或GPIO输出。
 
-完整离线回归45组/54,109断言及导出检查、无线owner6组/313断言、新增Flash/配置故障模型均通过；双板真实ReferenceApp ARM编译通过。具体证据见 [构建审查](Models/BOARD_BUILD_REVIEW.md) 和 [交接](HANDOFF.md)。无 `.work`、SDK副本或额外远端仓库。
+完整离线回归50组/54,398断言及导出检查、无线owner7组/383断言、新增Flash/配置故障模型均通过；双板真实ReferenceApp ARM编译通过。具体证据见 [构建审查](Models/BOARD_BUILD_REVIEW.md) 和 [交接](HANDOFF.md)。无 `.work`、SDK副本或额外远端仓库。
 
 **PCB尚未冻结，最终接线/极性、外部ADC时钟和传感器电气参数必须先核对。** 此版本可按参考配置安排上板验证，尚未实际板测。首次START及取消重启修复的失败→通过证据见 [专项审查](Models/FIRST_START_REVIEW.md)。
+
+START待确认期间的STOP及提示小修已完成，详见 [STOP_ORDER_REVIEW](Models/STOP_ORDER_REVIEW.md)。本次交付后暂停开发，等待用户上板实测反馈。

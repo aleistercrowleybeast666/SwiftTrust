@@ -64,6 +64,16 @@ UART白名单只有 `INFO`、`STATUS`、`PAIR ...` 和 `NVINIT NEW`，不接受�
 
 标定：将 `Models/SENSOR.CFG.example` 的字段按真实传感器/测量噪声填写，显式ACK后复制为TF根目录 `SENSOR.CFG` 并重启。模板的0值故意使标定无效。激励2.5V必须适合实际传感器，配置并不产生或测量激励电源。进入采集页的CALIBRATION，依次卸载归零、输入已知载荷、加载统计、核对后SAVE；原有CAL0/CAL1双文件只在新值完成sync/封印/close/readback后更换。更换传感器或ADC配置必须改变绑定并重新标定；不能套用旧系数。CH1的真实电气缩放未绑定时不应解释成已验证的激励监测电压。详见CALIBRATION.md。
 
+## 停止采集与待确认操作
+
+在 CAPTURE ONLY 页旋转编码器选中 STOP，再按下编码器；没有独立停止按钮，也无需第二次确认。START 尚在等待回执时，STOP 先记录为 `STOP QUEUED`。当前无线发送结束且状态新鲜后，遥控器发送序号更大的 STOP；不等待 START 回执，也不重放 START。即使 START 回执迟到、丢失，或 STOP 比旧 START 先到，采集端也按命令序号拒绝后到的旧 START。
+
+`WAIT STOP CONFIRM` 表示正在等待停止完成。采集端先禁止新样本入队，然后排空缓存、写结束记录、同步并关闭 TF 文件；只有匹配 STOP 的完成回执才显示 `STATE CONFIRMED`。配合新鲜的 `ACTUAL IDLE` 确认收尾后，再进行下一次 START。仅收到“已接受”或 IDLE 状态广播，都不能结束待确认的 STOP。
+
+重复按 STOP 不产生新命令、不重置重试次数，也不延长本轮时限。沿用每轮最多4次、500ms ACK 等待加抖动和120s总时限；排队STOP从提出意图起计算总时限。状态过期时可保留待确认 START 的停止意图，但恢复新鲜状态前不发送 STOP。`LINK LOST / STOP ?`、`STOP UNCONFIRMED` 或 `STOP FAILED / CHECK` 都不代表已停止；不允许重新 START。链路恢复后显式再按 STOP，会按原 STOP 身份重试；或通过 STATUS→CONNECT 显式重连。重连成功取消本地旧意图，采集端仍须按既有规则先停止收尾才能建立新会话。没有自动重连或自动重新 START。
+
+其他命令忙碌显示 `BUSY / WAIT COMMAND`，链路无效显示 `LINK LOST / CONNECT`，状态不允许显示 `STATE UNAVAILABLE`，序号用尽显示 `RECONNECT REQUIRED`；`NOT IMPLEMENTED` 保留给真正未实现的静态页面。普通无线信号中断或遥控器关机不会自动停止采集，不能代替 STOP。此次应同时升级双板 ReferenceApp，硬件与引脚配置不变。验证说明见 [STOP_ORDER_REVIEW](STOP_ORDER_REVIEW.md)。
+
 ## 调度与故障
 
 F411 DRDY与SPI1 DMA IRQ同抢占级0，互不嵌套；ISR只搬12字节帧/时间戳/队列，不做CRC、FatFs或打印。TIM5溢出扩展的读取/更新短临界区保证一致。主循环是同一个串行控制/卷owner：logger服务、calibration步骤、radio/server步骤、FatFs worker。SD每个512B扇区等待，以及射频BUSY/reset等待，会调用有重入保护的fast_service服务logger和电压/UART，再WFI让中断推进；不递归调用FatFs、校准存储或无线状态机。实际SDIO命令和卡最坏延迟仍需测量；40KiB队列/双缓冲不是任意慢卡的保证。
@@ -98,7 +108,7 @@ python -B Models/check_reference.py
 
 构建脚本直接读取实际EIDE清单、运行已安装unify_builder，临时对象自动删除；`--artifacts`仅保留dist/Acquisition和dist/Controller各自稀疏HEX/ELF。构建会检查无未定义符号、实际main/MSP/IRQ为强定义、所有加载区不覆盖NV；日志带本地源码SHA256。SDK清单为official_header_manifest.json，严格校验同一份官方输入。
 
-离线通过：完整45组/54,109个C断言与Python日志导出检查；含真实未修改FatFs在合成卡上持续2kHz模型与sector-wait协作服务3000条记录及收尾。无线owner 6组/313断言。参考参数/配对/Flash模型5组，含128次重启计数、256个写入中断点和97个整理中断点。详见firmware_host_validation.log、link_runtime_validation.log、reference_host_validation.log、reference_arm_validation.log。上述都不是硬件断电、射频链路或持续上板测试。
+离线通过：完整50组/54,398个C断言与Python日志导出检查；含真实未修改FatFs在合成卡上持续2kHz模型与sector-wait协作服务3000条记录及收尾。无线owner 7组/383断言。参考参数/配对/Flash模型5组，含128次重启计数、256个写入中断点和97个整理中断点。详见firmware_host_validation.log、link_runtime_validation.log、reference_host_validation.log、reference_arm_validation.log。上述都不是硬件断电、射频链路或持续上板测试。
 
 用户以后上板的最小核对项：实际接线/电平与型号；CLKIN/DRDY/SPI/DMA及TIM5时间戳；TF写入/STOP/拔卡与掉电恢复；双板配对/重启/丢包/重连期间不自动START；OLED方向/编码器格数/VDDA与四灯；真实载荷标定与不同卡的最坏写延迟。改变引脚/时钟/ADC增益/电压量程时先修改参考源码和绑定，再重新构建。尚无固件或操作系统级升级器。
 

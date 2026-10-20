@@ -128,6 +128,13 @@ typedef enum
     ST2_LINK_COMMIT,
     ST2_LINK_UP
 } st2_link_state;
+typedef enum
+{
+    ST2_STOP_NONE,
+    ST2_STOP_QUEUED,
+    ST2_STOP_ACTIVE,
+    ST2_STOP_UNCONFIRMED
+} st2_stop_state;
 typedef struct
 {
     st2_nv_port nv;
@@ -145,12 +152,18 @@ typedef struct
     unsigned attempts;
     bool have_status, pending, waiting_tx_done, have_sent;
     st_transaction_state transaction;
+    st2_stop_state stop;
+    uint32_t stop_requested_ms;
 } st2_client;
 void st2_client_init(st2_client *, st2_nv_port, st2_timing, const uint8_t uid[12],
                      const uint8_t peer[12]);
 bool st2_client_connect(st2_client *, uint32_t now_ms);
 bool st2_client_receive(st2_client *, const uint8_t *, size_t, uint32_t now_ms);
 bool st2_client_fresh(const st2_client *, uint32_t now_ms);
+/* STOP during pending START queues intent without changing the in-flight ID.
+ * tx_due orders a higher-ID STOP after TX completion and fresh telemetry.
+ * Repeated STOP is idempotent; an unconfirmed STOP needs explicit retry/connect.
+ * Neither status nor ACCEPTED confirms file closure. */
 bool st2_client_command(st2_client *, uint8_t type, uint32_t now_ms);
 /* NULL payload queries; commands carry action/unit/u64 milli-units/u32 gravity. */
 bool st2_client_cal_command(st2_client *, const uint8_t payload[14], uint32_t now_ms);

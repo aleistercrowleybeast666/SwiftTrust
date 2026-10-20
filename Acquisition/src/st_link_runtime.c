@@ -67,7 +67,8 @@ void st_link_client_step(st_link_runtime *l, st2_client *c, uint32_t now, uint32
         bool live = c->link != ST2_LINK_DOWN && (c->link != ST2_LINK_UP || c->pending);
         if (!live || size != l->length || memcmp(current, l->packet, size))
         {
-            (void)st_radio_cancel_queued(r, l->packet, l->length);
+            if (st_radio_cancel_queued(r, l->packet, l->length))
+                c->waiting_tx_done = false; /* Canceled unsent copy has no future TX_DONE. */
             l->awaiting_tx = false;
             l->length = 0;
         }
@@ -91,6 +92,8 @@ void st_link_client_step(st_link_runtime *l, st2_client *c, uint32_t now, uint32
             c->transaction = ST_TX_TIMEOUT;
         c->pending = false;
         c->waiting_tx_done = false;
+        if (c->stop != ST2_STOP_NONE)
+            c->stop = ST2_STOP_UNCONFIRMED;
         return;
     }
     uint8_t rx[49];

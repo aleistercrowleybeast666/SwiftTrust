@@ -375,8 +375,90 @@ static void duplex(void)
     G("runtime duplex official radio-state-machine model / durable-callback handshake / actual "
       "epoch mapping / four-fragment cal result / no automatic START");
 }
+static void stop_ordering(void)
+{
+    st_radio r;
+    bus b;
+    st_link_runtime l;
+    st2_client c;
+    nv store;
+    model_radio(&r, &b);
+    C(st_link_runtime_init(&l, &r));
+    client_up(&c, &store);
+    C(st2_client_command(&c, ST2_START, 0));
+    st_link_client_step(&l, &c, 0, 0);
+    C(r.tx_pending && c.waiting_tx_done);
+    C(st2_client_command(&c, ST2_STOP, 1));
+    st_link_client_step(&l, &c, 1, 0);
+    C(r.tx_active && b.tx[0] == ST2_START && c.stop == ST2_STOP_QUEUED);
+    C(c.request.type == ST2_START && c.request.id == 1);
+    signal(&r, &b, SX128X_IRQ_TX_DONE);
+    st_link_client_step(&l, &c, 2, 0);
+    C(r.tx_pending && r.tx[0] == ST2_STOP && c.request.id == 2);
+    C(c.stop == ST2_STOP_ACTIVE && c.waiting_tx_done && c.attempts == 1);
+    st2_packet late = {.type = ST2_ACK,
+                       .epoch = 1,
+                       .id = 1,
+                       .flags = (uint8_t)(ST2_COMPLETED | (ST_CAPTURING << 3))};
+    r.rx_length = (uint8_t)st2_encode(&late, r.rx);
+    r.rx_ready = true;
+    st_link_client_step(&l, &c, 3, 0);
+    C(r.tx_active && b.writes == 2 && b.tx[0] == ST2_STOP && c.pending);
+    C(c.transaction == ST_TX_WAIT_ACK && c.stop == ST2_STOP_ACTIVE);
+    signal(&r, &b, SX128X_IRQ_TIMEOUT);
+    st_link_client_step(&l, &c, 4, 0);
+    st_link_client_step(&l, &c, 2504, 0);
+    C(r.tx_pending && r.tx[0] == ST2_STOP && st_get16(r.tx + 5) == 2);
+    C(c.attempts == 2 && c.stop == ST2_STOP_ACTIVE);
+    r.failed = true;
+    st_link_client_step(&l, &c, 2505, 0);
+    C(!c.pending && c.stop == ST2_STOP_UNCONFIRMED && c.link == ST2_LINK_DOWN);
+    model_radio(&r, &b);
+    C(st_link_runtime_init(&l, &r));
+    st_link_client_step(&l, &c, 2506, 0);
+    C(!r.tx_pending && b.writes == 0 && c.stop == ST2_STOP_UNCONFIRMED);
+    /* STOP before START has even reached the RF owner: transmit only its fence. */
+    client_up(&c, &store);
+    C(st2_client_command(&c, ST2_START, 0));
+    C(st2_client_command(&c, ST2_STOP, 0));
+    st_link_client_step(&l, &c, 0, 0);
+    st_link_client_step(&l, &c, 1, 0);
+    C(b.writes == 1 && b.tx[0] == ST2_STOP && st_get16(b.tx + 5) == 2);
+    /* Fault while the original START is still queued also retains uncertainty. */
+    model_radio(&r, &b);
+    C(st_link_runtime_init(&l, &r));
+    client_up(&c, &store);
+    C(st2_client_command(&c, ST2_START, 0));
+    st_link_client_step(&l, &c, 0, 0);
+    C(st2_client_command(&c, ST2_STOP, 1));
+    r.failed = true;
+    st_link_client_step(&l, &c, 1, 0);
+    C(c.stop == ST2_STOP_UNCONFIRMED && !c.pending);
+    /* A late terminal START ACK can arrive while a retransmission is queued
+     * behind BUSY. Canceling that unsent copy must release its TX wait token. */
+    model_radio(&r, &b);
+    C(st_link_runtime_init(&l, &r));
+    client_up(&c, &store);
+    C(st2_client_command(&c, ST2_START, 0));
+    st_link_client_step(&l, &c, 0, 0);
+    b.ready = false;
+    C(st2_client_command(&c, ST2_STOP, 1));
+    r.rx_length = (uint8_t)st2_encode(&late, r.rx);
+    r.rx_ready = true;
+    st_link_client_step(&l, &c, 1, 0);
+    C(!c.pending && c.stop == ST2_STOP_QUEUED && r.tx_pending);
+    st_link_client_step(&l, &c, 2, 0);
+    C(r.tx_pending && r.tx[0] == ST2_STOP && c.request.id == 2);
+    C(c.pending && c.stop == ST2_STOP_ACTIVE);
+    b.ready = true;
+    st_link_client_step(&l, &c, 3, 0);
+    C(b.writes == 1 && b.tx[0] == ST2_STOP);
+    G("runtime queued/on-air START then newer STOP / TX_DONE ordering / late START ACK ignored / "
+      "STOP RF timeout retries same ID / RF fault retains uncertainty / no automatic replay");
+}
 int main(void)
 {
+    stop_ordering();
     client_completion();
     supersession();
     deadlines_and_fault();
