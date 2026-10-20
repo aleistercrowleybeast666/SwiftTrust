@@ -22,9 +22,9 @@
 
 ## 最新证据与复现
 
-- Host：`python -B Models/run_host_tests.py`，**43组/40,371次C断言**，附Python导出边界；报告`Models/firmware_host_validation.log`含源码SHA256。`HOST_CC`指定Host GCC或将gcc加入PATH；`SDK_ROOT`还须提供真实FatFs R0.12c头/源码。
-- ARM：`python -B Models/check_eide_link.py`，真实EIDE native builder读取两份实际工程源清单；**F41146个C文件＋1个启动汇编、G07141个C文件＋1个启动汇编，均成功链接且无未解析符号**。报告`Models/eide_link_validation.log`，时间2026-10-20T04:59 UTC。
-- 本轮链接Flash/RAM：F411 **41,800/52,688 B**；G071 **37,564/7,224 B**。RAM含代表性静态上下文及链接脚本堆栈预留，未包含尚未接入的整板任务/运行栈，不是最终RAM或实时性证明。
+- 标定基线Host（e6589b0；本轮仅新增定向6组/313）：`python -B Models/run_host_tests.py`，**43组/40,371次C断言**，附Python导出边界；报告`Models/firmware_host_validation.log`含源码SHA256。`HOST_CC`指定Host GCC或将gcc加入PATH；`SDK_ROOT`还须提供真实FatFs R0.12c头/源码。
+- ARM：`python -B Models/check_eide_link.py`，真实EIDE native builder读取两份实际工程源清单；**F41147个C文件＋1个启动汇编、G07142个C文件＋1个启动汇编，均成功链接且无未解析符号**。报告`Models/eide_link_validation.log`，时间2026-10-20T05:21 UTC。
+- 本轮链接Flash/RAM：F411 **42,604/52,744 B**；G071 **38,616/7,288 B**。RAM含代表性静态上下文及链接脚本堆栈预留，未包含尚未接入的整板任务/运行栈，不是最终RAM或实时性证明。
 - 引脚/资源：`python -B Models/validate_candidates.py`，**22项通过**，需本机CubeMX数据库。候选IOC曾由CubeMX实际保存核对，无代码生成或依赖整包下载。
 - 两端`.eide/eide.yml`都有独立name/uid/output；打开`SwiftThrust.code-workspace`分别选目标构建。Custom烧录仅拒绝执行；不得将LINK_CHECK当成整板程序烧录。
 - SDK为外部共享缓存，清单155文件/12,810,494 B，哈希本轮全数核对；SDK、工具链和产物不提交仓库。脚本临时构建目录自动清理，未在项目内留构建副本。
@@ -72,3 +72,6 @@ UNDERLINE只读核实：TR_F是无表头两列`时间,原始值`，默认秒，�
 块设备512B对齐bounce属于已有日志数据的副本，日志40KiB/1280条独有记录预算不变；标定另有2048B样本队列与1024B参数工作帧，已计入代表性ARM RAM对象。新增非点火标定TYPE；原有包及STLOG001布局不变，无点火执行。
 
 整板编译可行性与确切缺口见[BOARD_BUILD_REVIEW](Models/BOARD_BUILD_REVIEW.md)。校准TF记录已实现；链路epoch/counter的物理NV后端仍未选定，两者不可混用。
+
+
+无线应用接线已收口到`st_link_runtime`；新增定向Host6组/313断言及当前双板链接通过，原43组报告对应e6589b0基线，未重跑。已可用范围、调用顺序及仅四组外部输入见[BOARD_DECISIONS](Models/BOARD_DECISIONS.md)，本轮完成后停止扩展。

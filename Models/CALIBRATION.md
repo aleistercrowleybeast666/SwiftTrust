@@ -1,6 +1,6 @@
 # 采集标定核心与单编码器菜单
 
-本阶段已接入只读ADC DMA样本队列、真实FatFs双文件参数后端和配对会话内的非点火短包交互。Host **43组/40,371条C断言**通过，含端到端合成卡故障注入；双板真实SDK/EIDE组件链接通过并检查了入口保留。**未连接真实ADC、TF卡、射频或板卡；当前入口仍为LINK_CHECK，完整板级初始化尚未完成。**点火页仍为静态说明和返回。
+本阶段已接入只读ADC DMA样本队列、真实FatFs双文件参数后端和配对会话内的非点火短包交互。标定基线e6589b0的Host **43组/40,371条C断言**通过，含端到端合成卡故障注入；双板真实SDK/EIDE组件链接通过并检查了入口保留。**未连接真实ADC、TF卡、射频或板卡；当前入口仍为LINK_CHECK，完整板级初始化尚未完成。**点火页仍为静态说明和返回。
 
 ## 一个编码器即可操作
 
@@ -40,7 +40,7 @@
 - `st_cal_input`固定64项/2048B，单IRQ生产者、单前台消费者，一步最多处理64项；溢出或源错误拒绝候选。开始窗口前仍在途的旧帧按原始边沿时间丢弃。只在ZERO/LOAD采样窗口使能；2kSPS时容量32ms，前台服务需留出充分余量，实际调度/IRQ延迟尚未板测。
 - `ports/st_cal_system.c:st_cal_system_init`在卷已mount、logger/worker初始化后，读取参数、绑定服务/端点并挂到`st2_server`。调用方仍须提供**实际核实的**binding、policy及与DRDY相同的扩展64bit微秒时钟；不提供时保持未配置，绝不代填硬件参数。
 - ADC的EXTI、SPI DMA完成/错误路由及配置阶段/采样阶段SPI所有权仍需完整板级入口接线。启用EXTI前调用`st_f4_capture_bind_calibration(&capture, &cal.endpoint.input)`；前台周期调用`st_cal_endpoint_step(&cal.endpoint)`。此绑定不初始化硬件。
-- 控制器调用`st_cal_remote_init`、`st_cal_remote_port`绑定既有`st_cal_ui`，仅当标定菜单可见时调用`st_cal_remote_step`。原有RF owner负责`tx_due/accepted/tx_done/receive`。菜单背景查询复用已确认缓存，不阻塞数字位编辑；用户动作可取代只读查询。未确认的新命令不能由旧的SAVED缓存完成。
+- 控制器调用`st_cal_remote_init`、`st_cal_remote_port`绑定既有`st_cal_ui`，仅当标定菜单可见时调用`st_cal_remote_step`。`st_link_client_step`负责既有`tx_due/accepted/tx_done/receive`与driver tick；板级owner仍须初始化实际硬件。菜单背景查询复用已确认缓存，不阻塞数字位编辑；用户动作可取代只读查询。未确认的新命令不能由旧的SAVED缓存完成。
 - 服务、配置、logger命令和FatFs卷由一个串行前台owner调度。SAVE可在这个owner执行有界块IO的同步文件调用；**不在DRDY/RF ISR中写文件**，不能让两个任务并发操作非重入FatFs。保存时无活动采样窗口，真实文件系统总体时延仍待板测。RF IRQ只置标志；回复输出槽被占时必须保留已有包并依次重试，不能覆盖未发出的片段。
 
 ## TF参数文件与恢复
@@ -76,3 +76,6 @@ SAVE在途显示WAIT RESPONSE；丢回复超时显示RESULT UNKNOWN和CHECK LINK
 Host涵盖ADC队列溢出/错误/序号回绕/旧边沿、冻结四片乱序与重复、冲突与CRC/截断、SAVE仅执行一次、START锁/配置失效、菜单查询响应性、失联结果核对；真实FatFs/diskio合成FAT16在每个扇区提交处注入失败及0/17/511B部分写，核对旧活动文件字节不变，区分提交但报错的不确定情况。另有短包→DMA队列→服务→真实FatFs→活动参数→日志头元数据→重挂载恢复的完整Host路径。
 
 具体数量、源文件哈希和双板链接见`firmware_host_validation.log`、`eide_link_validation.log`；板级可行性见`BOARD_BUILD_REVIEW.md`。真实ADC/TF/RF、供电、调度与整板运行未测，不能据此宣称板测通过。校准窗口仍只持久化统计与系数，没有保存每个窗口的全部原始样本；历史实验STLOG的原始数据保留不变。静态砝码校准不证明动态带宽。
+
+
+本文43组/40,371断言对应e6589b0标定基线；后续无线owner接线单独定向验证6组/313断言。当前依赖清单见`BOARD_DECISIONS.md`。

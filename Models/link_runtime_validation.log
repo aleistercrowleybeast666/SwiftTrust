@@ -1,0 +1,21 @@
+2026-10-20T05:19:55.362099+00:00
+Focused RF/protocol runtime regression on software event model only. No radio, GPIO, COM, ADC or card accessed.
+Prior full43-group calibration baseline is not rerun or relabelled as this test.
+PASS runtime client queues once / attempts only after RF acceptance / real TX_DONE and timeout counters anchor retry / no early ACK timer
+PASS runtime superseded queued query and old-session START canceled before driver tick / only new explicit request transmitted
+PASS runtime total deadline removes unsent command / radio failure makes link unknown / explicit rebind never reconnects or replays START
+PASS runtime exact-byte queued cancellation / bad length and mismatch refused / on-air transmission never recalled / busy-unverified bind rejected
+PASS runtime server holds frozen reply while RF busy / no snapshot overwrite / all four calibration fragments transmitted in order with bounded slots
+PASS runtime duplex official radio-state-machine model / durable-callback handshake / actual epoch mapping / four-fragment cal result / no automatic START
+PASS targeted runtime: 6 groups, 313 assertions; sizeof(runtime)=56
+Source/header SHA256:
+f030b589b888984c48f5fd99c74f75376a61d0c6384bda27900cc5930f90ce7e Acquisition/src/st_core.c
+c12df0288ba0f48bb64d671457535e8111347818837ec3725e0044a3e6e3a4a6 Acquisition/src/st_logger.c
+9121426c298d02bf7fdb11227aac8b5ce5429d03d770614f87abf8dcdf27fb9d Acquisition/src/st_link2.c
+ac4d8c02993738920e1971ed71e082135ff702766ecf27e39d61185afef5be95 Acquisition/src/st_radio.c
+3e509972c45ed4c9459e354fb3b209115c485e418b7461db6513b220ee13d15f Acquisition/src/st_link_runtime.c
+44ca4b4c3c418b53dd9fa1def02622e6292cccfeb5460eecaad970e1ec0de045 Models/test_link_runtime.c
+601b65e1b20b1f634495ab481e10d5ae9e3ca39b6b88eef46dcafdc72146a8ce Acquisition/vendor/semtech_sx128x/sx128x.c
+1034b61c3cb288e5f311a157447dc83521ed9b35c5a2d6102f4f1299bc4a33ac Acquisition/include/st_link_runtime.h
+79e191c46770c92b3ae50b37b8e0529884d45459a7a07440e0fb29d639c8efc3 Acquisition/include/st_radio.h
+96c9e2ae644034f3d7496b81bd52bf5d9e5c11502b601e116b383dd4c556e922 Acquisition/include/st_link2.h

@@ -40,6 +40,9 @@ Flash尤其需要先决定保留区、擦除粒度、与升级程序的关系、
 
 `python -B Models/run_host_tests.py`需HOST_CC、SDK_ROOT；采用真实FatFs R0.12c和本项目ffconf，不使用伪SDK头。合成4MiB FAT16只在测试进程RAM中创建：真实logger→worker→FatFs→diskio→块设备模型完成1500样本、文件尺寸、每记录CRC和END检查；测试后释放，没有创建D盘卡镜像。
 
-Host总计43组/40,371条C断言。块设备检查非对齐缓冲、超时/时间回绕、拔卡、停止tick、错误锁存与几何；NV检查身份、范围、重开及切断位置。HAL端口本身仅通过真实SDK ARM编译链接，尚无物理总线或DMA实测。F41146C＋1汇编、G07141C＋1汇编均链接，无未解析符号。无额外SDK下载，复用已有共享缓存，构建产物仅临时目录。
+标定基线e6589b0的Host总计43组/40,371条C断言。块设备检查非对齐缓冲、超时/时间回绕、拔卡、停止tick、错误锁存与几何；NV检查身份、范围、重开及切断位置。HAL端口本身仅通过真实SDK ARM编译链接，尚无物理总线或DMA实测。F41147C＋1汇编、G07142C＋1汇编均链接，无未解析符号。无额外SDK下载，复用已有共享缓存，构建产物仅临时目录。
 
 标定集成现已具备`st_cal_system_init`、`st_f4_capture_bind_calibration`、`st_cal_endpoint_step`和控制器remote/port/step明确入口；它们不代替上述板级初始化。EIDE链接额外检查DMA完成/错误路径、TF与remote入口均保留。
+
+
+本轮已增加`st_link_runtime`无线收发应用接线：忙时保留回复、真实TX_DONE/timeout重试锚、撤销未发射的失效请求。新增定向验证6组/313断言通过；既有43组标定报告为e6589b0基线，未重复运行。完整运行时序及四组最小外部输入见[BOARD_DECISIONS](BOARD_DECISIONS.md)。

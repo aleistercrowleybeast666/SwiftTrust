@@ -90,6 +90,13 @@ bool st_radio_send(st_radio *r, const uint8_t *data, size_t n)
     r->tx_pending = true;
     return true;
 }
+bool st_radio_cancel_queued(st_radio *r, const uint8_t *p, size_t n)
+{
+    if (!r || !p || !r->tx_pending || n > sizeof(r->tx) || n != r->tx_length || memcmp(r->tx, p, n))
+        return false;
+    r->tx_pending = false;
+    return true;
+}
 bool st_radio_receive(st_radio *r, uint8_t out[49], size_t *n)
 {
     if (!r->rx_ready)

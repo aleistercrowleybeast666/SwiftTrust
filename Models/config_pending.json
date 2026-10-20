@@ -233,6 +233,11 @@
     "calibration": "adc_dma_readonly_queue_fatfs_dual_file_compact_rpc_host_end_to_end_arm_roots_verified_board_runtime_unbound",
     "calibration_queue_bytes": 2048,
     "calibration_parameter_files_bytes": 2048,
-    "calibration_hardware_tested": false
+    "calibration_hardware_tested": false,
+    "full_host_suite_baseline_commit": "e6589b042d47c73a194eac2f48576cbe5d6be40a",
+    "runtime_targeted_groups": 6,
+    "runtime_targeted_assertions": 313,
+    "radio_application_glue": "bounded_server_client_runtime_host_verified_arm_linked_board_init_unbound",
+    "hardware_decision_list": "Models/BOARD_DECISIONS.md"
   }
 }

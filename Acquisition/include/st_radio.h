@@ -40,4 +40,7 @@ void st_radio_tick(st_radio *, uint32_t now_ms);
 /* One queued packet. STATUS can replace queued STATUS; commands/ACK are never overwritten. */
 bool st_radio_send(st_radio *, const uint8_t *, size_t);
 bool st_radio_receive(st_radio *, uint8_t out[49], size_t *n);
+/* Exclusive radio owner only. Cancel exactly matching queued bytes, never an
+ * on-air transmission. Used before tick when protocol epoch/request changes. */
+bool st_radio_cancel_queued(st_radio *, const uint8_t *, size_t);
 #endif

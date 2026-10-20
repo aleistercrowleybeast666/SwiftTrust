@@ -12,3 +12,6 @@ EIDE入口只有CRC自检/WFI，无外设初始化；真实diskio/HAL端口未�
 
 
 最新标定集成：43组/40,371条C断言。真实FatFs合成卡逐扇区失败/部分写、启动恢复/配置拒绝、旧文件字节保持；短包→ADC队列→真实文件保存→活动参数→日志元数据→重挂载Host链通过。四片乱序/重复/CRC、未知结果核对、后台查询不冻结编辑均覆盖。实际ARM保留符号已检查，详见BOARD_BUILD_REVIEW.md。未板测，无实际SD掉电/射频/ADC时序保证。
+
+
+无线owner收口：`python -B Models/check_link_runtime.py`仅测新增接线，6组/313断言，源码哈希见link_runtime_validation.log。旧43组完整Host报告保留e6589b0基线语义，不冒称本轮重复执行；当前ARM链接另更新并保留runtime入口。未板测。

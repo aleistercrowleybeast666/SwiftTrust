@@ -11,3 +11,6 @@
 新增真实ADC/RF/SDIO HAL适配、FatFs diskio及双槽链路记录核心的接入依赖和离线证据见[板级接入](Models/BOARD_INTEGRATION.md)。当前仍缺整板初始化/任务与实际NV后端，未进行硬件验证。
 
 已知载荷标定已接入ADC DMA只读队列、FatFs双文件参数后端和有界短包交互；单编码器支持预设质量、自定义g/kg/N、选位/改数及反显。Host端到端和故障注入通过，真实板级初始化/板测尚未完成，见[标定说明](Models/CALIBRATION.md)及[整板编译审查](Models/BOARD_BUILD_REVIEW.md)。
+
+
+现有非点火无线owner由`st_link_server_step/st_link_client_step`接通，包含有界回复保留、TX_DONE/超时重试及未发射失效请求撤销。当前可用范围与最小外部输入见[收口清单](Models/BOARD_DECISIONS.md)；本轮到此停止，不自行决定未冻结硬件参数。
