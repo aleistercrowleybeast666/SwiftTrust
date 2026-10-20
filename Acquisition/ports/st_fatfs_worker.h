@@ -13,8 +13,9 @@ typedef struct
     bool verified, opened;
     FRESULT last_result;
 } st_fatfs_worker;
-/* A mounted, exclusively owned volume is required. Must run the blocking worker
- * in a lower-priority task independent of ADC completion and ring servicing. */
+/* A mounted, exclusively owned volume is required. Run the blocking worker
+ * in a lower-priority task, or a single owner whose block-device wait yields
+ * service the logger without reentering this worker/FatFs (ReferenceApp). */
 void st_fatfs_init(st_fatfs_worker *, bool mounted_and_verified);
 st_file_port st_fatfs_port(st_fatfs_worker *);
 void st_fatfs_worker_step(st_fatfs_worker *);

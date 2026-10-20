@@ -105,6 +105,10 @@ static void details_ui(void){nv cn={0},sn={0};st_logger l;st_logger_init(&l,(st_
  st_ui_model model;u.page=ST_UI_STATUS;st_ui2_render(&u,&c,(st_voltage_view){0},100,&model);
  C(strstr(model.rows[4],"READY/CLOSED")&&strstr(model.rows[5],"FRESH")&&strstr(model.rows[6],"BACK"));
  c.pending=false;
+ u.page=ST_UI_STATUS;u.selection=0;
+ C(!st_ui2_handle(&u,ST_UI_NEXT,&c,100)&&u.selection==1);
+ st_ui2_render(&u,&c,(st_voltage_view){0},100,&model);C(strstr(model.rows[7],"> CONNECT"));
+ C(!st_ui2_handle(&u,ST_UI_PRESS,&c,100)&&c.link==ST2_LINK_HELLO&&c.request.type==ST2_HELLO&&!c.pending);
  for(unsigned item=0;item<4;item++){
   st_ui_init(&u);u.selection=item;C(!st_ui2_handle(&u,ST_UI_PRESS,&c,100));
   st_ui_page expected[]={ST_UI_STATUS,ST_UI_IGNITION_ONLY,ST_UI_CAPTURE,ST_UI_COMBINED};C(u.page==expected[item]);

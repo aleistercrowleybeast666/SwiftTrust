@@ -1,3 +1,15 @@
+# 2026-10-20 双板参考应用交接
+
+当前工作已经从组件链接推进为两板ReferenceApp实际应用：两个 `board/reference_main.c` 是可执行入口，包含初始化、调度与IRQ，不再以CRC/WFI当完成。说明与接线以 [Models/REFERENCE_APPLICATION.md](Models/REFERENCE_APPLICATION.md) 为准。普通提交/推送后由交接回复给出实际SHA。
+
+完整离线45组/54,109断言、无线6组/313断言和新增参考Flash模型均通过；有两板ARM构建日志及本地dist稀疏HEX/ELF。没有连接、测试或烧录硬件。后续需要真实板来验证电气、时钟、卡延迟、标定与RF性能；自动烧录入口保持拒绝。
+
+选择ReferenceApp，首次通过本地UART INFO读取UID后双端PAIR，遥控STATUS→CONNECT，再采集页START/STOP。未配置真实传感器则raw-only。参考使用片内Flash，升级保留F411 sector2/3、G071 page62/63；不要烧录旧LinkCheck或跨NV区域BIN。点火只有静态菜单/未配置预留引脚。
+
+以下是早期阶段的历史交接，描述的“缺少main/NV/集成”等已由本次实现替代；历史验证不等于当前硬件测试。
+
+---
+
 # SwiftThrust 当前交接
 
 2026-10-20。源码、协议、四页面和原OLED选择已同步。新增真实HAL/diskio与链路持久化记录核心，详细接入依赖见[BOARD_INTEGRATION](Models/BOARD_INTEGRATION.md)。无线包无版本字段或版本位，TYPE=0x01…0x0C；`st2_`只是代码内部名称。当前目标为组件LINK_CHECK，**不是可运行整板固件**。所有硬件均未测试，未访问串口/SWD或机械臂设备。

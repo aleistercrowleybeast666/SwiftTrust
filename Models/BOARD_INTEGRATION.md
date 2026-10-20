@@ -1,3 +1,5 @@
+> 2026-10-20 更新：下文是 b539928d 之前的组件阶段记录，已由实际双板 ReferenceApp 替代；当前入口、参考参数、NV与接线以 [REFERENCE_APPLICATION.md](REFERENCE_APPLICATION.md) 为准。未上板验证仍然成立。
+
 # 板级接入：当前依赖和可编译范围
 
 本阶段完成真实HAL传输适配和可移植持久化记录核心，移除`board/link_check_diskio.c`占位。两端EIDE仍为LINK_CHECK：入口CRC自检/WFI，不初始化外设；没有可直接烧录运行的整板目标。所有verified条件必须来自实际配置核对，不得为了通过bind而硬填true。

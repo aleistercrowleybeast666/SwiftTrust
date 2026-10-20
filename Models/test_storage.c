@@ -30,7 +30,7 @@ typedef struct
     uint8_t *disk, *pending;
     uint32_t sectors, sector, now;
     unsigned waits, yields, aborts;
-    unsigned operations, fail_at, tear_bytes;
+    unsigned operations, fail_at, tear_bytes, delay;
     bool present, ready, active, write, error, freeze, never_done, remove_on_yield;
 } block_bus;
 static bool present(void *ctx)
@@ -57,7 +57,7 @@ static st_async_result submit(void *ctx, bool write, uint8_t *data, uint32_t sec
     b->write = write;
     b->pending = data;
     b->sector = sector;
-    b->waits = 1;
+    b->waits = b->delay ? b->delay : 1;
     return ST_IO_DONE;
 }
 static st_async_result poll(void *ctx)
@@ -85,6 +85,8 @@ static uint32_t now_ms(void *ctx)
 {
     return ((block_bus *)ctx)->now;
 }
+static st_logger *cooperative_logger;
+static uint32_t cooperative_sequence, cooperative_target;
 static void yield_task(void *ctx)
 {
     block_bus *b = ctx;
@@ -93,6 +95,23 @@ static void yield_task(void *ctx)
         b->now++;
     if (b->remove_on_yield)
         b->present = false;
+    if (cooperative_logger)
+    {
+        for (unsigned i = 0; i < 2 && cooperative_sequence < cooperative_target; i++)
+        {
+            if (!atomic_load(&cooperative_logger->capture_enabled))
+                break;
+            st_capture capture = {.sequence = ++cooperative_sequence,
+                                  .time_us = (uint64_t)b->now * 1000u - 500u + (uint64_t)i * 500u};
+            capture.bytes[0] = 1;
+            capture.bytes[1] = 3;
+            uint16_t crc = st_crc16(capture.bytes, 9);
+            capture.bytes[9] = (uint8_t)(crc >> 8);
+            capture.bytes[10] = (uint8_t)crc;
+            C(st_logger_offer_isr(cooperative_logger, &capture));
+        }
+        st_logger_service(cooperative_logger, (uint64_t)b->now * 1000u);
+    }
 }
 static void bind_block(st_block_device *d, block_bus *b)
 {
@@ -270,6 +289,72 @@ static void fatfs_logger_test(void)
     G("unmodified FatFs R0.12c + real worker + logger + diskio on synthetic RAM FAT16 / 1500 "
       "records / file size / per-record CRC / END / durable close (no physical SD)");
 }
+static void cooperative_storage_test(void)
+{
+    uint8_t *disk = calloc(8192, 512);
+    C(disk);
+    make_fat16(disk);
+    block_bus bus = {.disk = disk, .sectors = 8192, .present = true, .ready = true, .delay = 2};
+    st_block_device device;
+    bind_block(&device, &bus);
+    device.timeout_ms = 250;
+    st_diskio_bind(&device);
+    FATFS fs;
+    C(f_mount(&fs, "", 1) == FR_OK);
+    st_fatfs_worker worker;
+    st_fatfs_init(&worker, true);
+    st_logger *l = malloc(sizeof *l);
+    C(l);
+    st_log_config config = {.adc_clock_hz = 8192000,
+                            .osr = 2048,
+                            .rate_millihz = 2000000,
+                            .boot_epoch = 1,
+                            .gain_ch0 = 1,
+                            .gain_ch1 = 1,
+                            .clock_verified = true,
+                            .simulated = true};
+    st_logger_init(l, config, st_fatfs_port(&worker));
+    C(st_logger_start(l, (uint64_t)bus.now * 1000));
+    cooperative_logger = l;
+    cooperative_sequence = 0;
+    cooperative_target = 3000;
+    for (unsigned i = 0; i < 10000; i++)
+    {
+        yield_task(&bus); /* Timer/ADC progression outside or inside a blocking sector. */
+        if (cooperative_sequence >= cooperative_target)
+            C(st_logger_stop(l));
+        st_logger_service(l, (uint64_t)bus.now * 1000);
+        st_fatfs_worker_step(&worker);
+        if (cooperative_sequence == cooperative_target && l->state == ST_IDLE)
+            break;
+    }
+    cooperative_logger = NULL;
+    C(cooperative_sequence == 3000 && l->state == ST_IDLE);
+    C(!atomic_load(&l->ring.dropped) && !st_logger_error_count(l) && l->have_durable);
+    FIL file;
+    C(f_open(&file, "S0000000.BIN", FA_READ) == FR_OK);
+    C(f_size(&file) == 512u + 3001u * 32u);
+    C(f_lseek(&file, 512) == FR_OK);
+    uint8_t record[32];
+    UINT got;
+    for (unsigned i = 1; i <= 3001; i++)
+    {
+        C(f_read(&file, record, 32, &got) == FR_OK && got == 32);
+        C(st_get32(record + 28) == st_crc32(record, 28));
+        if (i <= 3000)
+            C(st_get32(record) == i && !st_get16(record + 22));
+        else
+            C(st_get16(record + 22) == ST_REC_END);
+    }
+    C(f_close(&file) == FR_OK);
+    C(f_mount(NULL, "", 0) == FR_OK);
+    st_diskio_bind(NULL);
+    free(l);
+    free(disk);
+    G("cooperative real FatFs/worker/diskio: 2kHz model continues in sector waits, logger service "
+      "never reenters FatFs, 3000 records without drop, clean STOP");
+}
+
 typedef struct
 {
     uint8_t slots[2][96];
@@ -646,6 +731,7 @@ unsigned st_test_storage(unsigned *out)
     block_tests();
     diskio_tests();
     fatfs_logger_test();
+    cooperative_storage_test();
     cal_fatfs_test();
     cal_end_to_end();
     nv_tests();

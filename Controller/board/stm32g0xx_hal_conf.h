@@ -1,4 +1,4 @@
-/* Build configuration only; electrical/ADC profiles remain unbound. */
+/* Shared HAL module selection for LinkCheck and explicit ReferenceApp targets. */
 #ifndef ST_HAL_CONF_H
 #define ST_HAL_CONF_H
 #define HAL_MODULE_ENABLED

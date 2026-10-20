@@ -1,5 +1,5 @@
 {
-  "revision": "v0.2-non-ignition-core-unbound-ports",
+  "revision": "v0.3-executable-reference-application-hardware-unverified",
   "board_bound": false,
   "acquisition": {
     "part": "STM32F411RCT6",
@@ -106,7 +106,16 @@
   },
   "radio": {
     "module": "E28-2G4M12SX",
-    "active_profile": null,
+    "active_profile": {
+      "scope": "ReferenceApp_only_not_hardware_verified",
+      "frequency_hz": 2473000000,
+      "power_dbm": 12,
+      "sf": 10,
+      "bandwidth_hz": 812500,
+      "coding_rate": "4/5",
+      "sync_word": 18,
+      "preamble_symbols": 16
+    },
     "old_reference": {
       "frequency_hz": 2473000000,
       "power_dbm": 12,
@@ -125,7 +134,7 @@
     "distance_guarantee": null
   },
   "modes": {
-    "acquisition_only": "portable_state_machine_host_tested_board_integration_pending",
+    "acquisition_only": "reference_application_ARM_build_and_offline_regression_passed_no_hardware_test",
     "ignition": "outside_delivery_scope"
   },
   "board": {
@@ -239,5 +248,38 @@
     "runtime_targeted_assertions": 313,
     "radio_application_glue": "bounded_server_client_runtime_host_verified_arm_linked_board_init_unbound",
     "hardware_decision_list": "Models/BOARD_DECISIONS.md"
+  },
+  "reference_application": {
+    "document": "REFERENCE_APPLICATION.md",
+    "target": "ReferenceApp",
+    "hardware_tested": false,
+    "physical_board_bound": false,
+    "parameters_are_replaceable_reference_assumptions": true,
+    "adc": {
+      "clock_source": "external_oscillator",
+      "clock_hz": 8192000,
+      "power_mode": 2,
+      "osr": 2048,
+      "pga_ch0": 1,
+      "pga_ch1": 1
+    },
+    "clocks": {
+      "F411_SYSCLK_HZ": 84000000,
+      "F411_SDIO_HZ": 48000000,
+      "G071_SYSCLK_HZ": 16000000
+    },
+    "voltage": "MCU_VDDA_from_factory_VREFINT_not_battery_SOC",
+    "nv": "internal_flash_two_region_journal_idle_only_preserve_on_upgrade",
+    "sensor": "SENSOR.CFG_explicit_rating_else_raw_only",
+    "ignition_reserved_only": {
+      "F411": [
+        "PA11",
+        "PA12"
+      ],
+      "G071": [
+        "PA11",
+        "PA12"
+      ]
+    }
   }
 }

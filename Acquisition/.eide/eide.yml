@@ -1,6 +1,6 @@
 {
   "version": "4.1",
-  "name": "SwiftThrust_Acquisition_LINK_CHECK",
+  "name": "SwiftThrust_Acquisition",
   "type": "ARM",
   "deviceName": "STM32F411RC",
   "packDir": null,
@@ -151,6 +151,24 @@
       },
       {
         "path": "src/st_link_runtime.c"
+      },
+      {
+        "path": "board/reference_main.c"
+      },
+      {
+        "path": "src/st_reference.c"
+      },
+      {
+        "path": "src/st_pairing.c"
+      },
+      {
+        "path": "src/st_journal.c"
+      },
+      {
+        "path": "src/st_console.c"
+      },
+      {
+        "path": "ports/st_flash_journal.c"
       }
     ],
     "folders": []
@@ -244,6 +262,92 @@
       "uploadConfigMap": {
         "Custom": {
           "commandLine": "python ../Models/refuse_linkcheck_flash.py"
+        }
+      }
+    },
+    "ReferenceApp": {
+      "cppPreprocessAttrs": {
+        "defineList": [
+          "USE_HAL_DRIVER",
+          "STM32F411xE",
+          "ST_REFERENCE_APPLICATION=1"
+        ],
+        "incList": [
+          "board",
+          "include",
+          "ports",
+          "../Acquisition/include",
+          "../Acquisition/ports",
+          "../Acquisition/ports/fatfs_config",
+          "../Controller/include",
+          "../Acquisition/vendor/semtech_sx128x",
+          "${SDK_ROOT}/f4-sdk/Inc",
+          "${SDK_ROOT}/f4-device-full/Include",
+          "${SDK_ROOT}/cmsis-core/Include",
+          "${SDK_ROOT}/fatfs/src"
+        ],
+        "libList": []
+      },
+      "excludeList": [],
+      "toolchain": "GCC",
+      "settings": {
+        "debugger": "cortex-debug"
+      },
+      "toolchainConfigMap": {
+        "GCC": {
+          "cpuType": "Cortex-M4",
+          "floatingPointHardware": "none",
+          "archExtensions": "",
+          "useCustomScatterFile": true,
+          "scatterFilePath": "board/reference_memory.ld",
+          "storageLayout": {
+            "RAM": [],
+            "ROM": []
+          },
+          "options": {
+            "version": 5,
+            "beforeBuildTasks": [],
+            "afterBuildTasks": [],
+            "global": {
+              "$float-abi-type": "soft",
+              "arm-thumb-mode": "thumb",
+              "use-newlib-nano": true,
+              "not-use-syscalls": true,
+              "output-debug-info": "enable",
+              "misc-control": "",
+              "toolPrefix": "arm-none-eabi-",
+              "microcontroller-cpu": "cortex-m4",
+              "microcontroller-fpu": "cortex-m4",
+              "microcontroller-float": "cortex-m4",
+              "$arch-extensions": "",
+              "$clang-arch-extensions": "",
+              "$armlink-arch-extensions": ""
+            },
+            "c/cpp-compiler": {
+              "language-c": "c11",
+              "optimization": "level-debug",
+              "warnings": "all-warnings",
+              "one-elf-section-per-function": true,
+              "one-elf-section-per-data": true,
+              "C_FLAGS": "-Os -Wall -Wextra -Werror -Wno-error=unused-parameter"
+            },
+            "asm-compiler": {
+              "ASM_FLAGS": ""
+            },
+            "linker": {
+              "output-format": "elf",
+              "remove-unused-input-sections": true,
+              "use-float-printf": false,
+              "LIB_FLAGS": "-lc -lm -lnosys",
+              "LD_FLAGS": "-nostartfiles"
+            }
+          }
+        }
+      },
+      "uploader": "Custom",
+      "uploadConfigMap": {
+        "Custom": {
+          "commandLine": "python ../Models/refuse_reference_flash.py"
         }
       }
     }

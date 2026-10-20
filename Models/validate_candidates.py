@@ -227,7 +227,27 @@ class Regression(unittest.TestCase):
         self.assertIs(config["board_bound"], False)
         for field in ["adc_clock_source", "adc_clock_hz", "adc_power_mode", "osr", "pga_ch0", "pga_ch1", "divider_ratio_ch1", "regulator", "charger", "rtos"]:
             self.assertIsNone(config["acquisition"][field], field)
-        self.assertIsNone(config["radio"]["active_profile"])
+        profile = config["radio"]["active_profile"]
+        self.assertEqual(profile["scope"], "ReferenceApp_only_not_hardware_verified")
+        self.assertEqual((profile["frequency_hz"], profile["sf"], profile["bandwidth_hz"]),
+                         (2473000000, 10, 812500))
+        reference = config["reference_application"]
+        self.assertIs(reference["hardware_tested"], False)
+        self.assertIs(reference["physical_board_bound"], False)
+        self.assertEqual(reference["adc"]["pga_ch0"], 1)
+
+    def test_executable_reference_pinout_and_reserved_pins(self):
+        all_rows = read_csv(ROOT / "Models/reference_pins.csv")
+        for board, (_, filename, _) in PARTS.items():
+            pins = pin_db(filename)
+            rows = [dict(row) for row in all_rows if row["board"] == board]
+            if board == "Controller":
+                for row in rows:
+                    row["pin"] = {"PA11":"PA11 [PA9]", "PA12":"PA12 [PA10]"}.get(row["pin"],row["pin"])
+            validate_pins(rows, pins)
+            reserved = [row for row in rows if row["role"] == "STATIC_FUTURE_PLACEHOLDER"]
+            self.assertEqual(len(reserved), 2)
+            self.assertTrue(all(row["signal"] == "RESERVED" for row in reserved))
 
     def test_actual_cube_saved_pinout_matches_plan(self):
         for board in PARTS:

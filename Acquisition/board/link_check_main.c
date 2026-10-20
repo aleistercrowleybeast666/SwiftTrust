@@ -1,3 +1,4 @@
+#if !defined(ST_REFERENCE_APPLICATION)
 /* This target is an explicit component LINK CHECK, not operational firmware.
  * No GPIO, COM, SPI, SD or radio is initialized. Never flash to another project.
  * Full board entry/task scheduling, verified peripherals and NV backend remain pending. */
@@ -45,3 +46,5 @@ int main(void)
         __asm volatile("wfi");
     }
 }
+
+#endif

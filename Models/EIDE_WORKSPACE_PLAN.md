@@ -1,3 +1,5 @@
+> 2026-10-20 更新：下文是 b539928d 之前的组件阶段记录，已由实际双板 ReferenceApp 替代；当前入口、参考参数、NV与接线以 [REFERENCE_APPLICATION.md](REFERENCE_APPLICATION.md) 为准。未上板验证仍然成立。
+
 # 双EIDE工作区与构建
 
 一个VSCode工作区可含两个独立EIDE工程。当前已创建实际4.1配置、独立name/uid、两个MCU的启动文件引用与链接脚本；控制器复用采集器的公共源码引用，不复制源码树。各目标输出相对本工程的build/eide/LinkCheck，互不覆盖。

@@ -1,4 +1,5 @@
 #include "st_cal_endpoint.h"
+#include "st_reference.h"
 #include "st_cal_remote.h"
 #include "st_cal_ui.h"
 #include <stdio.h>
@@ -353,8 +354,126 @@ static void background_query_test(void)
     G("cal background read-only query keeps encoder responsive / explicit action supersedes poll / "
       "previous cached outcome cannot complete a new command");
 }
+
+typedef struct
+{
+    size_t completed;
+    unsigned headers, closes;
+    uint8_t header[512];
+} start_file;
+static st_async_result start_submit(void *ctx, st_file_op op, const uint8_t *p, size_t n)
+{
+    start_file *file = ctx;
+    file->completed = n;
+    if (op == ST_FILE_WRITE && n == 512 && !memcmp(p, "STLOG001", 8))
+    {
+        memcpy(file->header, p, 512);
+        file->headers++;
+    }
+    if (op == ST_FILE_CLOSE)
+        file->closes++;
+    return ST_IO_DONE;
+}
+static st_async_result start_poll(void *ctx, size_t *n)
+{
+    *n = ((start_file *)ctx)->completed;
+    return ST_IO_DONE;
+}
+static bool application_prepare(void *ctx)
+{
+    fixture *f = ctx;
+    return st_ref_prepare_start(&f->logger, st_cal_endpoint_port(&f->endpoint), f->server.epoch,
+                                true, true);
+}
+static void application_command(fixture *f, uint8_t type, uint16_t id)
+{
+    st2_packet request = {.type = type, .epoch = f->server.epoch, .id = id};
+    uint8_t in[ST2_MAX], out[ST2_MAX];
+    size_t n = st2_encode(&request, in);
+    size_t got = st2_server_receive(&f->server, in, n, (st2_measurement){0}, f->now, out);
+    st2_packet reply;
+    C(got == 10 && st2_decode(&reply, out, got));
+    if ((reply.flags & 7u) != ST2_ACCEPTED)
+        fprintf(stderr, "reference command type=%u id=%u result=%u state=%u\n", type, id,
+                reply.flags & 7u, (unsigned)f->logger.state);
+    C((reply.flags & 7u) == ST2_ACCEPTED);
+}
+static void application_advance(fixture *f, st_capture_state state)
+{
+    for (unsigned i = 0; i < 100 && f->logger.state != state; i++)
+    {
+        f->now += 1000;
+        st_logger_service(&f->logger, f->now);
+        uint8_t response[ST2_MAX];
+        (void)st2_server_poll(&f->server, (st2_measurement){0}, f->now, response);
+    }
+    C(f->logger.state == state);
+}
+static void check_saved_header(fixture *f)
+{
+    C(f->logger.header[59] & 1u);
+    C(st_get32(f->logger.header + 24) == f->server.epoch);
+    C(st_get32(f->logger.header + 28) == f->active.binding.profile_id);
+    C(st_get32(f->logger.header + 32) == f->active.revision);
+    C((int32_t)st_get32(f->logger.header + 36) == f->active.zero_raw);
+    C((int64_t)st_get64(f->logger.header + 40) == f->active.nano_newtons_per_count);
+    C(f->logger.header[58] == f->active.binding.wire_count);
+    C(st_get32(f->logger.header + 508) == st_crc32(f->logger.header, 508));
+}
+static void first_application_start(void)
+{
+    fixture *f = calloc(1, sizeof *f);
+    C(f);
+    init(f);
+    start_file file = {0};
+    f->logger.port = (st_file_port){&file, start_submit, start_poll};
+    f->logger.config.clock_verified = false;
+    f->logger.config.calibration_valid = false;
+    f->server.calibration = (st2_cal_port){.ctx = f, .prepare_start = application_prepare};
+    st_cal_profile saved = f->active;
+    C(!st_ref_prepare_start(&f->logger, st_cal_endpoint_port(&f->endpoint), 23, false, true));
+    C(!f->logger.config.clock_verified && !f->logger.config.calibration_valid);
+    application_command(f, ST2_START, 1);
+    check_saved_header(f); /* Red with old application order. */
+    application_advance(f, ST_CAPTURING);
+    C(file.headers == 1);
+    C(!st_ref_prepare_start(&f->logger, st_cal_endpoint_port(&f->endpoint), 24, true, true));
+    application_command(f, ST2_STOP, 2);
+    application_advance(f, ST_IDLE);
+    C(file.closes == 1);
+    st_cal_control_port control = st_cal_service_port(&f->service);
+    C(control.request(control.ctx, ST_CAL_ACTION_BEGIN, NULL));
+    C(!application_prepare(f)); /* A wizard cannot be bypassed by clock confirmation. */
+    C(control.request(control.ctx, ST_CAL_ACTION_CANCEL, NULL));
+    C(!memcmp(&saved, &f->active, sizeof saved));
+    f->logger.config.clock_verified = false;
+    application_command(f, ST2_START, 3);
+    check_saved_header(f);
+    /* Source-fault/reconnect cancellation in the real board calls logger_stop.
+     * RF commands are serialized; a second command during pending START is rejected. */
+    C(st_logger_stop(&f->logger));
+    application_advance(f, ST_IDLE);
+    C(file.headers == 2 && file.closes == 2);
+    f->logger.config.clock_verified = false;
+    application_command(f, ST2_START, 5);
+    check_saved_header(f);
+    application_advance(f, ST_CAPTURING);
+    application_command(f, ST2_STOP, 6);
+    application_advance(f, ST_IDLE);
+    C(file.headers == 3 && file.closes == 3 && !memcmp(&saved, &f->active, sizeof saved));
+    C(st_ref_prepare_start(&f->logger, (st2_cal_port){0}, 24, true, false));
+    C(!f->logger.config.calibration_valid && f->logger.config.clock_verified);
+    C(st_logger_start(&f->logger, f->now));
+    C(!(f->logger.header[59] & 1u));
+    C(st_logger_stop(&f->logger));
+    application_advance(f, ST_IDLE);
+    free(f);
+    G("actual reference START preparation: saved coefficients in first STLOG header, source guard, "
+      "wizard cancel, source cancel during STARTING, restart and raw-only path");
+}
 unsigned st_test_cal_integration(unsigned *out)
 {
+    first_application_start();
     input_tests();
     rpc_tests();
     uncertainty_tests();

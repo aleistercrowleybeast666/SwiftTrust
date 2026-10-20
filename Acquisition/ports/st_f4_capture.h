@@ -12,7 +12,8 @@ typedef struct
     st_cal_input *calibration;
     bool verified, pending_logging;
     _Atomic(bool) busy;
-    uint32_t sequence, pending_sequence, pending_generation;
+    volatile uint32_t sequence; /* DRDY ISR-owned counter, sampled by foreground. */
+    uint32_t pending_sequence, pending_generation;
     uint64_t pending_time_us;
     uint8_t tx[12], rx[12];
     _Atomic(uint32_t) dma_busy, dma_errors;

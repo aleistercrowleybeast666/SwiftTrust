@@ -15,6 +15,19 @@ bool st_ui2_handle(st_ui *u, st_ui_event e, st2_client *c, uint32_t now)
         }
         return false;
     }
+    if (u->page == ST_UI_STATUS)
+    {
+        if (e == ST_UI_NEXT || e == ST_UI_PREV)
+        {
+            u->selection ^= 1u;
+            return false;
+        }
+        if (e == ST_UI_PRESS && u->selection == 1)
+        {
+            u->unavailable = !st2_client_connect(c, now);
+            return false;
+        }
+    }
     /* Navigation is identical, but only the R2 command API can create RF commands. */
     bool stop = e == ST_UI_PRESS && u->page == ST_UI_CAPTURE && u->selection == 1;
     bool start = e == ST_UI_PRESS && u->page == ST_UI_CONFIRM && u->selection == 0;
@@ -65,6 +78,7 @@ void st_ui2_render(const st_ui *u, const st2_client *c, st_voltage_view own, uin
                        !c->have_status ? "UNKNOWN"
                                        : ((fresh && (c->flags & 64u)) ? "FRESH" : "OLD/NO DATA"),
                        (c->flags & 128u) ? " !" : "");
-        (void)snprintf(m->rows[6], 22, "> BACK");
+        (void)snprintf(m->rows[6], 22, "%c BACK", u->selection == 0 ? '>' : ' ');
+        (void)snprintf(m->rows[7], 22, "%c CONNECT", u->selection == 1 ? '>' : ' ');
     }
 }

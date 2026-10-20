@@ -1,16 +1,13 @@
 # SwiftThrust
 
-高速推力原始数据采集、TF日志、无线采集启停与状态显示项目。遥控器和采集器同仓库、各有独立EIDE项目；模型/规格/验证在Models。GitHub仓库按用户既有名称为SwiftTrust，本地项目名称保持SwiftThrust。
+高速原始推力数据采集、TF日志与无线遥控采集/标定系统。GitHub仓库按用户指定拼写为SwiftTrust，本地项目名SwiftThrust。两板分别为STM32F411RCT6+ADS131M02+SDIO TF+E28，以及STM32G071KBT6+SSD1306+单编码器+E28。
 
-打开 `SwiftThrust.code-workspace`，EIDE分别选择 `SwiftThrust_Acquisition_LINK_CHECK` / `SwiftThrust_Controller_LINK_CHECK` 的LinkCheck目标构建。当前已通过真实ARM组件链接，入口仅CRC自检/WFI，**尚非可运行整板固件，烧录被禁用**。环境准备与未完成事项见[双工程说明](Models/EIDE_WORKSPACE_PLAN.md)和[交接](HANDOFF.md)。
+当前已实现双板可执行参考应用：功能main、HAL时钟/外设/MSP/IRQ、ADC DMA与TF协作调度、无线会话/状态/启停/标定、OLED/编码器、MCU VDDA与四灯、片内Flash持久化配对及故障处理。打开 `SwiftThrust.code-workspace`，两个EIDE工程都选择 **ReferenceApp**。旧 **LinkCheck** 仅CRC/WFI，不能作为运行固件。
 
-当前无线协议无版本字段，12B状态、9B采集启停、10B ACK；完整字段及STLOG001见[协议](PROTOCOLS.md)。OLED恢复原项目常见SSD1306 128×64/0x3C规格。主菜单状态/仅点火/仅采集/点火并采集均可浏览返回；仅采集页有采集命令，两个点火页只有未实现说明。
+参考板配置与首次配对、接线、传感器配置、NV保留区和升级边界见 [REFERENCE_APPLICATION](Models/REFERENCE_APPLICATION.md)。稀疏HEX/ELF可由 `python -B Models/build_reference.py --artifacts` 生成到本地 `dist`；自动烧录仍拒绝执行。没有连接或烧录硬件，板子/电气/时序/TF最坏延迟与射频距离尚未上板确认。
 
-无点火触发调用链、触发协议或输出驱动。未连接、烧录或访问任何现有机械臂/采集硬件。硬件、电压比例、时钟、任务、持久化及存储接线仍待确认，详见当前配置与验证记录。第三方源码保留原许可证；未为本项目擅自添加新许可。SDK、构建缓存和二进制不纳入仓库。
+默认无传感器规格时记录原始ADC，不伪造力值；标定需按真实传感器填写 [SENSOR.CFG.example](Models/SENSOR.CFG.example)。电压显示是MCU VDDA，不是电池SOC。点火仅保留静态菜单和未配置PA11/PA12标记，没有执行、协议或GPIO输出。
 
-新增真实ADC/RF/SDIO HAL适配、FatFs diskio及双槽链路记录核心的接入依赖和离线证据见[板级接入](Models/BOARD_INTEGRATION.md)。当前仍缺整板初始化/任务与实际NV后端，未进行硬件验证。
+完整离线回归45组/54,109断言及导出检查、无线owner6组/313断言、新增Flash/配置故障模型均通过；双板真实ReferenceApp ARM编译通过。具体证据见 [构建审查](Models/BOARD_BUILD_REVIEW.md) 和 [交接](HANDOFF.md)。无 `.work`、SDK副本或额外远端仓库。
 
-已知载荷标定已接入ADC DMA只读队列、FatFs双文件参数后端和有界短包交互；单编码器支持预设质量、自定义g/kg/N、选位/改数及反显。Host端到端和故障注入通过，真实板级初始化/板测尚未完成，见[标定说明](Models/CALIBRATION.md)及[整板编译审查](Models/BOARD_BUILD_REVIEW.md)。
-
-
-现有非点火无线owner由`st_link_server_step/st_link_client_step`接通，包含有界回复保留、TX_DONE/超时重试及未发射失效请求撤销。当前可用范围与最小外部输入见[收口清单](Models/BOARD_DECISIONS.md)；本轮到此停止，不自行决定未冻结硬件参数。
+**PCB尚未冻结，最终接线/极性、外部ADC时钟和传感器电气参数必须先核对。** 此版本可按参考配置安排上板验证，尚未实际板测。首次START及取消重启修复的失败→通过证据见 [专项审查](Models/FIRST_START_REVIEW.md)。

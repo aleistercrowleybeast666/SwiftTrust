@@ -238,6 +238,11 @@ static void finish_command(st2_server *s, st2_measurement m)
     if (!s->have_command || s->last_result != ST2_ACCEPTED)
         return;
     uint8_t result = s->logger->state == ST_FAULT ? ST2_FAILED : ST2_ACCEPTED;
+    /* A source fault or explicit reconnect can cancel START before capture.
+     * Once the logger drains to IDLE, fail that START instead of leaving it
+     * ACCEPTED forever and rejecting every subsequent explicit command. */
+    if (s->last_type == ST2_START && s->logger->state == ST_IDLE)
+        result = ST2_FAILED;
     if ((s->last_type == ST2_START && s->logger->state == ST_CAPTURING) ||
         (s->last_type == ST2_STOP && s->logger->state == ST_IDLE))
         result = ST2_COMPLETED;
