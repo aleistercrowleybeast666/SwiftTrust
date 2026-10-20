@@ -209,19 +209,20 @@
       "acquisition_start",
       "acquisition_stop",
       "details_query",
-      "session_handshake"
+      "session_handshake",
+      "calibration_non_ignition_command_query_fragmented_view"
     ],
     "ack_means": "accepted_then_completed_or_failed_with_same_transaction_id",
     "raw_sample_stream_over_radio": false,
     "wire_version_field": false,
-    "document_revision": "R3"
+    "document_revision": "R4"
   },
   "software": {
     "logger_format": "STLOG001",
     "ring_bytes": 32768,
     "staging_bytes": 8192,
-    "host_test_groups": 37,
-    "host_assertions": 35988,
+    "host_test_groups": 43,
+    "host_assertions": 40371,
     "arm_object_compile": true,
     "full_firmware_linked": false,
     "hardware_tested": false,
@@ -229,6 +230,9 @@
     "fatfs_worker_diskio_host_integration": true,
     "hal_adapters": "implemented_arm_linked_board_initialization_unbound",
     "nv_journal_core": "dual_slot96B_host_tested_physical_backend_unbound",
-    "calibration": "core_and_encoder_menu_host_tested_arm_linked_physical_sample_wire_storage_unbound"
+    "calibration": "adc_dma_readonly_queue_fatfs_dual_file_compact_rpc_host_end_to_end_arm_roots_verified_board_runtime_unbound",
+    "calibration_queue_bytes": 2048,
+    "calibration_parameter_files_bytes": 2048,
+    "calibration_hardware_tested": false
   }
 }

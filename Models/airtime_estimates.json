@@ -1,5 +1,5 @@
 {
-  "utc": "2026-10-20T02:06:06.251134+00:00",
+  "utc": "2026-10-20T04:57:33.375228+00:00",
   "preamble_symbols": 16,
   "explicit_header": true,
   "phy_crc": true,
@@ -25,6 +25,20 @@
       "cr": "4/5",
       "payload_bytes": 12,
       "airtime_ms_ceil": 55
+    },
+    {
+      "sf": 10,
+      "bw_hz": 812500,
+      "cr": "4/5",
+      "payload_bytes": 23,
+      "airtime_ms_ceil": 68
+    },
+    {
+      "sf": 10,
+      "bw_hz": 812500,
+      "cr": "4/5",
+      "payload_bytes": 26,
+      "airtime_ms_ceil": 74
     },
     {
       "sf": 10,
@@ -58,6 +72,20 @@
       "sf": 11,
       "bw_hz": 406250,
       "cr": "4/5",
+      "payload_bytes": 23,
+      "airtime_ms_ceil": 294
+    },
+    {
+      "sf": 11,
+      "bw_hz": 406250,
+      "cr": "4/5",
+      "payload_bytes": 26,
+      "airtime_ms_ceil": 294
+    },
+    {
+      "sf": 11,
+      "bw_hz": 406250,
+      "cr": "4/5",
       "payload_bytes": 49,
       "airtime_ms_ceil": 420
     },
@@ -86,6 +114,20 @@
       "sf": 12,
       "bw_hz": 203125,
       "cr": "4/5",
+      "payload_bytes": 23,
+      "airtime_ms_ceil": 1074
+    },
+    {
+      "sf": 12,
+      "bw_hz": 203125,
+      "cr": "4/5",
+      "payload_bytes": 26,
+      "airtime_ms_ceil": 1175
+    },
+    {
+      "sf": 12,
+      "bw_hz": 203125,
+      "cr": "4/5",
       "payload_bytes": 49,
       "airtime_ms_ceil": 1578
     },
@@ -109,6 +151,20 @@
       "cr": "4/8",
       "payload_bytes": 12,
       "airtime_ms_ceil": 1054
+    },
+    {
+      "sf": 12,
+      "bw_hz": 203125,
+      "cr": "4/8",
+      "payload_bytes": 23,
+      "airtime_ms_ceil": 1377
+    },
+    {
+      "sf": 12,
+      "bw_hz": 203125,
+      "cr": "4/8",
+      "payload_bytes": 26,
+      "airtime_ms_ceil": 1538
     },
     {
       "sf": 12,

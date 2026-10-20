@@ -274,9 +274,10 @@ unsigned st_test_lowlevel(unsigned *groups_out);
 unsigned st_test_r2(unsigned *groups_out);
 unsigned st_test_storage(unsigned *groups_out);
 unsigned st_test_calibration(unsigned *groups_out,const char *images);
+unsigned st_test_cal_integration(unsigned *groups_out);
 int main(int argc,char **argv) {
     CHECK(argc==4);test_crc_adc();test_ring();test_voltage();test_logger(argv[1]);
-    test_protocol_ui(argv[2]);test_oled_input();checks+=st_test_lowlevel(&groups);checks+=st_test_r2(&groups);checks+=st_test_storage(&groups);checks+=st_test_calibration(&groups,argv[3]);
+    test_protocol_ui(argv[2]);test_oled_input();checks+=st_test_lowlevel(&groups);checks+=st_test_r2(&groups);checks+=st_test_storage(&groups);checks+=st_test_cal_integration(&groups);checks+=st_test_calibration(&groups,argv[3]);
     printf("PASS total: %u groups, %u assertions; host sizeof(logger)=%zu, sizeof(oled)=%zu\n",groups,checks,sizeof(st_logger),sizeof(st_oled));
     return 0;
 }

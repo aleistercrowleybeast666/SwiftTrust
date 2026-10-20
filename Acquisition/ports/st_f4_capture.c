@@ -19,6 +19,10 @@ void st_f4_capture_init(st_f4_capture_port *p, SPI_HandleTypeDef *spi, GPIO_Type
     atomic_init(&p->dma_busy, 0);
     atomic_init(&p->dma_errors, 0);
 }
+void st_f4_capture_bind_calibration(st_f4_capture_port *p, st_cal_input *q)
+{
+    p->calibration = q;
+}
 void st_f4_capture_drdy(st_f4_capture_port *p, uint64_t timestamp)
 {
     ++p->sequence; /* Advances even on DMA busy; missing samples remain visible. */
@@ -28,6 +32,7 @@ void st_f4_capture_drdy(st_f4_capture_port *p, uint64_t timestamp)
     if (atomic_load_explicit(&p->busy, memory_order_acquire))
     {
         increment(&p->dma_busy);
+        st_cal_input_error_isr(p->calibration);
         if (logging)
             st_logger_source_error_isr(p->logger);
         return;
@@ -41,6 +46,7 @@ void st_f4_capture_drdy(st_f4_capture_port *p, uint64_t timestamp)
     HAL_StatusTypeDef result = HAL_SPI_TransmitReceive_DMA(p->spi, p->tx, p->rx, 12);
     if (result != HAL_OK)
     {
+        st_cal_input_error_isr(p->calibration);
         HAL_GPIO_WritePin(p->cs_port, p->cs_pin, GPIO_PIN_SET);
         atomic_store_explicit(&p->busy, false, memory_order_release);
         if (result == HAL_BUSY)
@@ -58,6 +64,7 @@ void st_f4_capture_complete(st_f4_capture_port *p, SPI_HandleTypeDef *spi)
     HAL_GPIO_WritePin(p->cs_port, p->cs_pin, GPIO_PIN_SET);
     st_capture c = {.time_us = p->pending_time_us, .sequence = p->pending_sequence};
     memcpy(c.bytes, p->rx, 12);
+    (void)st_cal_input_offer_isr(p->calibration, &c);
     if (p->pending_logging && p->pending_generation == p->logger->generation)
         (void)st_logger_offer_isr(p->logger, &c);
     atomic_store_explicit(&p->busy, false, memory_order_release);
@@ -68,6 +75,7 @@ void st_f4_capture_error(st_f4_capture_port *p, SPI_HandleTypeDef *spi)
         return;
     HAL_GPIO_WritePin(p->cs_port, p->cs_pin, GPIO_PIN_SET);
     increment(&p->dma_errors);
+    st_cal_input_error_isr(p->calibration);
     if (p->pending_logging && p->pending_generation == p->logger->generation)
         st_logger_source_error_isr(p->logger);
     atomic_store_explicit(&p->busy, false, memory_order_release);

@@ -51,7 +51,8 @@ static const char *error_name(st_cal_error error)
                                   "STORAGE UNBOUND",
                                   "SAVE FAILED",
                                   "ZERO EXPIRED",
-                                  "COEFF TOO SMALL"};
+                                  "COEFF TOO SMALL",
+                                  "LINK / RESULT UNKNOWN"};
     return (unsigned)error < sizeof(names) / sizeof(names[0]) ? names[error] : "ERROR";
 }
 static void value_text(char *out, size_t size, st_cal_reference ref, bool fixed)
@@ -77,11 +78,15 @@ static void refresh(st_cal_ui *u)
         u->view = (st_cal_view){.error = ST_CAL_CONFIG};
         return;
     }
-    if (u->view.state == ST_CAL_FAILED && u->page != ST_CAL_UI_INTRO)
+    if (!u->view.pending &&
+        (u->view.state == ST_CAL_FAILED || u->view.state == ST_CAL_CANCELLED ||
+         u->view.request_failed) &&
+        u->page != ST_CAL_UI_INTRO)
         page(u, ST_CAL_UI_RESULT, 0);
-    else if (u->page == ST_CAL_UI_WAIT_ZERO && u->view.state == ST_CAL_LOAD_READY)
+    else if (!u->view.pending && u->page == ST_CAL_UI_WAIT_ZERO &&
+             u->view.state == ST_CAL_LOAD_READY)
         page(u, ST_CAL_UI_LOAD_KIND, 2);
-    else if (u->page == ST_CAL_UI_WAIT_LOAD && u->view.state == ST_CAL_REVIEW)
+    else if (!u->view.pending && u->page == ST_CAL_UI_WAIT_LOAD && u->view.state == ST_CAL_REVIEW)
         page(u, ST_CAL_UI_REVIEW, 1);
 }
 void st_cal_ui_init(st_cal_ui *u, st_cal_control_port port)
@@ -138,7 +143,13 @@ static unsigned options(st_cal_ui_page p)
 }
 static bool cancel(st_cal_ui *u)
 {
-    (void)send(u, ST_CAL_ACTION_CANCEL, NULL, true);
+    if (!send(u, ST_CAL_ACTION_CANCEL, NULL, true))
+        return false;
+    if (u->view.pending)
+    {
+        page(u, ST_CAL_UI_RESULT, 0);
+        return false;
+    }
     return true;
 }
 static bool back(st_cal_ui *u)
@@ -172,6 +183,8 @@ static bool back(st_cal_ui *u)
 bool st_cal_ui_handle(st_cal_ui *u, st_cal_ui_event event, bool idle)
 {
     refresh(u);
+    if (u->view.pending)
+        return false;
     if (event == ST_CAL_UI_BACK)
         return back(u);
     if (event == ST_CAL_UI_NEXT || event == ST_CAL_UI_PREV)
@@ -397,12 +410,23 @@ void st_cal_ui_render(st_cal_ui *u, st_cal_panel *p)
         (void)snprintf(p->rows[5], 22, "%c BACK", u->selection == 1 ? '>' : ' ');
         break;
     case ST_CAL_UI_RESULT:
-        title = u->view.state == ST_CAL_COMMITTED ? "CALIBRATION SAVED" : "CALIBRATION FAILED";
+        title = u->view.uncertain
+                    ? "RESULT UNKNOWN"
+                    : (u->view.state == ST_CAL_COMMITTED
+                           ? "CALIBRATION SAVED"
+                           : (u->view.state == ST_CAL_CANCELLED ? "CALIBRATION CANCELLED"
+                                                                : "CALIBRATION FAILED"));
         (void)snprintf(p->rows[1], 22, "%s",
-                       u->view.state == ST_CAL_COMMITTED ? "NEW PROFILE ACCEPTED"
-                                                         : "OLD PROFILE RETAINED");
+                       u->view.uncertain                   ? "CHECK LINK STATUS"
+                       : u->view.state == ST_CAL_COMMITTED ? "NEW PROFILE ACCEPTED"
+                                                           : "OLD PROFILE RETAINED");
         (void)snprintf(p->rows[4], 22, "> BACK");
         break;
+    }
+    if (u->view.pending)
+    {
+        title = "WAIT RESPONSE";
+        (void)snprintf(p->rows[1], 22, "RESULT NOT CONFIRMED");
     }
     (void)snprintf(p->rows[0], 22, "%s", title);
     if (u->local_error || u->view.error)

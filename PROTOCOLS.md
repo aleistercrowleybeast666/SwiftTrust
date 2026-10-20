@@ -1,4 +1,4 @@
-# SwiftThrust 日志与遥测协议 · 文档修订R3
+# SwiftThrust 日志与遥测协议 · 文档修订R4
 
 > 当前无线包无版本字段/版本位；首字节仅TYPE。12B状态、9B启停、10B ACK已完成软件实现及Host回归；板级持久化、应用接线和实物链路尚未验收。STLOG001不变，无点火触发协议。
 
@@ -93,9 +93,9 @@ ADC编号：芯片CH0用于推力原始码，芯片CH1用于激励/监测原始�
 
 命令：`python -B Models/export_stlog.py input.BIN output.csv`。CSV排他新建，已有同名文件不覆盖。它是通用CSV，**尚未验证UNDERLINE专用导入兼容**。
 
-## 3. 当前无线短包契约（文档修订R3，不在包内放版本）
+## 3. 当前无线短包契约（文档修订R4，不在包内放版本）
 
-2026-10-20：按用户追加要求，取消R2草案的版本/类型合并字节。首字节仅为完整8位 **TYPE**，值0x01…0x09；没有版本字段，也没有版本位。代码内部`st2_`名称仅用于区别旧实现，不在空中传输。两端必须部署同一文档修订的配套固件；未来改同一包型的语义可能无法仅靠长度识别，因此需要一起更新两端。未知包型、错误长度、CRC或未绑定epoch均拒绝。TF的STLOG001标识不改。
+2026-10-20：按用户追加要求，取消R2草案的版本/类型合并字节。首字节仅为完整8位 **TYPE**，值0x01…0x0C；没有版本字段，也没有版本位。代码内部`st2_`名称仅用于区别旧实现，不在空中传输。两端必须部署同一文档修订的配套固件；未来改同一包型的语义可能无法仅靠长度识别，因此需要一起更新两端。未知包型、错误长度、CRC或未绑定epoch均拒绝。TF的STLOG001标识不改。
 
 所有多字节应用字段均为小端。末尾CRC16采用CCITT-FALSE：poly=0x1021、init=0xFFFF、非反射、xorout=0，覆盖CRC前全部字节，低字节先发。LoRa物理CRC也保持开启。
 
@@ -162,6 +162,17 @@ fragment高4位为总片数减1、低4位为索引。
 重试计时锚点为TX_DONE，需覆盖ACK空中时间＋切换/处理裕量。调用者注入0…250ms抖动；时钟回绕采用无符号差值。单轮重试有次数上限；收到ACCEPTED后允许继续查询同事务缓存，整个操作仍受总deadline限制。缺少TX_DONE时不会密集连发；应通知RF超时完成以进入有界恢复。心跳周期、最大空中时间、ACK_RTO、总操作时限必须与实际射频配置匹配，测试参数不等于定型参数。
 
 无原始推力无线流；高频原始数据写TF。无线失联不自行把记录当作已停止，需重新获取真实状态。RF源码当前只接收本节包型/长度/CRC，不自动回退旧v1。
+
+
+### 标定短包扩展（文档修订R4）
+
+新增CAL_COMMAND 0x0A（23B）、CAL_QUERY 0x0B（9B）、CAL_REPLY 0x0C（四片各26B），均沿用当前epoch、非零transaction_id和CRC16，小端字段与首字节完整TYPE保持一致。没有增加版本字段或版本位，旧0x01～0x09包布局不变；旧固件会拒绝新增类型，两端须一致部署。
+
+COMMAND偏移：TYPE@0、epoch u32@1、id u16@5、action@7、unit@8、milli_units u64@9、gravity u32@17、CRC16@21。动作0～6为BEGIN/ZERO/REFERENCE/LOAD/SAVE/CANCEL/REFERENCE_CLEAR；仅REFERENCE允许其后13B非零。QUERY与START同为9B布局。REPLY偏移：TYPE@0、epoch@1、id@5、fragment@7、16B data@8、CRC16@24；fragment为0x30～0x33，冻结64B视图定义见`Models/CALIBRATION.md`。
+
+CAL命令/查询与START/STOP共享单调ID流。缓存最后完整请求字节和四片视图，重复SAVE只重发结果；冲突或旧ID拒绝。控制器四片完整前不宣布完成，STATUS不能完成标定操作。重试等待`ack_rto+3*max_airtime+jitter`；草稿超出operation会话租期取消，已提交结果不因租期消失。丢SAVE回复应显示结果未知，并查询实际状态/active revision。START在草稿期被锁，创建日志前重新核对并应用活动profile；采集中不允许换参数。配对UID/CRC不是密码认证；无点火动作。
+
+TF参数文件实际保存和恢复的限制、真实卡掉电不确定性及编译证据见`Models/CALIBRATION.md`、`Models/BOARD_BUILD_REVIEW.md`。
 
 ### 3.5 空中时间与吞吐含义
 
@@ -273,12 +284,14 @@ quality_flags：bit0采样率依据未知；bit1已有样本（不代表该样�
 - 当前短包/事务/会话/诊断：`Acquisition/src/st_link2.c`及`include/st_link2.h`。持久化接口只是契约，板上后端未接。
 - RF严格过滤：`Acquisition/src/st_radio.c`；当前UI入口：`Controller/src/st_ui2.c`；旧`st_protocol.c`仅参考回归。
 - STLOG：`st_logger.c`、`st_core.c`；CSV校验/恢复：`Models/export_stlog.py`。
-- 当前Host：`Models/firmware_host_validation.log`，37组/35,988条C断言及Python导出边界。2026-10-20最新源码真实双EIDE组件链接均通过：`Models/eide_link_validation.log`；旧对象报告仅历史证据。
+- 当前Host：`Models/firmware_host_validation.log`，43组/40,371条C断言及Python导出边界。2026-10-20最新源码真实双EIDE组件链接均通过：`Models/eide_link_validation.log`；旧对象报告仅历史证据。
 - OLED按用户选择恢复原机械臂项目SSD1306/0x3C/128×64规格，参见`Models/OLED_REFERENCE.md`。四页面中的两个点火相关页只有静态说明及返回，无触发接口。
-- 缺少板级入口/任务调度、实际SDIO diskio、射频/ADC HAL适配器的板级初始化与IRQ接入、持久化存储及电气确认；因此LINK_CHECK不是可运行整板固件，不允许据此称硬件PASS。
+- 尚缺板级入口/任务调度、ADC/RF/SDIO已实现适配器的实际初始化与IRQ路由、链路NV物理后端及电气确认；标定TF后端已实现并Host验证。LINK_CHECK仍不是可运行整板固件，不能据此称硬件PASS。
 
-记录吞吐、40KiB名义数据缓存、同步调度限制、TR_F转换及未实现的校准方案见[HANDOFF](HANDOFF.md)。本轮没有修改STLOG001布局。
+记录吞吐、40KiB名义数据缓存、同步调度限制、TR_F转换及校准物理验收边界见[HANDOFF](HANDOFF.md)。本轮没有修改STLOG001布局。
 
 当前已加入`st_nv.c`双槽96B链路记录核心及真实FatFs diskio/ADC-RF-SDIO HAL适配；无线TYPE/长度和STLOG001布局不变。实际NV介质/写入窗口、任务和板级接线未完成，见[板级接入](Models/BOARD_INTEGRATION.md)。
 
-标定新增256B内部参数记录STCAL001和核心/离线菜单，不是新增无线帧；无线标定适配及物理参数保存未接通。STLOG001布局和现有TYPE/长度保持不变，见[标定说明](Models/CALIBRATION.md)。
+标定使用256B内部参数记录STCAL001，现已接入TF双文件后端、ADC只读队列和非点火短包；新增TYPE 0x0A/0x0B/0x0C，旧包布局与STLOG001保持不变，见[标定说明](Models/CALIBRATION.md)。
+
+文档R4补充非点火标定0x0A～0x0C及双文件参数保存；文档修订号仍不进入无线包。

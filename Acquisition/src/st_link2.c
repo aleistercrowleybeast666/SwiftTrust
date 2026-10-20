@@ -11,7 +11,12 @@ static size_t wire_length(const st2_packet *p)
         return 12;
     case ST2_START:
     case ST2_STOP:
+    case ST2_CAL_QUERY:
         return 9;
+    case ST2_CAL_COMMAND:
+        return 23;
+    case ST2_CAL_REPLY:
+        return p->count == 16 ? 26 : 0;
     case ST2_ACK:
     case ST2_DETAILS_QUERY:
         return 10;
@@ -41,6 +46,21 @@ static bool fields_valid(const st2_packet *p)
         return (p->flags & 7u) <= ST_FAULT && (!(p->flags & 32u) || p->mv != 65535);
     if (p->type == ST2_ACK)
         return (p->flags & 7u) <= ST2_FAILED && ((p->flags >> 3) & 7u) <= ST_FAULT;
+    if (p->type == ST2_CAL_COMMAND)
+    {
+        if (p->data[0] > 6)
+            return false;
+        if (p->data[0] != 2)
+        {
+            for (unsigned i = 1; i < 14; i++)
+                if (p->data[i])
+                    return false;
+        }
+        else if (p->data[1] > 2)
+            return false;
+    }
+    if (p->type == ST2_CAL_REPLY)
+        return p->count == 16 && p->fragment >= 0x30 && p->fragment <= 0x33;
     if (p->type == ST2_DETAILS_REPLY)
         return p->count <= 16 && (p->fragment & 15u) <= (p->fragment >> 4);
     return true;
@@ -79,6 +99,13 @@ size_t st2_encode(const st2_packet *p, uint8_t out[ST2_MAX])
             }
             if (p->type == ST2_ACK)
                 out[7] = p->flags;
+            if (p->type == ST2_CAL_COMMAND)
+                memcpy(out + 7, p->data, 14);
+            if (p->type == ST2_CAL_REPLY)
+            {
+                out[7] = p->fragment;
+                memcpy(out + 8, p->data, 16);
+            }
             if (p->type == ST2_DETAILS_QUERY || p->type == ST2_DETAILS_REPLY)
                 out[7] = p->section;
             if (p->type == ST2_DETAILS_REPLY)
@@ -104,6 +131,8 @@ bool st2_decode(st2_packet *p, const uint8_t *in, size_t n)
             return false;
         p->count = (uint8_t)(n - 11);
     }
+    if (p->type == ST2_CAL_REPLY)
+        p->count = 16;
     if (wire_length(p) != n)
         return false;
     if (p->type == ST2_HELLO)
@@ -133,6 +162,13 @@ bool st2_decode(st2_packet *p, const uint8_t *in, size_t n)
             }
             if (p->type == ST2_ACK)
                 p->flags = in[7];
+            if (p->type == ST2_CAL_COMMAND)
+                memcpy(p->data, in + 7, 14);
+            if (p->type == ST2_CAL_REPLY)
+            {
+                p->fragment = in[7];
+                memcpy(p->data, in + 8, 16);
+            }
             if (p->type == ST2_DETAILS_QUERY || p->type == ST2_DETAILS_REPLY)
                 p->section = in[7];
             if (p->type == ST2_DETAILS_REPLY)
@@ -157,6 +193,30 @@ void st2_server_init(st2_server *s, st_logger *l, st2_nv_port nv, st2_timing t,
     *s = (st2_server){.logger = l, .nv = nv, .timing = t, .last_counter = counter};
     memcpy(s->uid, uid, 12);
     memcpy(s->peer, peer, 12);
+}
+void st2_server_attach_calibration(st2_server *s, st2_cal_port p)
+{
+    s->calibration = p;
+}
+static void cal_reset(st2_server *s)
+{
+    if (s->calibration.reset)
+        s->calibration.reset(s->calibration.ctx);
+    s->cal_cached = false;
+    s->cal_owned = false;
+}
+static size_t cal_reply(st2_server *s, uint8_t *out)
+{
+    if (!s->cal_cached || s->cal_next >= 4)
+        return 0;
+    unsigned i = s->cal_next++;
+    st2_packet p = {.type = ST2_CAL_REPLY,
+                    .epoch = s->epoch,
+                    .id = s->last_command,
+                    .fragment = (uint8_t)(0x30u | i),
+                    .count = 16};
+    memcpy(p.data, s->cal_view + i * 16, 16);
+    return st2_encode(&p, out);
 }
 static uint8_t status_flags(st2_server *s, st2_measurement m)
 {
@@ -254,6 +314,7 @@ size_t st2_server_receive(st2_server *s, const uint8_t *in, size_t n, st2_measur
             if (p.counter <= s->last_counter || !s->nv.reserve_epoch ||
                 !s->nv.reserve_epoch(s->nv.ctx, p.counter, &epoch) || !epoch)
                 return 0;
+            cal_reset(s);
             s->last_counter = p.counter;
             s->epoch = epoch;
             s->offered = true;
@@ -294,6 +355,40 @@ size_t st2_server_receive(st2_server *s, const uint8_t *in, size_t n, st2_measur
         s->detail_next = 0;
         return detail_reply(s, out);
     }
+    if (p.type == ST2_CAL_COMMAND || p.type == ST2_CAL_QUERY)
+    {
+        if (s->have_command && p.id < s->last_command)
+            return send_ack(s, p.id, ack_flags(s, m, ST2_OLD), out);
+        if (s->have_command && p.id == s->last_command)
+        {
+            if (!s->cal_cached || p.type != s->last_type ||
+                (p.type == ST2_CAL_COMMAND && memcmp(p.data, s->cal_request, 14)))
+                return send_ack(s, p.id, ack_flags(s, m, ST2_CONFLICT), out);
+            s->cal_next = 0;
+            return cal_reply(s, out);
+        }
+        if ((s->have_command && s->last_result == ST2_ACCEPTED) || !s->calibration.snapshot ||
+            (p.type == ST2_CAL_COMMAND && !s->calibration.request))
+            return send_ack(s, p.id, ack_flags(s, m, ST2_STATE_REJECT), out);
+        bool ok = true;
+        if (p.type == ST2_CAL_COMMAND)
+            ok = s->calibration.request(s->calibration.ctx, p.data);
+        if (!s->calibration.snapshot(s->calibration.ctx, s->cal_view))
+            return send_ack(s, p.id, ack_flags(s, m, ST2_FAILED), out);
+        if (!ok)
+            s->cal_view[3] = 1; /* rejected; never a durable-save acknowledgement */
+        s->cal_last_ms = (uint32_t)(now / 1000);
+        s->cal_owned = true;
+        s->have_command = true;
+        s->last_command = p.id;
+        s->last_type = p.type;
+        s->last_result = ST2_COMPLETED;
+        s->last_flags = ack_flags(s, m, ST2_COMPLETED);
+        memcpy(s->cal_request, p.data, 14);
+        s->cal_cached = true;
+        s->cal_next = 0;
+        return cal_reply(s, out);
+    }
     if (p.type != ST2_START && p.type != ST2_STOP)
         return 0;
     uint8_t result;
@@ -311,11 +406,17 @@ size_t st2_server_receive(st2_server *s, const uint8_t *in, size_t n, st2_measur
     else
     {
         bool accepted =
-            p.type == ST2_START ? st_logger_start(s->logger, now) : st_logger_stop(s->logger);
+            p.type == ST2_START
+                ? ((!s->calibration.locked || !s->calibration.locked(s->calibration.ctx)) &&
+                   (!s->calibration.prepare_start ||
+                    s->calibration.prepare_start(s->calibration.ctx)) &&
+                   st_logger_start(s->logger, now))
+                : st_logger_stop(s->logger);
         result = accepted ? ST2_ACCEPTED : ST2_STATE_REJECT;
         s->have_command = true;
         s->last_command = p.id;
         s->last_type = p.type;
+        s->cal_cached = false;
         s->last_result = result;
         s->last_flags = ack_flags(s, m, result);
         finish_command(s, m);
@@ -328,11 +429,21 @@ size_t st2_server_poll(st2_server *s, st2_measurement m, uint64_t now, uint8_t o
     if (!s->active || m.tf > 3)
         return 0;
     finish_command(s, m);
+    if (s->cal_owned &&
+        (uint32_t)((uint32_t)(now / 1000) - s->cal_last_ms) > s->timing.operation_ms)
+    {
+        if (s->calibration.locked && s->calibration.locked(s->calibration.ctx))
+            cal_reset(s); /* lost controller releases a draft, never a committed result */
+        else
+            s->cal_owned = false;
+    }
     if (s->terminal_pending)
     {
         s->terminal_pending = false;
         return send_ack(s, s->last_command, s->last_flags, out);
     }
+    if (s->cal_cached && s->cal_next < 4)
+        return cal_reply(s, out);
     if (s->detail_cached && s->detail_next < 2)
         return detail_reply(s, out);
     uint8_t f = status_flags(s, m);
@@ -362,6 +473,8 @@ bool st2_client_connect(st2_client *c, uint32_t now)
     c->link = ST2_LINK_HELLO;
     c->epoch = 0;
     c->have_status = false;
+    c->cal_have_view = false;
+    c->cal_seen = 0;
     c->pending = false;
     c->request = (st2_packet){.type = ST2_HELLO, .counter = counter};
     memcpy(c->request.uid, c->uid, 12);
@@ -415,6 +528,24 @@ bool st2_client_receive(st2_client *c, const uint8_t *in, size_t n, uint32_t now
         }
         return true; /* status NEVER completes a transaction */
     }
+    if (p.type == ST2_CAL_REPLY && c->link == ST2_LINK_UP && c->pending && p.id == c->request.id &&
+        (c->request.type == ST2_CAL_COMMAND || c->request.type == ST2_CAL_QUERY))
+    {
+        unsigned i = p.fragment & 15u;
+        uint8_t bit = (uint8_t)(1u << i);
+        if (c->cal_seen & bit)
+            return !memcmp(c->cal_view + i * 16, p.data, 16);
+        memcpy(c->cal_view + i * 16, p.data, 16);
+        c->cal_seen |= bit;
+        if (c->cal_seen == 15)
+        {
+            c->cal_have_view = true;
+            c->cal_received_ms = now;
+            c->pending = false;
+            c->transaction = ST_TX_COMPLETE;
+        }
+        return true;
+    }
     if (p.type == ST2_ACK && c->link == ST2_LINK_UP && c->pending && p.id == c->request.id)
     {
         uint8_t result = p.flags & 7u;
@@ -451,6 +582,35 @@ bool st2_client_command(st2_client *c, uint8_t type, uint32_t now)
     c->started_ms = now;
     return true;
 }
+bool st2_client_cal_command(st2_client *c, const uint8_t data[14], uint32_t now)
+{
+    /* Read-only polls can be superseded by an explicit user action. A mutation
+     * already in flight must complete or hit its bounded timeout first. */
+    if (c->pending && c->request.type == ST2_CAL_QUERY && data)
+        c->pending = false;
+    if (c->pending || !st2_client_fresh(c, now) || !c->next_command ||
+        c->timing.operation_ms < c->timing.ack_rto_ms + 4u * c->timing.max_airtime_ms ||
+        (data && (c->flags & 7u) != ST_IDLE))
+        return false;
+    st2_packet p = {
+        .type = data ? ST2_CAL_COMMAND : ST2_CAL_QUERY, .epoch = c->epoch, .id = c->next_command};
+    if (data)
+        memcpy(p.data, data, 14);
+    uint8_t wire[ST2_MAX];
+    if (!st2_encode(&p, wire))
+        return false;
+    c->request = p;
+    c->next_command = c->next_command == 65535 ? 0 : (uint16_t)(c->next_command + 1);
+    c->pending = true;
+    c->transaction = ST_TX_WAIT_ACK;
+    c->attempts = 0;
+    c->have_sent = false;
+    c->waiting_tx_done = false;
+    c->started_ms = now;
+    c->cal_seen = 0;
+    c->cal_have_view = false;
+    return true;
+}
 /* now/started/last_send are modulo-2^32 milliseconds. Configured intervals are
  * bounded well below half the timer range. Total deadline also bounds retries
  * when an ACCEPTED reply resets the per-round retry budget. */
@@ -471,8 +631,11 @@ bool st2_client_tx_due(st2_client *c, uint32_t now, uint8_t out[ST2_MAX], size_t
     }
     if (c->waiting_tx_done || c->attempts >= c->timing.attempts)
         return false;
-    if (c->have_sent &&
-        (uint32_t)(now - c->last_send_ms) < c->timing.ack_rto_ms + c->retry_jitter_ms)
+    uint32_t reply_window = c->timing.ack_rto_ms;
+    if (c->request.type == ST2_CAL_COMMAND || c->request.type == ST2_CAL_QUERY)
+        reply_window +=
+            3u * c->timing.max_airtime_ms; /* four fragments get one complete reply window */
+    if (c->have_sent && (uint32_t)(now - c->last_send_ms) < reply_window + c->retry_jitter_ms)
         return false;
     *n = st2_encode(&c->request, out);
     return *n != 0;

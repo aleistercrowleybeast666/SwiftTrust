@@ -10,4 +10,4 @@
 
 新增真实ADC/RF/SDIO HAL适配、FatFs diskio及双槽链路记录核心的接入依赖和离线证据见[板级接入](Models/BOARD_INTEGRATION.md)。当前仍缺整板初始化/任务与实际NV后端，未进行硬件验证。
 
-已知载荷标定核心与单编码器反色输入已离线验证，支持常用质量和自定义g/kg/N；真实标定样本/无线/TF保存接线仍待完成，见[标定说明](Models/CALIBRATION.md)。
+已知载荷标定已接入ADC DMA只读队列、FatFs双文件参数后端和有界短包交互；单编码器支持预设质量、自定义g/kg/N、选位/改数及反显。Host端到端和故障注入通过，真实板级初始化/板测尚未完成，见[标定说明](Models/CALIBRATION.md)及[整板编译审查](Models/BOARD_BUILD_REVIEW.md)。

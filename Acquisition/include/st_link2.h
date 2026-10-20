@@ -13,6 +13,9 @@ enum
     ST2_HELLO,
     ST2_HELLO_REPLY,
     ST2_COMMIT,
+    ST2_CAL_COMMAND,
+    ST2_CAL_QUERY,
+    ST2_CAL_REPLY,
     ST2_MAX = 35
 };
 enum
@@ -65,9 +68,25 @@ typedef struct
     bool voltage_fresh, adc_fresh, quality_problem;
     uint16_t mv;
 } st2_measurement;
+/* Calibration callbacks run in one serialized foreground volume owner, never
+ * RF/ADC ISR. request may do bounded synchronous FatFs IO while capture is IDLE.
+ * locked excludes START through the whole wizard; reset cancels session drafts. */
+typedef struct
+{
+    void *ctx;
+    bool (*request)(void *, const uint8_t request[14]);
+    bool (*snapshot)(void *, uint8_t view[64]);
+    bool (*locked)(void *);
+    bool (*prepare_start)(void *);
+    void (*reset)(void *);
+} st2_cal_port;
 typedef struct
 {
     st_logger *logger;
+    st2_cal_port calibration;
+    uint8_t cal_request[14], cal_view[64], cal_next;
+    uint32_t cal_last_ms;
+    bool cal_cached, cal_owned;
     st2_nv_port nv;
     st2_timing timing;
     uint8_t uid[12], peer[12], last_type, last_result, last_flags;
@@ -83,6 +102,7 @@ typedef struct
 } st2_server;
 void st2_server_init(st2_server *, st_logger *, st2_nv_port, st2_timing, const uint8_t uid[12],
                      const uint8_t paired_controller[12], uint64_t durable_last_counter);
+void st2_server_attach_calibration(st2_server *, st2_cal_port);
 size_t st2_server_receive(st2_server *, const uint8_t *, size_t, st2_measurement, uint64_t now_us,
                           uint8_t out[ST2_MAX]);
 /* Call only when the RF output slot is available. Terminal ACK precedes status.
@@ -115,6 +135,9 @@ typedef struct
     uint8_t uid[12], peer[12];
     st2_link_state link;
     st2_packet request;
+    uint8_t cal_view[64], cal_seen;
+    bool cal_have_view;
+    uint32_t cal_received_ms;
     uint64_t counter;
     uint32_t epoch, received_ms, last_send_ms, started_ms, retry_jitter_ms;
     uint16_t status_sequence, next_command, mv;
@@ -129,6 +152,8 @@ bool st2_client_connect(st2_client *, uint32_t now_ms);
 bool st2_client_receive(st2_client *, const uint8_t *, size_t, uint32_t now_ms);
 bool st2_client_fresh(const st2_client *, uint32_t now_ms);
 bool st2_client_command(st2_client *, uint8_t type, uint32_t now_ms);
+/* NULL payload queries; commands carry action/unit/u64 milli-units/u32 gravity. */
+bool st2_client_cal_command(st2_client *, const uint8_t payload[14], uint32_t now_ms);
 bool st2_client_tx_due(st2_client *, uint32_t now_ms, uint8_t out[ST2_MAX], size_t *);
 /* Invoke only after RF accepts the packet; TX_DONE anchors the ACK timer.
  * Notify completion even on a TX timeout, so bounded retry can proceed. */

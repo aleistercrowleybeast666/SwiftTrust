@@ -18,4 +18,6 @@ typedef struct
 void st_fatfs_init(st_fatfs_worker *, bool mounted_and_verified);
 st_file_port st_fatfs_port(st_fatfs_worker *);
 void st_fatfs_worker_step(st_fatfs_worker *);
+/* Called by the same volume owner, not a cross-task lock. */
+bool st_fatfs_idle(const st_fatfs_worker *);
 #endif

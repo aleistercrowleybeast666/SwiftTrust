@@ -504,3 +504,8 @@ unsigned st_test_calibration(unsigned *out, const char *images)
     *out += groups;
     return checks;
 }
+
+st_cal_profile st_cal_test_profile(void)
+{
+    return good_profile();
+}

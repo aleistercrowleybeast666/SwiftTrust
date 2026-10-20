@@ -1,8 +1,8 @@
-2026-10-20T04:32:36.676438+00:00
+2026-10-20T04:59:05.237776+00:00
 Actual EIDE unify_builder; component LINK_CHECK targets only, NOT operational firmware.
 No hardware access. All outputs in automatically removed temporary directories.
 BOARD Acquisition
-[ INFO ] start building at 2026-10-20 12:32:37
+[ INFO ] start building at 2026-10-20 12:59:05
 
 [ TOOL ] arm-none-eabi-gcc.exe (Arm GNU Toolchain 14.3.Rel1 (Build arm-14.174)) 14.3.1 20250623
 
@@ -11,31 +11,31 @@ BOARD Acquisition
 +---------+-----------+-----------+---------------+--------+
 | C Files | Cpp Files | Asm Files | Lib/Obj Files | Totals |
 +---------+-----------+-----------+---------------+--------+
-| 41      | 0         | 1         | 0             | 42     |
+| 46      | 0         | 1         | 0             | 47     |
 +---------+-----------+-----------+---------------+--------+
 
 [ INFO ] start compiling (jobs: 2) ...
 
->> [  2%] CC 'link_check_main.c'
->> [  4%] CC 'st_ads.c'
->> [  7%] CC 'st_debug.c'
->> [  9%] CC 'st_core.c'
->> [ 11%] CC 'st_logger.c'
->> [ 14%] CC 'st_protocol.c'
->> [ 16%] CC 'st_radio.c'
->> [ 19%] CC 'st_f4_capture.c'
->> [ 21%] CC 'st_fatfs_worker.c'
->> [ 23%] CC 'st_debug_uart_hal.c'
->> [ 26%] CC 'sx128x.c'
->> [ 28%] CC 'ff.c'
->> [ 30%] CC 'stm32f4xx_hal.c'
->> [ 33%] CC 'stm32f4xx_hal_adc.c'
->> [ 35%] CC 'stm32f4xx_hal_adc_ex.c'
->> [ 38%] CC 'stm32f4xx_hal_cortex.c'
->> [ 40%] CC 'stm32f4xx_hal_dma.c'
->> [ 42%] CC 'stm32f4xx_hal_dma_ex.c'
->> [ 45%] CC 'stm32f4xx_hal_flash.c'
->> [ 47%] CC 'stm32f4xx_hal_flash_ex.c'
+>> [  2%] CC 'st_ads.c'
+>> [  4%] CC 'link_check_main.c'
+>> [  6%] CC 'st_debug.c'
+>> [  8%] CC 'st_core.c'
+>> [ 10%] CC 'st_logger.c'
+>> [ 12%] CC 'st_protocol.c'
+>> [ 14%] CC 'st_radio.c'
+>> [ 17%] CC 'st_f4_capture.c'
+>> [ 19%] CC 'st_fatfs_worker.c'
+>> [ 21%] CC 'st_debug_uart_hal.c'
+>> [ 23%] CC 'sx128x.c'
+>> [ 25%] CC 'ff.c'
+>> [ 27%] CC 'stm32f4xx_hal.c'
+>> [ 29%] CC 'stm32f4xx_hal_adc.c'
+>> [ 31%] CC 'stm32f4xx_hal_adc_ex.c'
+>> [ 34%] CC 'stm32f4xx_hal_cortex.c'
+>> [ 36%] CC 'stm32f4xx_hal_dma.c'
+>> [ 38%] CC 'stm32f4xx_hal_dma_ex.c'
+>> [ 40%] CC 'stm32f4xx_hal_flash.c'
+>> [ 42%] CC 'stm32f4xx_hal_flash_ex.c'
 <SDK>/f4-sdk/Src/stm32f4xx_hal_flash_ex.c: In function 'FLASH_MassErase':
 <SDK>/f4-sdk/Src/stm32f4xx_hal_flash_ex.c:948:60: [33;22mwarning: [0munused parameter 'Banks' [35;22m[-Wunused-parameter][0m
   948 | static void FLASH_MassErase(uint8_t VoltageRange, uint32_t Banks)
@@ -48,34 +48,39 @@ BOARD Acquisition
 <SDK>/f4-sdk/Src/stm32f4xx_hal_flash_ex.c:1063:75: [33;22mwarning: [0munused parameter 'Banks' [35;22m[-Wunused-parameter][0m
  1063 | static HAL_StatusTypeDef FLASH_OB_DisableWRP(uint32_t WRPSector, uint32_t Banks)
 [35;22m      |                                                                  ~~~~~~~~~^~~~~[0m
->> [ 50%] CC 'stm32f4xx_hal_gpio.c'
->> [ 52%] CC 'stm32f4xx_hal_pwr.c'
->> [ 54%] CC 'stm32f4xx_hal_pwr_ex.c'
->> [ 57%] CC 'stm32f4xx_hal_rcc_ex.c'
->> [ 59%] CC 'stm32f4xx_hal_rcc.c'
->> [ 61%] CC 'stm32f4xx_hal_sd.c'
->> [ 64%] CC 'stm32f4xx_hal_spi.c'
->> [ 66%] CC 'stm32f4xx_hal_tim_ex.c'
->> [ 69%] CC 'stm32f4xx_hal_tim.c'
->> [ 71%] CC 'stm32f4xx_hal_uart.c'
->> [ 73%] CC 'stm32f4xx_ll_sdmmc.c'
->> [ 76%] AS 'startup_stm32f411xe.s'
->> [ 78%] CC 'system_stm32f4xx.c'
->> [ 80%] CC 'st_block.c'
->> [ 83%] CC 'st_link2.c'
->> [ 85%] CC 'st_nv.c'
->> [ 88%] CC 'st_diskio.c'
->> [ 90%] CC 'st_sdio_hal.c'
->> [ 92%] CC 'st_ads_hal.c'
->> [ 95%] CC 'st_radio_hal.c'
->> [ 97%] CC 'st_cal.c'
->> [100%] CC 'st_cal_service.c'
+>> [ 44%] CC 'stm32f4xx_hal_gpio.c'
+>> [ 46%] CC 'stm32f4xx_hal_pwr.c'
+>> [ 48%] CC 'stm32f4xx_hal_pwr_ex.c'
+>> [ 51%] CC 'stm32f4xx_hal_rcc.c'
+>> [ 53%] CC 'stm32f4xx_hal_rcc_ex.c'
+>> [ 55%] CC 'stm32f4xx_hal_sd.c'
+>> [ 57%] CC 'stm32f4xx_hal_spi.c'
+>> [ 59%] CC 'stm32f4xx_hal_tim_ex.c'
+>> [ 61%] CC 'stm32f4xx_hal_tim.c'
+>> [ 63%] CC 'stm32f4xx_ll_sdmmc.c'
+>> [ 65%] CC 'stm32f4xx_hal_uart.c'
+>> [ 68%] AS 'startup_stm32f411xe.s'
+>> [ 70%] CC 'system_stm32f4xx.c'
+>> [ 72%] CC 'st_block.c'
+>> [ 74%] CC 'st_link2.c'
+>> [ 76%] CC 'st_nv.c'
+>> [ 78%] CC 'st_diskio.c'
+>> [ 80%] CC 'st_sdio_hal.c'
+>> [ 82%] CC 'st_ads_hal.c'
+>> [ 85%] CC 'st_radio_hal.c'
+>> [ 87%] CC 'st_cal.c'
+>> [ 89%] CC 'st_cal_service.c'
+>> [ 91%] CC 'st_cal_input.c'
+>> [ 93%] CC 'st_cal_view.c'
+>> [ 95%] CC 'st_cal_endpoint.c'
+>> [ 97%] CC 'st_cal_system.c'
+>> [100%] CC 'st_cal_fatfs.c'
 
 [ INFO ] start linking ...
 
 Memory region         Used Size  Region Size  %age Used
-           FLASH:       35240 B       256 KB     13.44%
-             RAM:       48528 B       128 KB     37.02%
+           FLASH:       41800 B       256 KB     15.95%
+             RAM:       52688 B       128 KB     40.20%
 
 [ INFO ] start outputting files ...
 
@@ -91,11 +96,12 @@ file path: "<TEMP>\Acquisition\SwiftThrust_Acquisition_LINK_CHECK.bin"
 
 
    text	   data	    bss	    dec	    hex	filename
-  35120	    112	  48416	  83648	  146c0	<TEMP>\Acquisition\SwiftThrust_Acquisition_LINK_CHECK.elf
+  41672	    120	  52568	  94360	  17098	<TEMP>\Acquisition\SwiftThrust_Acquisition_LINK_CHECK.elf
 
+PASS retained calibration integration symbols: st_cal_endpoint_step, st_cal_fatfs_open, st_cal_fatfs_storage, st_cal_input_offer_isr, st_cal_system_init, st_f4_capture_bind_calibration, st_f4_capture_complete, st_f4_capture_error
 PASS linked ELF with no undefined symbols; binaries removed after validation.
 BOARD Controller
-[ INFO ] start building at 2026-10-20 12:32:44
+[ INFO ] start building at 2026-10-20 12:59:14
 
 [ TOOL ] arm-none-eabi-gcc.exe (Arm GNU Toolchain 14.3.Rel1 (Build arm-14.174)) 14.3.1 20250623
 
@@ -104,57 +110,59 @@ BOARD Controller
 +---------+-----------+-----------+---------------+--------+
 | C Files | Cpp Files | Asm Files | Lib/Obj Files | Totals |
 +---------+-----------+-----------+---------------+--------+
-| 39      | 0         | 1         | 0             | 40     |
+| 41      | 0         | 1         | 0             | 42     |
 +---------+-----------+-----------+---------------+--------+
 
 [ INFO ] start compiling (jobs: 2) ...
 
 >> [  2%] CC 'link_check_main.c'
->> [  5%] CC 'st_oled.c'
+>> [  4%] CC 'st_oled.c'
 >> [  7%] CC 'st_raster.c'
->> [ 10%] CC 'st_ui.c'
->> [ 12%] CC 'st_g0_oled.c'
->> [ 15%] CC 'st_core.c'
->> [ 17%] CC 'st_protocol.c'
->> [ 20%] CC 'st_radio.c'
->> [ 22%] CC 'st_debug.c'
->> [ 25%] CC 'st_debug_uart_hal.c'
->> [ 27%] CC 'sx128x.c'
->> [ 30%] CC 'stm32g0xx_hal.c'
->> [ 32%] CC 'stm32g0xx_hal_adc_ex.c'
->> [ 35%] CC 'stm32g0xx_hal_adc.c'
->> [ 37%] CC 'stm32g0xx_hal_cortex.c'
->> [ 40%] CC 'stm32g0xx_hal_dma.c'
->> [ 42%] CC 'stm32g0xx_hal_dma_ex.c'
->> [ 45%] CC 'stm32g0xx_hal_flash.c'
->> [ 47%] CC 'stm32g0xx_hal_flash_ex.c'
->> [ 50%] CC 'stm32g0xx_hal_gpio.c'
->> [ 52%] CC 'stm32g0xx_hal_i2c_ex.c'
->> [ 55%] CC 'stm32g0xx_hal_i2c.c'
->> [ 57%] CC 'stm32g0xx_hal_pwr.c'
->> [ 60%] CC 'stm32g0xx_hal_pwr_ex.c'
->> [ 62%] CC 'stm32g0xx_hal_rcc.c'
->> [ 65%] CC 'stm32g0xx_hal_rcc_ex.c'
->> [ 67%] CC 'stm32g0xx_hal_spi.c'
->> [ 70%] CC 'stm32g0xx_hal_tim_ex.c'
->> [ 72%] CC 'stm32g0xx_hal_tim.c'
->> [ 75%] CC 'stm32g0xx_hal_uart_ex.c'
->> [ 77%] CC 'stm32g0xx_hal_uart.c'
->> [ 80%] CC 'system_stm32g0xx.c'
->> [ 82%] AS 'startup_stm32g071xx.s'
->> [ 85%] CC 'st_ui2.c'
->> [ 87%] CC 'st_link2.c'
->> [ 90%] CC 'st_nv.c'
->> [ 92%] CC 'st_radio_hal.c'
->> [ 95%] CC 'st_cal_service.c'
->> [ 97%] CC 'st_cal.c'
->> [100%] CC 'st_cal_ui.c'
+>> [  9%] CC 'st_ui.c'
+>> [ 11%] CC 'st_g0_oled.c'
+>> [ 14%] CC 'st_core.c'
+>> [ 16%] CC 'st_protocol.c'
+>> [ 19%] CC 'st_radio.c'
+>> [ 21%] CC 'st_debug.c'
+>> [ 23%] CC 'st_debug_uart_hal.c'
+>> [ 26%] CC 'sx128x.c'
+>> [ 28%] CC 'stm32g0xx_hal.c'
+>> [ 30%] CC 'stm32g0xx_hal_adc_ex.c'
+>> [ 33%] CC 'stm32g0xx_hal_adc.c'
+>> [ 35%] CC 'stm32g0xx_hal_cortex.c'
+>> [ 38%] CC 'stm32g0xx_hal_dma.c'
+>> [ 40%] CC 'stm32g0xx_hal_dma_ex.c'
+>> [ 42%] CC 'stm32g0xx_hal_flash.c'
+>> [ 45%] CC 'stm32g0xx_hal_flash_ex.c'
+>> [ 47%] CC 'stm32g0xx_hal_gpio.c'
+>> [ 50%] CC 'stm32g0xx_hal_i2c_ex.c'
+>> [ 52%] CC 'stm32g0xx_hal_pwr.c'
+>> [ 54%] CC 'stm32g0xx_hal_i2c.c'
+>> [ 57%] CC 'stm32g0xx_hal_pwr_ex.c'
+>> [ 59%] CC 'stm32g0xx_hal_rcc.c'
+>> [ 61%] CC 'stm32g0xx_hal_rcc_ex.c'
+>> [ 64%] CC 'stm32g0xx_hal_spi.c'
+>> [ 66%] CC 'stm32g0xx_hal_tim_ex.c'
+>> [ 69%] CC 'stm32g0xx_hal_tim.c'
+>> [ 71%] CC 'stm32g0xx_hal_uart_ex.c'
+>> [ 73%] CC 'stm32g0xx_hal_uart.c'
+>> [ 76%] CC 'system_stm32g0xx.c'
+>> [ 78%] AS 'startup_stm32g071xx.s'
+>> [ 80%] CC 'st_ui2.c'
+>> [ 83%] CC 'st_link2.c'
+>> [ 85%] CC 'st_nv.c'
+>> [ 88%] CC 'st_radio_hal.c'
+>> [ 90%] CC 'st_cal_service.c'
+>> [ 92%] CC 'st_cal.c'
+>> [ 95%] CC 'st_cal_view.c'
+>> [ 97%] CC 'st_cal_ui.c'
+>> [100%] CC 'st_cal_remote.c'
 
 [ INFO ] start linking ...
 
 Memory region         Used Size  Region Size  %age Used
-           FLASH:       35304 B       128 KB     26.93%
-             RAM:        7040 B        32 KB     21.48%
+           FLASH:       37564 B       128 KB     28.66%
+             RAM:        7224 B        32 KB     22.05%
 
 [ INFO ] start outputting files ...
 
@@ -170,7 +178,8 @@ file path: "<TEMP>\Controller\SwiftThrust_Controller_LINK_CHECK.bin"
 
 
    text	   data	    bss	    dec	    hex	filename
-  35192	    108	   6928	  42228	   a4f4	<TEMP>\Controller\SwiftThrust_Controller_LINK_CHECK.elf
+  37448	    112	   7112	  44672	   ae80	<TEMP>\Controller\SwiftThrust_Controller_LINK_CHECK.elf
 
+PASS retained calibration integration symbols: st2_client_cal_command, st_cal_remote_init, st_cal_remote_port, st_cal_remote_step
 PASS linked ELF with no undefined symbols; binaries removed after validation.
 Both EIDE targets linked. The entry point performs only a CRC self-check and WFI. No board functionality is claimed.

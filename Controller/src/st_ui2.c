@@ -4,7 +4,8 @@ bool st_ui2_handle(st_ui *u, st_ui_event e, st2_client *c, uint32_t now)
 {
     if (u->page == ST_UI_CALIBRATION)
     {
-        bool idle = st2_client_fresh(c, now) && (c->flags & 7u) == ST_IDLE && !c->pending;
+        bool idle = st2_client_fresh(c, now) && (c->flags & 7u) == ST_IDLE &&
+                    (!c->pending || c->request.type == ST2_CAL_QUERY);
         bool exit = u->calibration ? st_cal_ui_handle(u->calibration, (st_cal_ui_event)e, idle)
                                    : (e == ST_UI_BACK || e == ST_UI_PRESS);
         if (exit)

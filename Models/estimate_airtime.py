@@ -20,8 +20,8 @@ int main(void){
  {SX128X_LORA_RANGING_SF11,SX128X_LORA_RANGING_BW_400,SX128X_LORA_RANGING_CR_4_5},
  {SX128X_LORA_RANGING_SF12,SX128X_LORA_RANGING_BW_200,SX128X_LORA_RANGING_CR_4_5},
  {SX128X_LORA_RANGING_SF12,SX128X_LORA_RANGING_BW_200,SX128X_LORA_RANGING_CR_4_8}};
- unsigned lengths[]={9,10,12,49};
- for(unsigned i=0;i<4;i++) for(unsigned j=0;j<4;j++) {
+ unsigned lengths[]={9,10,12,23,26,49};
+ for(unsigned i=0;i<4;i++) for(unsigned j=0;j<6;j++) {
   sx128x_pkt_params_lora_t packet={.preamble_len={2,3},.header_type=SX128X_LORA_RANGING_PKT_EXPLICIT,
    .pld_len_in_bytes=(uint8_t)lengths[j],.crc_is_on=true,.invert_iq_is_on=false};
   unsigned ms=sx128x_get_lora_time_on_air_in_ms(&packet,&profiles[i]);

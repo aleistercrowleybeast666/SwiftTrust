@@ -1,6 +1,7 @@
 #ifndef ST_F4_CAPTURE_H
 #define ST_F4_CAPTURE_H
 #include "st_core.h"
+#include "st_cal_input.h"
 #include "stm32f4xx_hal.h"
 typedef struct
 {
@@ -8,6 +9,7 @@ typedef struct
     GPIO_TypeDef *cs_port;
     uint16_t cs_pin;
     st_logger *logger;
+    st_cal_input *calibration;
     bool verified, pending_logging;
     _Atomic(bool) busy;
     uint32_t sequence, pending_sequence, pending_generation;
@@ -23,6 +25,8 @@ typedef struct
  * ADC. */
 void st_f4_capture_init(st_f4_capture_port *, SPI_HandleTypeDef *, GPIO_TypeDef *, uint16_t,
                         st_logger *, bool verified);
+/* Bind once before enabling EXTI; NULL disables the optional calibration tap. */
+void st_f4_capture_bind_calibration(st_f4_capture_port *, st_cal_input *);
 void st_f4_capture_drdy(st_f4_capture_port *, uint64_t edge_time_us);
 void st_f4_capture_complete(st_f4_capture_port *, SPI_HandleTypeDef *);
 void st_f4_capture_error(st_f4_capture_port *, SPI_HandleTypeDef *);

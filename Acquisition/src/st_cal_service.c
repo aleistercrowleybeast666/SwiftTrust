@@ -111,3 +111,13 @@ bool st_cal_service_feed(st_cal_service *s, const st_capture *capture)
         return false;
     return st_cal_feed(&s->workflow, *s->current, capture);
 }
+
+void st_cal_service_source_error(st_cal_service *s)
+{
+    if (s && (s->workflow.state == ST_CAL_ZERO_COLLECT || s->workflow.state == ST_CAL_LOAD_COLLECT))
+    {
+        s->workflow.state = ST_CAL_FAILED;
+        s->workflow.error = ST_CAL_SEQUENCE;
+        s->workflow.candidate.valid = false;
+    }
+}

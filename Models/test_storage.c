@@ -2,6 +2,7 @@
 #include "st_diskio.h"
 #include "st_nv.h"
 #include "st_fatfs_worker.h"
+#include "st_cal_system.h"
 #include "ff.h"
 #include "diskio.h"
 #include <stdio.h>
@@ -29,6 +30,7 @@ typedef struct
     uint8_t *disk, *pending;
     uint32_t sectors, sector, now;
     unsigned waits, yields, aborts;
+    unsigned operations, fail_at, tear_bytes;
     bool present, ready, active, write, error, freeze, never_done, remove_on_yield;
 } block_bus;
 static bool present(void *ctx)
@@ -43,6 +45,12 @@ static st_async_result submit(void *ctx, bool write, uint8_t *data, uint32_t sec
 {
     block_bus *b = ctx;
     C(!b->active && !((uintptr_t)data & 3u) && sector < b->sectors);
+    if (++b->operations == b->fail_at)
+    {
+        if (write && b->tear_bytes)
+            memcpy(b->disk + (size_t)sector * 512, data, b->tear_bytes);
+        return ST_IO_ERROR;
+    }
     if (b->error)
         return ST_IO_ERROR;
     b->active = true;
@@ -385,11 +393,261 @@ static void nv_powercuts(void)
       "slot / committed-but-error skips used counter / bad CRC / unverified storage / read "
       "failure");
 }
+
+st_cal_profile st_cal_test_profile(void);
+static void read_cal_file(const char *name, uint8_t out[1024])
+{
+    FIL f;
+    UINT n;
+    C(f_open(&f, name, FA_READ) == FR_OK);
+    C(f_size(&f) == 1024);
+    C(f_read(&f, out, 1024, &n) == FR_OK && n == 1024);
+    C(f_close(&f) == FR_OK);
+}
+static void cal_fatfs_test(void)
+{
+    uint8_t *disk = calloc(8192, 512), *base = malloc(8192u * 512u);
+    C(disk && base);
+    make_fat16(disk);
+    block_bus bus = {.disk = disk, .sectors = 8192, .present = true, .ready = true};
+    st_block_device device;
+    bind_block(&device, &bus);
+    device.timeout_ms = 1000;
+    st_diskio_bind(&device);
+    FATFS fs;
+    C(f_mount(&fs, "", 1) == FR_OK);
+    st_fatfs_worker worker;
+    st_fatfs_init(&worker, true);
+    st_logger *logger = malloc(sizeof(*logger));
+    st_cal_system *system = malloc(sizeof(*system));
+    C(logger && system);
+    st_cal_profile p = st_cal_test_profile(), loaded = {0};
+    uint8_t encoded[256], old_file[1024], again[1024];
+    st_log_config cfg = {0};
+    st_logger_init(logger, cfg, st_fatfs_port(&worker));
+    C(st_cal_system_init(system, logger, &worker, NULL, p.binding, p.policy, NULL, NULL) ==
+      ST_CAL_DISK_EMPTY);
+    st_cal_storage port = st_cal_fatfs_storage(&system->disk);
+    C(st_cal_profile_encode(&p, encoded) == 256 && port.save(port.ctx, encoded));
+    system->active = p;
+    p.revision = 2;
+    C(st_cal_profile_encode(&p, encoded) == 256 && port.save(port.ctx, encoded));
+    system->active = p;
+    C(system->disk.generation == 2 && system->disk.active_slot == 1);
+    unsigned no_io = bus.operations;
+    C(!port.save(port.ctx, encoded) &&
+      no_io == bus.operations); /* stale revision cannot overwrite */
+    C(st_cal_fatfs_open(&system->disk, &loaded) == ST_CAL_DISK_VALID && loaded.revision == 2);
+    read_cal_file("CAL1.BIN", old_file);
+    C(f_mount(NULL, "", 0) == FR_OK);
+    memcpy(base, disk, 8192u * 512u);
+    C(f_mount(&fs, "", 1) == FR_OK);
+    p.revision = 3;
+    C(st_cal_profile_encode(&p, encoded) == 256);
+    logger->state = ST_CAPTURING;
+    unsigned before = bus.operations;
+    C(!port.save(port.ctx, encoded) && bus.operations == before && system->active.revision == 2);
+    logger->state = ST_IDLE;
+    before = bus.operations;
+    C(port.save(port.ctx, encoded));
+    unsigned count = bus.operations - before;
+    C(count > 2 && count < 100);
+    /* Repeat every physical sector submit, including readback. Existing fixed
+     * slots avoid allocator changes in this fault model. A real card FTL may do
+     * more than the model; this is not a physical brownout guarantee. */
+    unsigned failures = 0, uncertain = 0;
+    for (unsigned tear = 0; tear < 3; tear++)
+        for (unsigned cut = 1; cut <= count; cut++)
+        {
+            C(f_mount(NULL, "", 0) == FR_OK);
+            memcpy(disk, base, 8192u * 512u);
+            bus.fail_at = 0;
+            bus.operations = 0;
+            bus.active = false;
+            bus.tear_bytes = tear == 0 ? 0 : (tear == 1 ? 17 : 511);
+            bind_block(&device, &bus);
+            device.timeout_ms = 1000;
+            st_diskio_bind(&device);
+            C(f_mount(&fs, "", 1) == FR_OK);
+            st_cal_fatfs_init(&system->disk, &worker, logger, p.binding);
+            C(st_cal_fatfs_open(&system->disk, &system->active) == ST_CAL_DISK_VALID &&
+              system->active.revision == 2);
+            port = st_cal_fatfs_storage(&system->disk);
+            bus.fail_at = bus.operations + cut;
+            bool ok = port.save(port.ctx, encoded);
+            C(system->active.revision == 2);
+            if (!ok)
+            {
+                failures++;
+                C(system->disk.fault);
+                before = bus.operations;
+                C(!port.save(port.ctx, encoded) && before == bus.operations);
+            }
+            bus.fail_at = 0;
+            C(f_mount(NULL, "", 0) == FR_OK);
+            bind_block(&device, &bus);
+            device.timeout_ms = 1000;
+            st_diskio_bind(&device);
+            C(f_mount(&fs, "", 1) == FR_OK);
+            read_cal_file("CAL1.BIN", again);
+            C(!memcmp(old_file, again, 1024));
+            st_cal_fatfs_init(&system->disk, &worker, logger, p.binding);
+            C(st_cal_fatfs_open(&system->disk, &loaded) == ST_CAL_DISK_VALID);
+            C(loaded.revision == 2 || loaded.revision == 3);
+            if (!ok && loaded.revision == 3)
+                uncertain++;
+        }
+    C(failures && uncertain);
+    /* A mismatched sensor/config does not load or overwrite either slot. */
+    st_cal_binding foreign = p.binding;
+    foreign.sensor_id++;
+    st_cal_fatfs_init(&system->disk, &worker, logger, foreign);
+    loaded.revision = 99;
+    C(st_cal_fatfs_open(&system->disk, &loaded) == ST_CAL_DISK_FOREIGN && loaded.revision == 99);
+    C(!st_cal_fatfs_storage(&system->disk).save(&system->disk, encoded));
+    C(f_mount(NULL, "", 0) == FR_OK);
+    st_diskio_bind(NULL);
+    free(system);
+    free(logger);
+    free(base);
+    free(disk);
+    G("cal real FatFs two1KiB files / prepare-sync-seal-sync-close-readback / startup reload / "
+      "capture guard / every sector IO fail with0-17-511B torn writes / old file byte-exact / "
+      "uncertain commit reconciled / foreign binding refused");
+}
+
+static uint64_t cal_clock(void *ctx)
+{
+    return *(uint64_t *)ctx;
+}
+static void cal_wire_action(st2_server *server, uint16_t id, st_cal_action action, uint64_t now)
+{
+    st2_packet p = {.type = ST2_CAL_COMMAND, .epoch = server->epoch, .id = id};
+    p.data[0] = (uint8_t)action;
+    if (action == ST_CAL_ACTION_REFERENCE)
+    {
+        p.data[1] = ST_CAL_GRAMS;
+        st_put64(p.data + 2, 100000);
+        st_put32(p.data + 10, ST_CAL_G0_UM_S2);
+    }
+    uint8_t in[35], out[35];
+    size_t n = st2_encode(&p, in);
+    C(n == 23);
+    C(st2_server_receive(server, in, n, (st2_measurement){0}, now, out) == 26);
+}
+static void cal_dma_window(st_cal_system *system, uint64_t *now, int32_t raw, uint32_t seq)
+{
+    *now += system->service.policy.settle_us;
+    for (unsigned i = 0; i < 16; i++)
+    {
+        st_capture c = {.time_us = *now, .sequence = seq + i};
+        c.bytes[0] = 1;
+        c.bytes[1] = 3;
+        c.bytes[3] = (uint8_t)((uint32_t)raw >> 16);
+        c.bytes[4] = (uint8_t)((uint32_t)raw >> 8);
+        c.bytes[5] = (uint8_t)raw;
+        uint16_t crc = st_crc16(c.bytes, 9);
+        c.bytes[9] = (uint8_t)(crc >> 8);
+        c.bytes[10] = (uint8_t)crc;
+        C(st_cal_input_offer_isr(&system->endpoint.input, &c));
+        *now += 500;
+    }
+    st_cal_endpoint_step(&system->endpoint);
+}
+static void cal_wire_candidate(st_cal_system *s, st2_server *server, uint16_t *id, uint64_t *now)
+{
+    cal_wire_action(server, (*id)++, ST_CAL_ACTION_BEGIN, *now);
+    cal_wire_action(server, (*id)++, ST_CAL_ACTION_ZERO, *now);
+    cal_dma_window(s, now, 1000, 100);
+    C(s->service.workflow.state == ST_CAL_LOAD_READY);
+    cal_wire_action(server, (*id)++, ST_CAL_ACTION_REFERENCE, *now);
+    cal_wire_action(server, (*id)++, ST_CAL_ACTION_LOAD, *now);
+    cal_dma_window(s, now, 2000, 200);
+    C(s->service.workflow.state == ST_CAL_REVIEW);
+}
+static void cal_end_to_end(void)
+{
+    uint8_t *disk = calloc(8192, 512);
+    C(disk != NULL);
+    make_fat16(disk);
+    block_bus bus = {.disk = disk, .sectors = 8192, .present = true, .ready = true};
+    st_block_device dev;
+    bind_block(&dev, &bus);
+    dev.timeout_ms = 1000;
+    st_diskio_bind(&dev);
+    FATFS fs;
+    C(f_mount(&fs, "", 1) == FR_OK);
+    st_fatfs_worker worker;
+    st_fatfs_init(&worker, true);
+    st_logger *logger = malloc(sizeof(*logger));
+    st_cal_system *s = malloc(sizeof(*s));
+    C(logger && s);
+    st_cal_profile model = st_cal_test_profile();
+    st_cal_binding b = model.binding;
+    uint64_t now = 1000000;
+    st_log_config cfg = {.adc_clock_hz = b.adc_clock_hz,
+                         .osr = b.osr,
+                         .rate_millihz = b.rate_millihz,
+                         .gain_ch0 = b.gain0,
+                         .gain_ch1 = b.gain1,
+                         .clock_verified = true,
+                         .simulated = true};
+    st_logger_init(logger, cfg, st_fatfs_port(&worker));
+    st2_server server;
+    st2_server_init(&server, logger, (st2_nv_port){0}, (st2_timing){10000, 2200, 2500, 100000, 4},
+                    (uint8_t[12]){1}, (uint8_t[12]){2}, 0);
+    server.active = true;
+    server.offered = true;
+    server.epoch = 33;
+    C(st_cal_system_init(s, logger, &worker, &server, b, model.policy, &now, cal_clock) ==
+      ST_CAL_DISK_EMPTY);
+    uint16_t id = 1;
+    cal_wire_candidate(s, &server, &id, &now);
+    C(!s->active.valid && !logger->config.calibration_valid);
+    uint16_t save_id = id++;
+    cal_wire_action(&server, save_id, ST_CAL_ACTION_SAVE, now);
+    C(s->active.valid && s->active.revision == 1 && s->service.workflow.state == ST_CAL_COMMITTED);
+    unsigned before = bus.operations;
+    cal_wire_action(&server, save_id, ST_CAL_ACTION_SAVE, now);
+    C(bus.operations == before); /* duplicate SAVE never invokes FatFs again */
+    C(server.calibration.prepare_start(server.calibration.ctx));
+    C(logger->config.calibration_valid && logger->config.profile_version == 1);
+    cal_wire_action(&server, id++, ST_CAL_ACTION_BEGIN, now);
+    before = bus.operations;
+    cal_wire_action(&server, id++, ST_CAL_ACTION_CANCEL, now);
+    C(bus.operations == before && s->active.revision == 1 &&
+      s->service.workflow.state == ST_CAL_CANCELLED);
+    cal_wire_candidate(s, &server, &id, &now);
+    bus.fail_at = bus.operations + 1;
+    cal_wire_action(&server, id++, ST_CAL_ACTION_SAVE, now);
+    C(s->active.revision == 1 && s->service.workflow.state == ST_CAL_FAILED &&
+      s->service.workflow.error == ST_CAL_STORAGE_ERROR);
+    bus.fail_at = 0;
+    C(f_mount(NULL, "", 0) == FR_OK);
+    bind_block(&dev, &bus);
+    dev.timeout_ms = 1000;
+    st_diskio_bind(&dev);
+    C(f_mount(&fs, "", 1) == FR_OK);
+    st_cal_profile reloaded = {0};
+    st_cal_fatfs_init(&s->disk, &worker, logger, b);
+    C(st_cal_fatfs_open(&s->disk, &reloaded) == ST_CAL_DISK_VALID && reloaded.revision == 1);
+    C(f_mount(NULL, "", 0) == FR_OK);
+    st_diskio_bind(NULL);
+    free(s);
+    free(logger);
+    free(disk);
+    G("cal end-to-end compact RF command -> readonly DMA queue -> service -> real FatFs/diskio -> "
+      "verified active -> START metadata / duplicate SAVE no IO / cancel and injected write "
+      "failure retain old / remount reload (synthetic card only)");
+}
+
 unsigned st_test_storage(unsigned *out)
 {
     block_tests();
     diskio_tests();
     fatfs_logger_test();
+    cal_fatfs_test();
+    cal_end_to_end();
     nv_tests();
     nv_powercuts();
     *out += groups;

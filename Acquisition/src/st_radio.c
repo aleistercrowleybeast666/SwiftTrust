@@ -81,7 +81,8 @@ bool st_radio_send(st_radio *r, const uint8_t *data, size_t n)
     {
         st2_packet old;
         if (!st2_decode(&old, r->tx, r->tx_length) || old.type != ST2_STATUS ||
-            (p.type != ST2_STATUS && p.type != ST2_ACK))
+            (p.type != ST2_STATUS && p.type != ST2_ACK && p.type != ST2_CAL_REPLY &&
+             p.type != ST2_CAL_COMMAND && p.type != ST2_CAL_QUERY))
             return false;
     }
     memcpy(r->tx, data, n);

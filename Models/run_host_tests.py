@@ -34,7 +34,7 @@ def main():
     reports=[datetime.datetime.now(datetime.timezone.utc).isoformat(), 'Host-only synthetic regression. No MCU/RF/SD/OLED hardware accessed.']
     with tempfile.TemporaryDirectory(prefix='swiftthrust-host-') as temporary:
         t=Path(temporary);exe=t/'tests.exe';fixture=t/'synthetic.stlog';frames=t/'ui.raw';calframes=t/'calibration.raw'
-        sources=sorted((ROOT/'Acquisition/src').glob('*.c'))+sorted((ROOT/'Controller/src').glob('*.c'))+[ROOT/'Models/test_core.c',ROOT/'Models/test_lowlevel.c',ROOT/'Models/test_r2.c',ROOT/'Models/test_storage.c',ROOT/'Models/test_calibration.c',ROOT/'Acquisition/ports/st_diskio.c',ROOT/'Acquisition/ports/st_fatfs_worker.c']
+        sources=sorted((ROOT/'Acquisition/src').glob('*.c'))+sorted((ROOT/'Controller/src').glob('*.c'))+[ROOT/'Models/test_core.c',ROOT/'Models/test_lowlevel.c',ROOT/'Models/test_r2.c',ROOT/'Models/test_storage.c',ROOT/'Models/test_calibration.c',ROOT/'Acquisition/ports/st_diskio.c',ROOT/'Acquisition/ports/st_fatfs_worker.c',ROOT/'Acquisition/ports/st_cal_fatfs.c',ROOT/'Acquisition/ports/st_cal_system.c',ROOT/'Models/test_cal_integration.c']
         sdk=sdk_root()
         fatfs=sdk/'fatfs/src/ff.c';fobj=t/'fatfs.o'
         frun=subprocess.run([str(GCC),'-std=c11','-O2','-Wall','-Wextra','-Werror','-I',str(ROOT/'Acquisition/ports/fatfs_config'),'-I',str(fatfs.parent),'-c',str(fatfs),'-o',str(fobj)],capture_output=True,text=True,timeout=60)
@@ -83,7 +83,7 @@ def main():
         png_preview(calframes.read_bytes(),ROOT/'Models/calibration_ui_preview.png')
         reports.append('FatFs R0.12c external SDK SHA256: '+hashlib.sha256(fatfs.read_bytes()).hexdigest())
         reports.append('Source SHA256:')
-        for p in sources+sorted((ROOT/'Acquisition/include').glob('*.h'))+sorted((ROOT/'Controller/include').glob('*.h')):
+        for p in sources+sorted((ROOT/'Acquisition/include').glob('*.h'))+sorted((ROOT/'Controller/include').glob('*.h'))+sorted((ROOT/'Acquisition/ports').rglob('*.h'))+sorted((ROOT/'Controller/ports').rglob('*.h')):
             reports.append(hashlib.sha256(p.read_bytes()).hexdigest()+' '+p.relative_to(ROOT).as_posix())
     output='\n'.join(x for x in reports if x.strip())+'\n'
     (ROOT/'Models/firmware_host_validation.log').write_text(output,encoding='utf-8')

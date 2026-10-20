@@ -1,0 +1,364 @@
+#include "st_cal_endpoint.h"
+#include "st_cal_remote.h"
+#include "st_cal_ui.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+static unsigned checks, groups;
+#define C(x)                                                                                       \
+    do                                                                                             \
+    {                                                                                              \
+        checks++;                                                                                  \
+        if (!(x))                                                                                  \
+        {                                                                                          \
+            fprintf(stderr, "cal integration line%d: %s\n", __LINE__, #x);                         \
+            exit(1);                                                                               \
+        }                                                                                          \
+    } while (0)
+#define G(s)                                                                                       \
+    do                                                                                             \
+    {                                                                                              \
+        groups++;                                                                                  \
+        puts("PASS " s);                                                                           \
+    } while (0)
+st_cal_profile st_cal_test_profile(void);
+typedef struct
+{
+    st_cal_profile active;
+    st_cal_binding binding;
+    st_cal_service service;
+    st_cal_endpoint endpoint;
+    st_logger logger;
+    st2_server server;
+    st2_client client;
+    st_cal_remote remote;
+    uint64_t now;
+    unsigned saves;
+    bool fail_save;
+} fixture;
+static uint64_t now_us(void *ctx)
+{
+    return ((fixture *)ctx)->now;
+}
+static uint32_t now_ms(void *ctx)
+{
+    return (uint32_t)(((fixture *)ctx)->now / 1000);
+}
+static bool idle(void *ctx)
+{
+    fixture *f = ctx;
+    return f->logger.state == ST_IDLE && !atomic_load(&f->logger.capture_enabled);
+}
+static bool save(void *ctx, const uint8_t p[256])
+{
+    fixture *f = ctx;
+    st_cal_profile parsed;
+    f->saves++;
+    C(st_cal_profile_decode(&parsed, p, 256));
+    C(parsed.revision == f->active.revision + 1);
+    return !f->fail_save;
+}
+static void init(fixture *f)
+{
+    *f = (fixture){.now = 1000000};
+    f->active = st_cal_test_profile();
+    f->binding = f->active.binding;
+    st_log_config cfg = {.adc_clock_hz = f->binding.adc_clock_hz,
+                         .osr = f->binding.osr,
+                         .rate_millihz = f->binding.rate_millihz,
+                         .gain_ch0 = f->binding.gain0,
+                         .gain_ch1 = f->binding.gain1,
+                         .clock_verified = true,
+                         .simulated = true};
+    st_logger_init(&f->logger, cfg, (st_file_port){0});
+    st_cal_service_init(&f->service, &f->active, &f->binding, f->active.policy,
+                        (st_cal_storage){f, save}, f, now_us, idle);
+    st_cal_endpoint_init(&f->endpoint, &f->service, &f->logger);
+    st2_timing timing = {10000, 2200, 2500, 100000, 4};
+    st2_server_init(&f->server, &f->logger, (st2_nv_port){0}, timing, (uint8_t[12]){1},
+                    (uint8_t[12]){2}, 0);
+    f->server.active = true;
+    f->server.offered = true;
+    f->server.epoch = 23;
+    st2_server_attach_calibration(&f->server, st_cal_endpoint_port(&f->endpoint));
+    st2_client_init(&f->client, (st2_nv_port){0}, timing, (uint8_t[12]){2}, (uint8_t[12]){1});
+    f->client.link = ST2_LINK_UP;
+    f->client.epoch = 23;
+    f->client.have_status = true;
+    f->client.received_ms = now_ms(f);
+    f->client.next_command = 1;
+    f->client.flags = ST_IDLE;
+    st_cal_remote_init(&f->remote, &f->client, f, now_ms);
+}
+static st_capture capture(int32_t raw, uint32_t seq, uint64_t now)
+{
+    st_capture c = {.time_us = now, .sequence = seq};
+    c.bytes[0] = 1;
+    c.bytes[1] = 3;
+    c.bytes[3] = (uint8_t)((uint32_t)raw >> 16);
+    c.bytes[4] = (uint8_t)((uint32_t)raw >> 8);
+    c.bytes[5] = (uint8_t)raw;
+    uint16_t crc = st_crc16(c.bytes, 9);
+    c.bytes[9] = (uint8_t)(crc >> 8);
+    c.bytes[10] = (uint8_t)crc;
+    return c;
+}
+static void feed(fixture *f, int32_t raw, uint32_t seq)
+{
+    f->now += f->active.policy.settle_us;
+    for (unsigned i = 0; i < 16; i++)
+    {
+        st_capture c = capture(raw, seq + i, f->now), old = c;
+        C(st_cal_input_offer_isr(&f->endpoint.input, &c));
+        C(!memcmp(&old, &c, sizeof(c)));
+        f->now += 500;
+    }
+    st_cal_endpoint_step(&f->endpoint);
+}
+static void request(fixture *f, st_cal_action action, const st_cal_reference *ref)
+{
+    st_cal_control_port p = st_cal_remote_port(&f->remote);
+    C(p.request(p.ctx, action, ref));
+}
+static void exchange(fixture *f, bool duplicate)
+{
+    uint8_t in[ST2_MAX], out[4][ST2_MAX];
+    size_t lens[4];
+    size_t n = st2_encode(&f->client.request, in);
+    C(n == 9 || n == 23);
+    lens[0] = st2_server_receive(&f->server, in, n, (st2_measurement){0}, f->now, out[0]);
+    C(lens[0] == 26);
+    for (unsigned i = 1; i < 4; i++)
+    {
+        lens[i] = st2_server_poll(&f->server, (st2_measurement){0}, f->now, out[i]);
+        C(lens[i] == 26);
+    }
+    if (duplicate)
+    {
+        unsigned saves = f->saves;
+        uint8_t retry[ST2_MAX];
+        C(st2_server_receive(&f->server, in, n, (st2_measurement){0}, f->now, retry) == 26);
+        C(!memcmp(out[0], retry, 26) && f->saves == saves);
+        /* The retry's pending fragments do not mutate the cached snapshot. */
+    }
+    C(st2_client_receive(&f->client, out[3], lens[3], now_ms(f)));
+    C(st2_client_receive(&f->client, out[1], lens[1], now_ms(f)));
+    C(st2_client_receive(&f->client, out[1], lens[1], now_ms(f)));
+    C(f->client.pending && !f->client.cal_have_view);
+    uint8_t bad[ST2_MAX];
+    memcpy(bad, out[1], 26);
+    bad[9] ^= 1;
+    st_put16(bad + 24, st_crc16(bad, 24));
+    C(!st2_client_receive(&f->client, bad, 26, now_ms(f)));
+    C(st2_client_receive(&f->client, out[0], lens[0], now_ms(f)));
+    C(st2_client_receive(&f->client, out[2], lens[2], now_ms(f)));
+    C(!f->client.pending && f->client.cal_have_view && f->client.transaction == ST_TX_COMPLETE);
+}
+static st_cal_view view(fixture *f)
+{
+    st_cal_view v;
+    st_cal_control_port p = st_cal_remote_port(&f->remote);
+    C(p.snapshot(p.ctx, &v));
+    return v;
+}
+static void query(fixture *f)
+{
+    C(st2_client_cal_command(&f->client, NULL, now_ms(f)));
+    exchange(f, false);
+}
+static void prepare(fixture *f)
+{
+    request(f, ST_CAL_ACTION_BEGIN, NULL);
+    exchange(f, true);
+    C(view(f).state == ST_CAL_ZERO_READY);
+    /* All START paths, including a direct wire request, respect the wizard lock. */
+    C(st2_client_command(&f->client, ST2_START, now_ms(f)));
+    uint8_t in[35], out[35];
+    size_t n = st2_encode(&f->client.request, in);
+    n = st2_server_receive(&f->server, in, n, (st2_measurement){0}, f->now, out);
+    C(n == 10 && st2_client_receive(&f->client, out, n, now_ms(f)) &&
+      f->client.transaction == ST_TX_REJECTED);
+    C(f->logger.state == ST_IDLE);
+    request(f, ST_CAL_ACTION_ZERO, NULL);
+    exchange(f, true);
+    feed(f, 1000, 10);
+    query(f);
+    C(view(f).state == ST_CAL_LOAD_READY);
+    st_cal_reference ref = {ST_CAL_GRAMS, 100000, ST_CAL_G0_UM_S2};
+    request(f, ST_CAL_ACTION_REFERENCE, &ref);
+    exchange(f, true);
+    request(f, ST_CAL_ACTION_LOAD, NULL);
+    exchange(f, true);
+    feed(f, 2000, 100);
+    query(f);
+    C(view(f).state == ST_CAL_REVIEW && f->active.revision == 1);
+}
+static void input_tests(void)
+{
+    fixture *f = malloc(sizeof(*f));
+    C(f != NULL);
+    init(f);
+    st_cal_control_port p = st_cal_service_port(&f->service);
+    C(p.request(p.ctx, ST_CAL_ACTION_BEGIN, NULL));
+    C(p.request(p.ctx, ST_CAL_ACTION_ZERO, NULL));
+    st_cal_endpoint_step(&f->endpoint);
+    atomic_store(&f->endpoint.input.head, UINT32_MAX - 3);
+    atomic_store(&f->endpoint.input.tail, UINT32_MAX - 3);
+    st_capture stale = capture(9000, 1, f->now - 1);
+    C(st_cal_input_offer_isr(&f->endpoint.input, &stale));
+    feed(f, 1000, 10);
+    C(f->service.workflow.state == ST_CAL_LOAD_READY &&
+      f->service.workflow.candidate.zero_raw == 1000);
+    C(!atomic_load(&f->endpoint.input.enabled));
+    C(!st_cal_input_offer_isr(&f->endpoint.input, &stale));
+    C(p.request(p.ctx, ST_CAL_ACTION_BEGIN, NULL));
+    C(p.request(p.ctx, ST_CAL_ACTION_ZERO, NULL));
+    st_cal_endpoint_step(&f->endpoint);
+    for (unsigned i = 0; i < 64; i++)
+    {
+        st_capture c = capture(1000, i, f->now + 3000 + i * 500);
+        C(st_cal_input_offer_isr(&f->endpoint.input, &c));
+    }
+    C(!st_cal_input_offer_isr(&f->endpoint.input, &stale));
+    st_cal_endpoint_step(&f->endpoint);
+    C(f->service.workflow.state == ST_CAL_FAILED && f->service.workflow.error == ST_CAL_SEQUENCE &&
+      f->active.revision == 1);
+    C(p.request(p.ctx, ST_CAL_ACTION_BEGIN, NULL));
+    C(p.request(p.ctx, ST_CAL_ACTION_ZERO, NULL));
+    st_cal_endpoint_step(&f->endpoint);
+    st_cal_input_error_isr(&f->endpoint.input);
+    st_cal_endpoint_step(&f->endpoint);
+    C(f->service.workflow.state == ST_CAL_FAILED && f->active.revision == 1 && f->saves == 0);
+    f->logger.state = ST_CAPTURING;
+    C(!p.request(p.ctx, ST_CAL_ACTION_BEGIN, NULL));
+    C(f->active.revision == 1);
+    free(f);
+    G("cal real-DMA tap queue / raw bytes unchanged / stale edge discard / uint32 wrap / bounded "
+      "drain / overflow and DMA-error reject candidate / capture busy preserves active");
+}
+static void rpc_tests(void)
+{
+    fixture *f = malloc(sizeof(*f));
+    C(f != NULL);
+    init(f);
+    prepare(f);
+    request(f, ST_CAL_ACTION_SAVE, NULL);
+    uint8_t command[35], bad[35], reply[35];
+    size_t n = st2_encode(&f->client.request, command);
+    for (size_t i = 0; i < n; i++)
+    {
+        memcpy(bad, command, n);
+        bad[i] ^= 1;
+        C(st2_server_receive(&f->server, bad, n, (st2_measurement){0}, f->now, reply) == 0);
+    }
+    for (size_t i = 0; i < n; i++)
+        C(st2_server_receive(&f->server, command, i, (st2_measurement){0}, f->now, reply) == 0);
+    C(f->saves == 0);
+    exchange(f, true);
+    C(f->saves == 1 && f->active.revision == 2 && view(f).state == ST_CAL_COMMITTED);
+    st2_packet conflict = f->client.request;
+    conflict.data[0] = ST_CAL_ACTION_CANCEL;
+    n = st2_encode(&conflict, bad);
+    n = st2_server_receive(&f->server, bad, n, (st2_measurement){0}, f->now, reply);
+    st2_packet ack;
+    C(n == 10 && st2_decode(&ack, reply, n) && (ack.flags & 7u) == ST2_CONFLICT &&
+      f->active.revision == 2);
+    conflict.epoch++;
+    n = st2_encode(&conflict, bad);
+    C(!st2_server_receive(&f->server, bad, n, (st2_measurement){0}, f->now, reply));
+    C(f->server.calibration.prepare_start(f->server.calibration.ctx));
+    C(f->logger.config.calibration_valid && f->logger.config.profile_version == 2);
+    f->binding.gain0 = 64;
+    C(f->server.calibration.prepare_start(f->server.calibration.ctx));
+    C(!f->logger.config.calibration_valid);
+    f->binding.gain0 = 128;
+    request(f, ST_CAL_ACTION_BEGIN, NULL);
+    exchange(f, false);
+    f->now += (uint64_t)(f->server.timing.operation_ms + 1) * 1000;
+    (void)st2_server_poll(&f->server, (st2_measurement){0}, f->now, reply);
+    C(f->service.workflow.state == ST_CAL_CANCELLED && f->active.revision == 2);
+    free(f);
+    G("cal 23B command / 9B query / four26B frozen reply fragments / reorder-duplicate-conflict / "
+      "CRC-truncation / old epoch / save executes once / START lock and apply / session lease "
+      "cancel");
+}
+static void uncertainty_tests(void)
+{
+    fixture *f = malloc(sizeof(*f));
+    C(f != NULL);
+    init(f);
+    prepare(f);
+    request(f, ST_CAL_ACTION_SAVE, NULL);
+    uint8_t wire[35], reply[35];
+    size_t n = st2_encode(&f->client.request, wire);
+    C(st2_server_receive(&f->server, wire, n, (st2_measurement){0}, f->now, reply) == 26);
+    C(f->active.revision == 2 && f->saves == 1); /* all replies lost */
+    st2_client_tx_accepted(&f->client);
+    st2_client_tx_done(&f->client, now_ms(f), 0);
+    C(!st2_client_tx_due(&f->client, now_ms(f) + f->client.timing.ack_rto_ms, wire, &n));
+    C(st2_client_tx_due(
+        &f->client, now_ms(f) + f->client.timing.ack_rto_ms + 3u * f->client.timing.max_airtime_ms,
+        wire, &n));
+    st_cal_ui ui;
+    st_cal_ui_init(&ui, st_cal_remote_port(&f->remote));
+    ui.page = ST_CAL_UI_RESULT;
+    st_cal_panel panel;
+    st_cal_ui_render(&ui, &panel);
+    C(!strcmp(panel.rows[0], "WAIT RESPONSE"));
+    f->now += (uint64_t)(f->client.timing.operation_ms + 1) * 1000;
+    C(!st2_client_tx_due(&f->client, now_ms(f), wire, &n));
+    C(view(f).uncertain);
+    (void)st2_server_poll(&f->server, (st2_measurement){0}, f->now, reply);
+    C(f->service.workflow.state == ST_CAL_COMMITTED);
+    st_cal_ui_render(&ui, &panel);
+    C(!strcmp(panel.rows[0], "RESULT UNKNOWN"));
+    C(strcmp(panel.rows[1], "OLD PROFILE RETAINED"));
+    f->client.received_ms = now_ms(f);
+    query(f);
+    C(view(f).state == ST_CAL_COMMITTED && !view(f).uncertain);
+    st_cal_ui_render(&ui, &panel);
+    C(!strcmp(panel.rows[0], "CALIBRATION SAVED"));
+    /* Rejected capture-time SAVE cannot mutate the accepted profile. */
+    f->client.flags = ST_IDLE;
+    f->logger.state = ST_CAPTURING;
+    request(f, ST_CAL_ACTION_BEGIN, NULL);
+    exchange(f, false);
+    C(view(f).request_failed && view(f).error == ST_CAL_BUSY && f->active.revision == 2);
+    free(f);
+    G("cal remote menu waits for complete reply / lost SAVE reply yields RESULT UNKNOWN / explicit "
+      "query reconciles durable result / capture-time mutation rejected");
+}
+
+static void background_query_test(void)
+{
+    fixture *f = malloc(sizeof(*f));
+    C(f != NULL);
+    init(f);
+    request(f, ST_CAL_ACTION_BEGIN, NULL);
+    exchange(f, false);
+    C(view(f).state == ST_CAL_ZERO_READY);
+    C(st2_client_cal_command(&f->client, NULL, now_ms(f)));
+    uint16_t query_id = f->client.request.id;
+    C(!view(f).pending && view(f).state == ST_CAL_ZERO_READY);
+    st_cal_ui ui;
+    st_cal_ui_init(&ui, st_cal_remote_port(&f->remote));
+    ui.page = ST_CAL_UI_EDITOR;
+    ui.selection = 0;
+    C(!st_cal_ui_handle(&ui, ST_CAL_UI_NEXT, true) && ui.selection == 1);
+    request(f, ST_CAL_ACTION_CANCEL, NULL);
+    C(f->client.request.id > query_id);
+    exchange(f, false);
+    C(view(f).state == ST_CAL_CANCELLED && f->active.revision == 1);
+    free(f);
+    G("cal background read-only query keeps encoder responsive / explicit action supersedes poll / "
+      "previous cached outcome cannot complete a new command");
+}
+unsigned st_test_cal_integration(unsigned *out)
+{
+    input_tests();
+    rpc_tests();
+    uncertainty_tests();
+    background_query_test();
+    *out += groups;
+    return checks;
+}

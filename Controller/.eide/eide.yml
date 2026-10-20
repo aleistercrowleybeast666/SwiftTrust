@@ -127,6 +127,12 @@
       },
       {
         "path": "src/st_cal_ui.c"
+      },
+      {
+        "path": "../Acquisition/src/st_cal_view.c"
+      },
+      {
+        "path": "src/st_cal_remote.c"
       }
     ],
     "folders": []
@@ -210,7 +216,7 @@
               "remove-unused-input-sections": true,
               "use-float-printf": false,
               "LIB_FLAGS": "-lc -lm -lnosys",
-              "LD_FLAGS": "-nostartfiles -Wl,--undefined=st_crc16,--undefined=st_radio_tick,--undefined=st_debug_service,--undefined=st_debug_uart_configure,--undefined=st_ui_handle,--undefined=st_ui_raster,--undefined=st_oled_service,--undefined=st_g0_oled_i2c,--undefined=st2_client_receive,--undefined=st_ui2_handle,--undefined=st_ui2_render,--undefined=st_radio_hal_bind,--undefined=st_radio_hal_port,--undefined=st_nv_link_port,--undefined=st_cal_begin,--undefined=st_cal_commit,--undefined=st_cal_service_port,--undefined=st_cal_ui_handle,--undefined=st_cal_ui_render"
+              "LD_FLAGS": "-nostartfiles -Wl,--undefined=st_crc16,--undefined=st_radio_tick,--undefined=st_debug_service,--undefined=st_debug_uart_configure,--undefined=st_ui_handle,--undefined=st_ui_raster,--undefined=st_oled_service,--undefined=st_g0_oled_i2c,--undefined=st2_client_receive,--undefined=st_ui2_handle,--undefined=st_ui2_render,--undefined=st_radio_hal_bind,--undefined=st_radio_hal_port,--undefined=st_nv_link_port,--undefined=st_cal_begin,--undefined=st_cal_commit,--undefined=st_cal_service_port,--undefined=st_cal_ui_handle,--undefined=st_cal_ui_render,--undefined=st_cal_remote_init,--undefined=st_cal_remote_port,--undefined=st_cal_remote_step"
             }
           }
         }

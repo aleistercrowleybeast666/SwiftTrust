@@ -6,15 +6,17 @@
 #include "st_debug.h"
 #include "st_nv.h"
 #include "st_ui.h"
+#include "st_cal_remote.h"
+st_cal_remote st_linkcheck_cal_remote;
 st_cal_ui st_linkcheck_cal_ui;
 st_nv_store st_linkcheck_nv;
 st_radio st_linkcheck_radio;
 st_debug st_linkcheck_debug;
 st_oled st_linkcheck_oled;
 st2_client st_linkcheck_client;
-void *volatile st_linkcheck_objects[] = {&st_linkcheck_cal_ui, &st_linkcheck_nv,
-                                         &st_linkcheck_radio,  &st_linkcheck_debug,
-                                         &st_linkcheck_oled,   &st_linkcheck_client};
+void *volatile st_linkcheck_objects[] = {
+    &st_linkcheck_cal_remote, &st_linkcheck_cal_ui, &st_linkcheck_nv,    &st_linkcheck_radio,
+    &st_linkcheck_debug,      &st_linkcheck_oled,   &st_linkcheck_client};
 volatile unsigned st_link_check_crc_ok;
 void _init(void)
 {

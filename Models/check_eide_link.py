@@ -42,6 +42,11 @@ def main():
    reports.append(subprocess.check_output([str(tool/'bin/arm-none-eabi-size.exe'),str(elfs[0])],text=True).replace(str(temp),'<TEMP>'))
    undefined=subprocess.check_output([str(tool/'bin/arm-none-eabi-nm.exe'),'-u',str(elfs[0])],text=True)
    assert not undefined.strip(),undefined
+   symbols=subprocess.check_output([str(tool/'bin/arm-none-eabi-nm.exe'),'--defined-only',str(elfs[0])],text=True)
+   required=({'st_cal_system_init','st_cal_endpoint_step','st_cal_fatfs_open','st_cal_fatfs_storage','st_f4_capture_bind_calibration','st_cal_input_offer_isr','st_f4_capture_complete','st_f4_capture_error'} if board=='Acquisition' else {'st_cal_remote_init','st_cal_remote_port','st_cal_remote_step','st2_client_cal_command'})
+   defined={line.split()[-1] for line in symbols.splitlines() if line.split()}
+   assert required<=defined,'Calibration integration discarded or missing: '+str(required-defined)
+   reports.append('PASS retained calibration integration symbols: '+', '.join(sorted(required)))
    reports.append('PASS linked ELF with no undefined symbols; binaries removed after validation.')
  reports.append('Both EIDE targets linked. The entry point performs only a CRC self-check and WFI. No board functionality is claimed.')
  result='\n'.join(reports)+'\n';(ROOT/'Models/eide_link_validation.log').write_text(result,encoding='utf-8');print(result);return 0

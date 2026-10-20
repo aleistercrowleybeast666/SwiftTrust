@@ -88,3 +88,9 @@ void st_fatfs_worker_step(st_fatfs_worker *w)
     atomic_store_explicit(&w->state, result == FR_OK ? FILE_DONE : FILE_ERROR,
                           memory_order_release);
 }
+
+bool st_fatfs_idle(const st_fatfs_worker *w)
+{
+    return w && w->verified && !w->opened &&
+           atomic_load_explicit(&w->state, memory_order_acquire) == FILE_FREE;
+}

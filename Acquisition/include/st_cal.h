@@ -82,7 +82,8 @@ typedef enum
     ST_CAL_STORAGE_UNBOUND,
     ST_CAL_STORAGE_ERROR,
     ST_CAL_ZERO_EXPIRED,
-    ST_CAL_COEFFICIENT
+    ST_CAL_COEFFICIENT,
+    ST_CAL_LINK
 } st_cal_error;
 typedef struct
 {
