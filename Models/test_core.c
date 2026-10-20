@@ -272,9 +272,10 @@ static void test_oled_input(void) {
 }
 unsigned st_test_lowlevel(unsigned *groups_out);
 unsigned st_test_r2(unsigned *groups_out);
+unsigned st_test_storage(unsigned *groups_out);
 int main(int argc,char **argv) {
     CHECK(argc==3);test_crc_adc();test_ring();test_voltage();test_logger(argv[1]);
-    test_protocol_ui(argv[2]);test_oled_input();checks+=st_test_lowlevel(&groups);checks+=st_test_r2(&groups);
+    test_protocol_ui(argv[2]);test_oled_input();checks+=st_test_lowlevel(&groups);checks+=st_test_r2(&groups);checks+=st_test_storage(&groups);
     printf("PASS total: %u groups, %u assertions; host sizeof(logger)=%zu, sizeof(oled)=%zu\n",groups,checks,sizeof(st_logger),sizeof(st_oled));
     return 0;
 }

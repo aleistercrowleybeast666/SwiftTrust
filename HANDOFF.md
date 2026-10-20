@@ -1,18 +1,18 @@
 # SwiftThrust 当前交接
 
-2026-10-20。源码、协议、四页面和原OLED选择已同步。无线包无版本字段或版本位，TYPE=0x01…0x09；`st2_`只是代码内部名称。当前目标为组件LINK_CHECK，**不是可运行整板固件**。所有硬件均未测试，未访问串口/SWD或机械臂设备。
+2026-10-20。源码、协议、四页面和原OLED选择已同步。新增真实HAL/diskio与链路持久化记录核心，详细接入依赖见[BOARD_INTEGRATION](Models/BOARD_INTEGRATION.md)。无线包无版本字段或版本位，TYPE=0x01…0x09；`st2_`只是代码内部名称。当前目标为组件LINK_CHECK，**不是可运行整板固件**。所有硬件均未测试，未访问串口/SWD或机械臂设备。
 
 ## 逐模块状态
 
 | 模块、真实入口 | 已实现且验证 | 已实现但待验证 | 尚未实现 |
 |---|---|---|---|
 | ADC解析/记录：`Acquisition/src/st_core.c`，`st_adc_decode`、`st_record` | Host：24bit符号扩展、CRC/状态/填充、记录CRC；两端ARM构建 | 真实ADS数据、SPI完整性及时间性能 | 实际电气/时钟/增益绑定 |
-| ADS配置：`Acquisition/src/st_ads.c`，`st_ads_init`、`st_ads_tick` | Host总线模型：复位时序、延迟ACK、寄存器写入/读回、LOCK、启动排空、失败分支；F411 ARM构建 | 实物复位/配置/读回和稳定采样 | ADC配置SPI HAL端口与板级初始化 |
+| ADS配置：`Acquisition/src/st_ads.c`，`st_ads_init`、`st_ads_tick` | Host总线模型：复位时序、延迟ACK、寄存器写入/读回、LOCK、启动排空、失败分支；F411 ARM构建 | `ports/st_ads_hal.c`真实DMA适配已F411编译链接；实际复位/读回/稳定采样未测 | 板级SPI/DMA/CLKIN初始化与配置阶段所有权接线 |
 | DRDY采集：`Acquisition/ports/st_f4_capture.c`，`st_f4_capture_drdy/complete/error` | F411真实HAL编译链接；Host仅验证其下游队列和记录核心 | DMA/EXTI序列化、空闲排空、64bit时钟扩展、停止边界和实时性，未作HAL模型/板测 | 实际IRQ/DMA初始化与回调接线 |
 | 环形与日志：`st_core.c`、`st_logger.c`，`st_ring_push/pop`、`st_logger_start/stop/service` | Host：SPSC溢出、双缓冲、保留在途内存、短写/异步故障、头/尾/同步/关闭顺序、恢复有效前缀；F411 ARM构建 | 真实卡延迟、分配簇、sync最坏停顿、掉电恢复 | 完整应用存储调度与持久化验收 |
-| FatFs适配：`ports/st_fatfs_worker.c`，`st_fatfs_worker_step` | F411与真实FatFs R0.12c编译链接 | 真实f_open/write/sync/close运行；本适配没有Host运行回归，logger测试用的是测试文件端口 | 实际SDIO diskio和低优先级任务；`board/link_check_diskio.c`明确NOT_READY，仅链接用途 |
-| 无线短包：`src/st_link2.c`，`st2_server_receive/poll`、`st2_client_*`、`st2_details_*` | Host：长度/坏CRC/未知型、配对UID握手、持久化失败拒绝、幂等/终态ACK、状态心跳/年龄/不回绕、诊断一致快照/乱序/重读；两端ARM构建 | 与实际radio队列、TX_DONE、测量年龄及运行任务接线 | 实际Flash/EEPROM NV后端、配对配置与掉电原子性；无后端即拒绝建链，测试RAM模型不等于持久化 |
-| SX128x：`src/st_radio.c`，`st_radio_init/tick/send/receive` | 未修改Semtech源；Host总线模型和两端ARM构建，G071用有界PRIMASK标志交换 | 真实BUSY/SPI/DIO/复位/空中收发、超时恢复 | 两板实际SPI HAL端口及应用收发调度 |
+| FatFs适配：`ports/st_fatfs_worker.c`，`st_fatfs_worker_step` | Host真实FatFs＋worker＋diskio在合成FAT16写入/校验1500样本；F411 ARM构建 | `ports/st_sdio_hal.c`真实DMA端口仅ARM验证，物理卡性能/掉电未测 | 板级SDIO/DMA/IRQ、卡检测极性和低优先级任务；旧NOT_READY-only占位已删除 |
+| 无线短包：`src/st_link2.c`，`st2_server_receive/poll`、`st2_client_*`、`st2_details_*` | Host：长度/坏CRC/未知型、配对UID握手、持久化失败拒绝、幂等/终态ACK、状态心跳/年龄/不回绕、诊断一致快照/乱序/重读；两端ARM构建 | 与实际radio队列、TX_DONE、测量年龄及运行任务接线 | `src/st_nv.c`双槽记录核心已Host验证并两端ARM构建；实际Flash/EEPROM后端、配对/epoch域与写入时机未完成，无物理后端仍拒绝建链 |
+| SX128x：`src/st_radio.c`，`st_radio_init/tick/send/receive` | 未修改Semtech源；Host总线模型和两端ARM构建，G071用有界PRIMASK标志交换 | 真实BUSY/SPI/DIO/复位/空中收发、超时恢复 | 真实`ports/st_radio_hal.c`已两端ARM构建；尚需SPI/GPIO初始化与应用收发调度 |
 | 电压/LED：`st_core.c`电压函数、`ports/st_f4_capture.c`的`st_f4_voltage_leds` | Host：未知/过期/真实零、四级阈值与回差；F411 GPIO适配ARM构建 | 真实参考/分压/校准、LED极性和阈值 | 两板供电ADC采样绑定；未确认时UNKNOWN，GPIO未验证不驱动 |
 | UI/OLED：`Controller/src/st_ui2.c`、`st_ui.c`、`st_raster.c`、`st_oled.c`，`st_ui2_handle/render` | Host：四入口浏览/返回、开始确认默认返回、仅采集启停、禁用页面不创建事务；SSD1306/SH1106总线模型；G071 ARM构建与真实C帧缓冲目视核查 | 实际屏幕/编码器电气和按键手感 | 板级输入/显示事件循环接线；当前字体ASCII，不冒充中文或实物照片 |
 | UART：`src/st_debug.c`、`ports/st_debug_uart_hal.c`，`st_debug_write/service`、`st_debug_uart_configure` | Host验证有界发送队列/保留内存/满丢弃/限速；两板真实UART HAL编译链接 | 实际115200 8N1 TX/RX及错误恢复；UART HAL本身未做Host模拟/板测 | USART1 IRQ与HAL回调接线；没有RX命令执行器 |
@@ -20,9 +20,9 @@
 
 ## 最新证据与复现
 
-- Host：`python -B Models/run_host_tests.py`，**27组/21,469次C断言**，附Python导出边界；报告`Models/firmware_host_validation.log`含源码SHA256。`HOST_CC`指定Host GCC或将gcc加入PATH。
-- ARM：`python -B Models/check_eide_link.py`，真实EIDE native builder读取两份实际工程源清单；**两端各34个C文件＋1个启动汇编，均成功链接且无未解析符号**。报告`Models/eide_link_validation.log`，时间2026-10-20T03:16 UTC。
-- 本轮链接Flash/RAM：F411 **22,144/47,224 B**；G071 **20,748/6,800 B**。RAM含代表性静态上下文及链接脚本堆栈预留，未包含尚未接入的整板任务/运行栈，不是最终RAM或实时性证明。
+- Host：`python -B Models/run_host_tests.py`，**32组/33,482次C断言**，附Python导出边界；报告`Models/firmware_host_validation.log`含源码SHA256。`HOST_CC`指定Host GCC或将gcc加入PATH；`SDK_ROOT`还须提供真实FatFs R0.12c头/源码。
+- ARM：`python -B Models/check_eide_link.py`，真实EIDE native builder读取两份实际工程源清单；**F41139个C文件＋1个启动汇编、G07136个C文件＋1个启动汇编，均成功链接且无未解析符号**。报告`Models/eide_link_validation.log`，时间2026-10-20T03:42 UTC。
+- 本轮链接Flash/RAM：F411 **30,932/47,896 B**；G071 **25,632/6,896 B**。RAM含代表性静态上下文及链接脚本堆栈预留，未包含尚未接入的整板任务/运行栈，不是最终RAM或实时性证明。
 - 引脚/资源：`python -B Models/validate_candidates.py`，**22项通过**，需本机CubeMX数据库。候选IOC曾由CubeMX实际保存核对，无代码生成或依赖整包下载。
 - 两端`.eide/eide.yml`都有独立name/uid/output；打开`SwiftThrust.code-workspace`分别选目标构建。Custom烧录仅拒绝执行；不得将LINK_CHECK当成整板程序烧录。
 - SDK为外部共享缓存，清单155文件/12,810,494 B，哈希本轮全数核对；SDK、工具链和产物不提交仓库。脚本临时构建目录自动清理，未在项目内留构建副本。
@@ -65,4 +65,6 @@ UNDERLINE只读核实：TR_F是无表头两列`时间,原始值`，默认秒，�
 
 ## 完成整板固件仍需
 
-真实原理图/时钟/分压/LED/传感器参数确认；板级初始化、中断、独立存储任务和完整应用循环；SDIO diskio、ADC/RF HAL端口；可靠NV配对计数与epoch恢复；电气、实时性、掉电与射频实测。当前源码可审阅和组件构建，不宣称整板完成。第三方保持原许可，未擅自添加项目新许可。
+真实原理图/时钟/分压/LED/传感器参数确认；板级初始化、中断、独立存储任务和完整应用循环；SDIO/ADC/RF适配器的板级初始化和IRQ/任务接入；双槽记录的实际NV介质、配对与epoch恢复/写入窗口；电气、实时性、掉电与射频实测。当前源码可审阅和组件构建，不宣称整板完成。第三方保持原许可，未擅自添加项目新许可。
+
+本阶段新增块设备占512B对齐bounce，不能把其中的重复写入数据再算为额外日志队列容量；前述40KiB/1280条记录预算保持不变。无新增校准向导、点火行为或协议字段。

@@ -12,9 +12,6 @@
         "path": "board/link_check_main.c"
       },
       {
-        "path": "board/link_check_diskio.c"
-      },
-      {
         "path": "src/st_ads.c"
       },
       {
@@ -112,6 +109,24 @@
       },
       {
         "path": "src/st_link2.c"
+      },
+      {
+        "path": "src/st_block.c"
+      },
+      {
+        "path": "src/st_nv.c"
+      },
+      {
+        "path": "ports/st_diskio.c"
+      },
+      {
+        "path": "ports/st_sdio_hal.c"
+      },
+      {
+        "path": "ports/st_ads_hal.c"
+      },
+      {
+        "path": "ports/st_radio_hal.c"
       }
     ],
     "folders": []
@@ -196,7 +211,7 @@
               "remove-unused-input-sections": true,
               "use-float-printf": false,
               "LIB_FLAGS": "-lc -lm -lnosys",
-              "LD_FLAGS": "-nostartfiles -Wl,--undefined=st_crc16,--undefined=st_radio_tick,--undefined=st_debug_service,--undefined=st_debug_uart_configure,--undefined=st_logger_service,--undefined=st_ads_tick,--undefined=st_server_handle,--undefined=st_f4_capture_drdy,--undefined=st_fatfs_worker_step,--undefined=st2_server_receive,--undefined=st2_client_receive"
+              "LD_FLAGS": "-nostartfiles -Wl,--undefined=st_crc16,--undefined=st_radio_tick,--undefined=st_debug_service,--undefined=st_debug_uart_configure,--undefined=st_logger_service,--undefined=st_ads_tick,--undefined=st_server_handle,--undefined=st_f4_capture_drdy,--undefined=st_fatfs_worker_step,--undefined=st2_server_receive,--undefined=st2_client_receive,--undefined=st_radio_hal_bind,--undefined=st_radio_hal_port,--undefined=st_nv_link_port,--undefined=st_ads_hal_bind,--undefined=st_ads_hal_port,--undefined=st_sdio_hal_bind,--undefined=st_sdio_hal_port,--undefined=disk_initialize,--undefined=disk_read,--undefined=disk_write,--undefined=disk_ioctl"
             }
           }
         }

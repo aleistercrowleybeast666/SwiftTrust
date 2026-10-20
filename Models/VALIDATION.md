@@ -4,4 +4,6 @@
 
 Host使用合成ADC、RF/I2C/SPI/存储/NV模型，覆盖坏CRC/格式、队列溢出、短写/故障、幂等重试/终态ACK丢失、握手旧epoch/持久化失败、状态超时、诊断快照乱序以及四页面无行为占位。C代码保持-Wall -Wextra -Werror -Wconversion -Wshadow -Wpedantic；原版第三方Semtech单独编译。EIDE完整HAL编译保留厂商设备裁剪后的unused-parameter警告，其余错误仍阻断。
 
-EIDE入口只有CRC自检/WFI，无外设初始化或真实存储成功后端。链接的代表性静态上下文/堆栈预留仅证明当前组件容纳在器件内存里，不证明最终任务栈/实时性。没有操作探针、串口、ADC、SD或机械臂。没有进行真实掉电、距离或电气测试。软件通过不等于Hardware PASS。
+EIDE入口只有CRC自检/WFI，无外设初始化；真实diskio/HAL端口未绑定实物时拒绝I/O。链接的代表性静态上下文/堆栈预留仅证明当前组件容纳在器件内存里，不证明最终任务栈/实时性。没有操作探针、串口、ADC、SD或机械臂。没有进行真实掉电、距离或电气测试。软件通过不等于Hardware PASS。
+
+本阶段新增：32组/33,482断言；采用未修改FatFs R0.12c、真实worker/diskio、合成RAM FAT16走完整1500样本流程。NV内存模型穷举97个写入切断位置。HAL端口只经真实SDK ARM编译链接，不能把RAM盘、NV模型或编译通过当作真实卡/Flash/DMA测试。

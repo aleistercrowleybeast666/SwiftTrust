@@ -1,4 +1,4 @@
-2026-10-20T03:25:54.163004+00:00
+2026-10-20T03:43:02.219833+00:00
 Host-only synthetic regression. No MCU/RF/SD/OLED hardware accessed.
 Official vendor source compiled separately with -Wall -Wextra -Werror; project code retains conversion/shadow checks; vendor remains unmodified.
 Compiler: gcc.exe (Rev5, Built by MSYS2 project) 16.1.0
@@ -30,31 +30,44 @@ PASS R2 paired UID handshake / durable reservation once / boot rejects old count
 PASS R2 stop idempotence / terminal ACK loss and retry / status never completes command / conflicting ID / async failure / no transaction wrap / TX_DONE retry anchor
 PASS R2 10s heartbeat / freshness event / sticky quality / stale or duplicate status rejected / time wrap / status sequence exhaustion / bounded handshake timeout
 PASS R2 consistent two-fragment diagnostic snapshot / reorder and duplicate / changed duplicate rejection / request ID isolation / menu emits only R2 START
-PASS total: 27 groups, 21469 assertions; host sizeof(logger)=41720, sizeof(oled)=1104
+PASS block DMA-aligned retained bounce / unaligned caller / two-sector roundtrip / bounds / wrap timeout / removal / frozen tick / latched failure
+PASS real FatFs diskio interface / unbound and wrong drive / geometry / unknown erase size / read-write-sync / hot removal
+PASS unmodified FatFs R0.12c + real worker + logger + diskio on synthetic RAM FAT16 / 1500 records / file size / per-record CRC / END / durable close (no physical SD)
+PASS NV explicit blank provisioning / alternating slots / reopened counter / paired identity mismatch / monotonic peer counter / assigned epoch range exhaustion
+PASS NV simulated cut at all97 byte boundaries / no automatic rollback from damaged programmed slot / committed-but-error skips used counter / bad CRC / unverified storage / read failure
+PASS total: 32 groups, 33482 assertions; host sizeof(logger)=41720, sizeof(oled)=1104
 
 PASS Python exporter: clean/uncalibrated/calibrated/invalid-ADC/truncated-tail/record-CRC/header-CRC/exclusive-output
 Preview panels: HOME, CAPTURE ONLY, STATUS, RESERVED COMBINED (synthetic values).
+FatFs R0.12c external SDK SHA256: 511a87724dadd27a358bac32e37e66d6808eeb514eb773734f18878ed731b3dc
 Source SHA256:
 85c8921a5d8042d6b417e361f8b00301751742ace178881db9beb376076ae486 Acquisition/src/st_ads.c
+ad108c5001481ea463dc8c09d05c13c6f6fe8d46789c806523aa01ca2ff83cce Acquisition/src/st_block.c
 f030b589b888984c48f5fd99c74f75376a61d0c6384bda27900cc5930f90ce7e Acquisition/src/st_core.c
 5a83f4be52f3d1f5cf6150d40e104ff9be3754a68794df27618fb4a78ceb1a64 Acquisition/src/st_debug.c
 0ec51a97eb4f37d837786efdd1997bc768a0e6bf2b112b6329e1aa95fb61ff76 Acquisition/src/st_link2.c
 c12df0288ba0f48bb64d671457535e8111347818837ec3725e0044a3e6e3a4a6 Acquisition/src/st_logger.c
+7a143df7af7c8ed706e28dd038bbaf5251e8384e2881eee5bc89225b28ba0fdc Acquisition/src/st_nv.c
 cf4674098beea581aed9c8ee120a39e6ee2768600ae5c1e391f1fcf10d5d35c9 Acquisition/src/st_protocol.c
 35e36047a1036552e5174bfca53877442391944304b5cb3e0b3d3e7ff0703c3d Acquisition/src/st_radio.c
 b62c7def77658e989c69bcd0f32140aa61b619ce8e1b11519661cefd78061f9c Controller/src/st_oled.c
 88f61b11e1e874fbc9441afd72ae557d38ebdba3726639ee8af3b46353810297 Controller/src/st_raster.c
 710bc8caa44e0617ff392bb094075d8aff5d20f9c276dac53a013c67aa12b015 Controller/src/st_ui.c
 5d12cd14a1af2237baa892d19b7aa306e9db9092996498e2865bd297e44064ee Controller/src/st_ui2.c
-468ce452a4da73aebb7316aca67d6b02ca1066249e0629cb5a559cbe5921ce01 Models/test_core.c
+3756c1a443f7b33c60854385cd6501ee1f0df1bf5b986cab54a2deb5c4aabea3 Models/test_core.c
 451f0570abd3bab5aba093edba090cc71e36fe40b3de0787d63ff16cb03db5fe Models/test_lowlevel.c
 6a6f8f63a91b1810c76c93232d35acbcc4bad64e159631c0ede60087468e0b9a Models/test_r2.c
+6244a7e9e3d95f3880d85b238ac2f6d877a4b2e09b5a3f9b651fe32e83a8a0ed Models/test_storage.c
+6e83666d557634404362aa74afba3ba436f98a0f4e957d9796df1e7465545121 Acquisition/ports/st_diskio.c
+f4569f644459495701a2dc9f0cc7cfcc052a6654307a8d41e26285e951bcb791 Acquisition/ports/st_fatfs_worker.c
 601b65e1b20b1f634495ab481e10d5ae9e3ca39b6b88eef46dcafdc72146a8ce Acquisition/vendor/semtech_sx128x/sx128x.c
 e8b37ff483637167208fa12916541ea96a9b8c8d59e3a12b2026af0a8fdde300 Acquisition/include/st_ads.h
+1f520f2c4af4a711850a2f8145928c499cc20869af7db7e6edba1d2a8d3c121f Acquisition/include/st_block.h
 46edaac876109c0d071a73bc766c5fa2ad8be5bb48afdd03637cb75ef7203b39 Acquisition/include/st_bsp.h
 818501040e351c95eee6ffe64b87206236fc03ff9542fcc625a62e4be10fe9b5 Acquisition/include/st_core.h
 1761f0eb5bd3d7f208afe2b45b29a9a9d9e363ce7602d67a07cc4698a88855d8 Acquisition/include/st_debug.h
 df75a27863bdcb7297d99ab77e339a3e9f7d57b52e405014b0e9ca482ed2bb09 Acquisition/include/st_link2.h
+a5e4240c40b5254c7bdda55c6f35c01b6b39027aa1b40a66d9e5ae835eef8004 Acquisition/include/st_nv.h
 d02afbaafb84d17af43bc56c3cc8483af54e3de5fd338b38fe8c6c2eb1911664 Acquisition/include/st_radio.h
 e4e601548fcd6ec4842fa2ed623eb53e36e1a02d7d745865c593ccf9bed95701 Controller/include/st_controller_bsp.h
 fc1c0c962ba9bcf734af48118c799a08c2ac0bcff2ed4eb908b278daede82264 Controller/include/st_ui.h

@@ -273,8 +273,10 @@ quality_flags：bit0采样率依据未知；bit1已有样本（不代表该样�
 - 当前短包/事务/会话/诊断：`Acquisition/src/st_link2.c`及`include/st_link2.h`。持久化接口只是契约，板上后端未接。
 - RF严格过滤：`Acquisition/src/st_radio.c`；当前UI入口：`Controller/src/st_ui2.c`；旧`st_protocol.c`仅参考回归。
 - STLOG：`st_logger.c`、`st_core.c`；CSV校验/恢复：`Models/export_stlog.py`。
-- 当前Host：`Models/firmware_host_validation.log`，27组/21,469条C断言及Python导出边界。2026-10-20最新源码真实双EIDE组件链接均通过：`Models/eide_link_validation.log`；旧对象报告仅历史证据。
+- 当前Host：`Models/firmware_host_validation.log`，32组/33,482条C断言及Python导出边界。2026-10-20最新源码真实双EIDE组件链接均通过：`Models/eide_link_validation.log`；旧对象报告仅历史证据。
 - OLED按用户选择恢复原机械臂项目SSD1306/0x3C/128×64规格，参见`Models/OLED_REFERENCE.md`。四页面中的两个点火相关页只有静态说明及返回，无触发接口。
-- 缺少板级入口/任务调度、实际SDIO diskio、射频/ADC的HAL绑定、持久化存储及电气确认；因此LINK_CHECK不是可运行整板固件，不允许据此称硬件PASS。
+- 缺少板级入口/任务调度、实际SDIO diskio、射频/ADC HAL适配器的板级初始化与IRQ接入、持久化存储及电气确认；因此LINK_CHECK不是可运行整板固件，不允许据此称硬件PASS。
 
 记录吞吐、40KiB名义数据缓存、同步调度限制、TR_F转换及未实现的校准方案见[HANDOFF](HANDOFF.md)。本轮没有修改STLOG001布局。
+
+当前已加入`st_nv.c`双槽96B链路记录核心及真实FatFs diskio/ADC-RF-SDIO HAL适配；无线TYPE/长度和STLOG001布局不变。实际NV介质/写入窗口、任务和板级接线未完成，见[板级接入](Models/BOARD_INTEGRATION.md)。
