@@ -30,6 +30,36 @@ static void command(st_console *c)
         c->status(c->ctx);
         return;
     }
+    if (!strcmp(c->line, "IGNKEY CLEAR"))
+    {
+        bool ok = c->ignition_key && c->idle(c->ctx) &&
+                  c->ignition_key(c->ctx, NULL) == IGNITION_KEY_OK;
+        c->emit(c->ctx, ok ? "IGNKEY CLEARED; CONNECT AGAIN\r\n" : "IGNKEY DENIED\r\n");
+        return;
+    }
+    if (!strncmp(c->line, "IGNKEY ", 7))
+    {
+        uint8_t key[16] = {0};
+        bool ok = strlen(c->line) == 39;
+        unsigned zero = 0, ff = 0;
+        for (unsigned i = 0; ok && i < 16; i++)
+        {
+            int a = hex(c->line[7 + 2 * i]), b = hex(c->line[8 + 2 * i]);
+            if (a < 0 || b < 0)
+                ok = false;
+            else
+            {
+                key[i] = (uint8_t)(a * 16 + b);
+                zero += key[i] == 0;
+                ff += key[i] == 255;
+            }
+        }
+        ok = ok && zero != 16 && ff != 16 && c->ignition_key && c->idle(c->ctx) &&
+             c->ignition_key(c->ctx, key) == IGNITION_KEY_OK;
+        Ignition_ClearMemory(key, sizeof key);
+        c->emit(c->ctx, ok ? "IGNKEY SET RAM ONLY; CONNECT AGAIN\r\n" : "IGNKEY DENIED\r\n");
+        return;
+    }
     if (!strcmp(c->line, "NVINIT NEW"))
     {
         bool ok = st_pairing_initialize_new(p, c->idle(c->ctx), ST_PAIR_NEW_MEDIA_CONFIRM);
@@ -61,7 +91,7 @@ static void command(st_console *c)
             c->changed(c->ctx);
         return;
     }
-    c->emit(c->ctx, "INFO | STATUS | PAIR <24hexUID> <net> | NVINIT NEW\r\n");
+    c->emit(c->ctx, "INFO | STATUS | PAIR <24hexUID> <net> | NVINIT NEW | IGNKEY <32hex>/CLEAR\r\n");
 }
 void st_console_feed(st_console *c, uint8_t byte)
 {
@@ -74,6 +104,7 @@ void st_console_feed(st_console *c, uint8_t byte)
             c->emit(c->ctx, "LINE TOO LONG\r\n");
         else if (c->used)
             command(c);
+        Ignition_ClearMemory(c->line, sizeof c->line);
         c->used = 0;
         c->overflow = false;
         return;

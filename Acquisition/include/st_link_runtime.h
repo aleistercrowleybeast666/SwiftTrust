@@ -1,13 +1,15 @@
 #ifndef ST_LINK_RUNTIME_H
 #define ST_LINK_RUNTIME_H
 #include "st_link2.h"
+#include "st_auto_link.h"
 #include "st_radio.h"
 typedef struct
 {
     st_radio *radio;
+    AutoLink *auto_link;
     uint32_t observed_done, observed_timeouts;
     uint8_t packet[ST2_MAX], length, role;
-    bool awaiting_tx, fault;
+    bool awaiting_tx, fault, ignition_tx;
 } st_link_runtime;
 /* One foreground owner of radio tick/send/receive and this protocol endpoint.
  * Caller has initialized/verified radio GPIO/SPI/config and live HAL tick.

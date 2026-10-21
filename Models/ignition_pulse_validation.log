@@ -1,0 +1,6 @@
+2026-10-21T11:07:16.094802+00:00
+Host register model only; no electrical or hardware timing claim.
+PASS actual F4 pulse driver on register model: 30 checks; 5,000,000 high ticks, reset-low, abort-low, clock divider, no foreground/IRQ cutoff dependency
+SHA256 Acquisition/ports/st_ignition_f4.c 4cefab312ab41ea9b691415ad1fa8eba19f871ea7fb8c2117b86c06256edf0e8
+SHA256 Models/test_ignition_f4.c 0e0ee440d204101deac75abf540ef3d1847ffaba5f6819e2a251301d9d2a869c
+SHA256 Models/ignition_f4_model/stm32f4xx_hal.h f94953115ed0dce1124d3d2be179ec3426acca7a969e70c3a2224365032b930e

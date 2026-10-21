@@ -5,7 +5,7 @@ from local_tools import executable
 R=Path(__file__).resolve().parents[1]
 def main():
     cc=executable('HOST_CC','gcc');vendor=R/'Acquisition/vendor/semtech_sx128x'
-    sources=[R/p for p in ['Acquisition/src/st_core.c','Acquisition/src/st_logger.c','Acquisition/src/st_link2.c','Acquisition/src/st_radio.c','Acquisition/src/st_link_runtime.c','Models/test_link_runtime.c']]
+    sources=[R/p for p in ['Acquisition/src/st_core.c','Acquisition/src/st_auto_link.c','Acquisition/src/st_pairing.c','Acquisition/src/st_nv.c','Acquisition/src/st_logger.c','Acquisition/src/st_link2.c','Acquisition/src/st_ignition.c','Acquisition/vendor/tiny_aes/aes.c','Acquisition/src/st_radio.c','Acquisition/src/st_link_runtime.c','Models/test_link_runtime.c']]
     lines=[datetime.datetime.now(datetime.timezone.utc).isoformat(),'Focused RF/protocol runtime regression on software event model only. No radio, GPIO, COM, ADC or card accessed.','Prior full43-group calibration baseline is not rerun or relabelled as this test.']
     with tempfile.TemporaryDirectory(prefix='swift-runtime-') as d:
         t=Path(d);obj=t/'vendor.o';exe=t/'runtime.exe'

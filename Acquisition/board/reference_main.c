@@ -1,5 +1,5 @@
 /* Executable REFERENCE board. See Models/REFERENCE_APPLICATION.md before use.
- * No ignition output or command exists; PA11/PA12 are untouched reservations. */
+ * PA0 provides an autonomous 5s logic pulse; PA11/PA12 remain untouched. */
 #if defined(ST_REFERENCE_APPLICATION)
 #include "stm32f4xx_hal.h"
 #include "stm32f4xx_ll_adc.h"
@@ -14,6 +14,8 @@
 #include "st_radio_hal.h"
 #include "st_link_runtime.h"
 #include "st_debug_uart_hal.h"
+#include "st_ignition_f4.h"
+#include "st_battery.h"
 #include <stdio.h>
 #include <string.h>
 
@@ -37,10 +39,12 @@ static st_radio_hal radio_hal;
 static st_radio radio;
 static st_link_runtime link;
 static st2_server server;
+static IgnitionServer ignition;
 static st_debug_uart_hal uart;
 static st_debug debug;
 static st_journal journal;
 static st_pairing pairing;
+static AutoLink auto_link;
 static st_console console;
 static st_flash_window flash_window;
 static volatile uint32_t time_high;
@@ -52,6 +56,8 @@ static uint32_t seen_version, rate_sequence;
 static uint64_t last_valid_us, rate_time_us;
 static st_voltage supply;
 static st_voltage_view supply_view;
+static BatteryMonitor battery;
+static st_voltage_view battery_view;
 static const st_voltage_policy supply_policy = {{3000, 3100, 3200, 3300}, 20, 1000, true};
 static const st_f4_led_port leds = {
     {GPIOB, GPIOB, GPIOB, GPIOB}, {GPIO_PIN_6, GPIO_PIN_7, GPIO_PIN_8, GPIO_PIN_9}, true, true};
@@ -59,6 +65,7 @@ static volatile bool capture_owner;
 static bool mounted, rate_ok, rate_checked, paired, change_pair, servicing, app_ready, adc_busy;
 static bool source_fault;
 static uint32_t adc_started_ms, last_adc_ms;
+static bool adc_battery_phase, adc_next_battery;
 static void fast_service(void);
 
 uint64_t st_reference_time_us(void *ctx)
@@ -86,6 +93,7 @@ static void emit(void *ctx, const char *s)
 }
 static void fatal(void)
 {
+    (void)IgnitionPulse_Stop(NULL);
     HAL_NVIC_DisableIRQ(EXTI4_IRQn);
     atomic_store(&logger.capture_enabled, false);
     if (uart.verified)
@@ -204,9 +212,12 @@ void HAL_SD_MspInit(SD_HandleTypeDef *h)
 }
 void HAL_ADC_MspInit(ADC_HandleTypeDef *h)
 {
-    (void)h;
-    __HAL_RCC_ADC1_CLK_ENABLE();
-    irq(ADC_IRQn, 7);
+    if (h->Instance == ADC1)
+    {
+        __HAL_RCC_ADC1_CLK_ENABLE();
+        gpio(GPIOC, GPIO_PIN_0, GPIO_MODE_ANALOG, GPIO_NOPULL, 0);
+        irq(ADC_IRQn, 7);
+    }
 }
 void HAL_TIM_Base_MspInit(TIM_HandleTypeDef *h)
 {
@@ -233,6 +244,8 @@ static void spi_init(SPI_HandleTypeDef *h, SPI_TypeDef *instance, bool mode1)
 }
 static void board_init(void)
 {
+    if (IgnitionPulse_Init() != IGNITION_OUTPUT_OK)
+        fatal();
     __HAL_RCC_GPIOA_CLK_ENABLE();
     __HAL_RCC_GPIOB_CLK_ENABLE();
     __HAL_RCC_GPIOC_CLK_ENABLE();
@@ -294,6 +307,7 @@ static bool idle(void *ctx)
 {
     (void)ctx;
     return supply.valid && supply.mv >= 2700 && supply.mv <= 3600 && supply_view.age_ms <= 1000 &&
+           !IgnitionServer_IsBusy(&ignition) && !IgnitionPulse_IsRunning(NULL) &&
            logger.state == ST_IDLE && !logger.inflight && !atomic_load(&logger.capture_enabled) &&
            (!app_ready || !mounted || st_fatfs_idle(&worker)) &&
            (!app_ready || !cal_port.locked || !cal_port.locked(cal_port.ctx));
@@ -313,6 +327,22 @@ static void status(void *ctx)
                    (unsigned)pairing.store.status, (unsigned long)atomic_load(&logger.ring.dropped),
                    (unsigned long)st_logger_error_count(&logger));
     emit(NULL, s);
+    (void)snprintf(s, sizeof s, "BAT PC0 %lu mV VALID %u / VDDA %lu mV\r\n",
+                   (unsigned long)battery.voltage.mv, battery.voltage.valid ? 1u : 0u,
+                   (unsigned long)supply.mv);
+    emit(NULL, s);
+    (void)snprintf(s, sizeof s, "IGN STATE %u / MCU SIGNAL %s / NO EXTERNAL FEEDBACK\r\n",
+                   (unsigned)ignition.state, IgnitionPulse_IsRunning(NULL) ? "PULSE" : "LOW");
+    emit(NULL, s);
+}
+static IgnitionKeyResult Ignition_SetConsoleKey(void *ctx, const uint8_t key[16])
+{
+    (void)ctx;
+    if (!paired || !idle(NULL) || radio.tx_active || radio.tx_pending || link.length)
+        return IGNITION_KEY_BUSY;
+    server.active = server.offered = false;
+    (void)IgnitionServer_SetSession(&ignition, 0, false);
+    return IgnitionServer_SetKey(&ignition, key);
 }
 static void voltage_step(uint32_t ms, uint64_t us)
 {
@@ -325,32 +355,55 @@ static void voltage_step(uint32_t ms, uint64_t us)
         __set_PRIMASK(mask);
         (void)HAL_ADC_Stop_IT(&vref_adc);
         adc_busy = false;
-        uint32_t mv = 0;
-        bool ok = st_ref_vdda_mv(*VREFINT_CAL_ADDR, VREFINT_CAL_VREF, raw, &mv);
-        supply = (st_voltage){mv, us, true, ok};
+        if (adc_battery_phase)
+            Battery_Update(&battery, raw, &supply, us);
+        else
+        {
+            uint32_t mv = 0;
+            bool ok = st_ref_vdda_mv(*VREFINT_CAL_ADDR, VREFINT_CAL_VREF, raw, &mv);
+            supply = (st_voltage){mv, us, true, ok};
+            adc_next_battery = ok;
+            if (!ok)
+                Battery_Invalidate(&battery);
+        }
     }
     if (adc_busy && (uint32_t)(ms - adc_started_ms) > 20)
     {
         (void)HAL_ADC_Stop_IT(&vref_adc);
         adc_busy = false;
-        supply.valid = false;
-    }
-    if (!adc_busy && (uint32_t)(ms - last_adc_ms) >= 100)
-    {
-        last_adc_ms = ms;
-        adc_started_ms = ms;
-        adc_busy = HAL_ADC_Start_IT(&vref_adc) == HAL_OK;
-        if (!adc_busy)
+        if (!adc_battery_phase)
             supply.valid = false;
+        Battery_Invalidate(&battery);
+        adc_next_battery = false;
+    }
+    if (!adc_busy && (adc_next_battery || (uint32_t)(ms - last_adc_ms) >= 100))
+    {
+        adc_battery_phase = adc_next_battery;
+        adc_next_battery = false;
+        if (!adc_battery_phase)
+            last_adc_ms = ms;
+        adc_started_ms = ms;
+        ADC_ChannelConfTypeDef channel = {.Channel = adc_battery_phase ? ADC_CHANNEL_10 : ADC_CHANNEL_VREFINT,
+                                          .Rank = 1, .SamplingTime = ADC_SAMPLETIME_480CYCLES};
+        adc_busy = HAL_ADC_ConfigChannel(&vref_adc, &channel) == HAL_OK &&
+                   HAL_ADC_Start_IT(&vref_adc) == HAL_OK;
+        if (!adc_busy)
+        {
+            if (!adc_battery_phase)
+                supply.valid = false;
+            Battery_Invalidate(&battery);
+        }
     }
     supply_view = st_voltage_evaluate(&supply_policy, &supply, us, supply_view);
-    (void)st_f4_voltage_leds(&leds, supply_view);
+    battery_view = Battery_Evaluate(&battery, us);
+    (void)st_f4_voltage_leds(&leds, battery_view);
 }
 static void fast_service(void)
 {
     if (!app_ready || servicing)
         return;
     servicing = true;
+    IgnitionServer_Service(&ignition);
     uint64_t us = st_reference_time_us(NULL);
     uint32_t ms = (uint32_t)(us / 1000);
     if (capture_owner && seen_version != latest_version)
@@ -453,9 +506,31 @@ static bool reserve_epoch(void *ctx, uint64_t counter, uint32_t *epoch)
     rate_sequence = capture.sequence;
     return ok;
 }
+static bool Ignition_CheckLocal(void *ctx, uint8_t mode)
+{
+    (void)ctx;
+    bool voltage_ok = supply.valid && supply.mv >= 2700 && supply.mv <= 3600 &&
+                      supply_view.age_ms <= 1000;
+    if (!voltage_ok || radio.failed || cal_locked(NULL))
+        return false;
+    if (mode == 1)
+        return logger.state == ST_IDLE;
+    return mode == 2 && logger.state == ST_CAPTURING && !source_fault && !ads.failed &&
+           rate_ok && last_valid_us && st_reference_time_us(NULL) - last_valid_us <= 10000 &&
+           mounted && present(NULL) && !block.fault && !st_logger_error_count(&logger);
+}
 static void server_init(void)
 {
+    (void)IgnitionPulse_Stop(NULL);
     paired = st_nv_server_init(&server, &pairing.store, &logger, st_ref_link_timing());
+    IgnitionServer_Init(&ignition, (const uint8_t *)UID_BASE, pairing.store.identity.peer_uid);
+    if (IgnitionServer_BindOutput(&ignition, (IgnitionOutputPort){NULL, now_ms,
+            Ignition_CheckLocal, IgnitionPulse_Start, IgnitionPulse_Stop,
+            IgnitionPulse_IsRunning}) != IGNITION_OUTPUT_OK)
+        fatal();
+    if (paired && IgnitionServer_SetKey(&ignition, st_ref_ignition_key()) != IGNITION_KEY_OK)
+        fatal();
+    server.ignition = &ignition;
     if (paired)
         server.nv = (st2_nv_port){NULL, reserve_epoch, NULL};
     if (paired)
@@ -526,8 +601,10 @@ int main(void)
     (void)st_journal_open(&journal, st_flash_journal_port(&flash_window));
     (void)st_pairing_open(&pairing, st_journal_storage(&journal), (const uint8_t *)UID_BASE,
                           ST_NV_ACQUISITION);
+    AutoLink_Init(&auto_link, &pairing, st_ref_ignition_key(), 0x5354, NULL, idle);
     console = (st_console){
-        .pair = &pairing, .emit = emit, .idle = idle, .changed = changed, .status = status};
+        .pair = &pairing, .emit = emit, .idle = idle, .changed = changed, .status = status,
+        .ignition_key = Ignition_SetConsoleKey};
     storage_init();
     sensor_init();
     server_init();
@@ -554,6 +631,7 @@ int main(void)
     st_radio_init(&radio, st_radio_hal_port(&radio_hal), st_ref_radio_config(true));
     if (!st_link_runtime_init(&link, &radio))
         fatal();
+    link.auto_link = &auto_link;
     app_ready = true;
     for (;;)
     {
@@ -572,6 +650,7 @@ int main(void)
                 irq(EXTI4_IRQn, 0);
             }
         }
+        change_pair |= AutoLink_TakeChanged(&auto_link);
         if (change_pair)
         {
             change_pair = false;
@@ -582,7 +661,6 @@ int main(void)
             rate_sequence = capture.sequence;
         }
         st_cal_endpoint_step(&calibration.endpoint);
-        if (paired)
         {
             bool fresh = last_valid_us && us - last_valid_us <= 10000;
             st2_measurement measurement = {
@@ -590,17 +668,16 @@ int main(void)
                     block.fault || !present(NULL)
                         ? ST2_TF_FAULT
                         : (worker.opened ? ST2_TF_OPEN : (mounted ? ST2_TF_READY : ST2_TF_UNKNOWN)),
-                .voltage_fresh = supply.valid && supply_view.age_ms <= 1000,
+                .voltage_fresh = battery.voltage.valid && battery_view.age_ms <= BATTERY_FRESH_MS,
                 .adc_fresh = fresh,
                 /* Not-yet-measured startup/reconnect readiness is UNKNOWN, not
                  * a permanent quality error. START still requires rate_ok. */
                 .quality_problem = ads.failed || (rate_checked && !rate_ok) || source_fault ||
                                    st_logger_error_count(&logger) > 0,
-                .mv = supply.mv > 65534 ? 65535 : (uint16_t)supply.mv};
+                .mv = battery.voltage.valid && battery.voltage.mv <= 65534
+                    ? (uint16_t)battery.voltage.mv : UINT16_MAX};
             st_link_server_step(&link, &server, measurement, us);
         }
-        else
-            st_radio_tick(&radio, now_ms(NULL));
         if (radio.failed && (logger.state == ST_STARTING || logger.state == ST_CAPTURING))
         {
             source_fault = true;

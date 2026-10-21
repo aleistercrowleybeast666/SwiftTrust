@@ -34,7 +34,7 @@ def main():
     reports=[datetime.datetime.now(datetime.timezone.utc).isoformat(), 'Host-only synthetic regression. No MCU/RF/SD/OLED hardware accessed.']
     with tempfile.TemporaryDirectory(prefix='swiftthrust-host-') as temporary:
         t=Path(temporary);exe=t/'tests.exe';fixture=t/'synthetic.stlog';frames=t/'ui.raw';calframes=t/'calibration.raw'
-        sources=sorted((ROOT/'Acquisition/src').glob('*.c'))+sorted((ROOT/'Controller/src').glob('*.c'))+[ROOT/'Models/test_core.c',ROOT/'Models/test_lowlevel.c',ROOT/'Models/test_r2.c',ROOT/'Models/test_stop.c',ROOT/'Models/test_storage.c',ROOT/'Models/test_calibration.c',ROOT/'Acquisition/ports/st_diskio.c',ROOT/'Acquisition/ports/st_fatfs_worker.c',ROOT/'Acquisition/ports/st_cal_fatfs.c',ROOT/'Acquisition/ports/st_cal_system.c',ROOT/'Models/test_cal_integration.c']
+        sources=sorted((ROOT/'Acquisition/src').glob('*.c'))+sorted((ROOT/'Controller/src').glob('*.c'))+[ROOT/'Models/test_core.c',ROOT/'Models/test_lowlevel.c',ROOT/'Models/test_r2.c',ROOT/'Models/test_stop.c',ROOT/'Models/test_storage.c',ROOT/'Models/test_calibration.c',ROOT/'Acquisition/ports/st_diskio.c',ROOT/'Acquisition/ports/st_fatfs_worker.c',ROOT/'Acquisition/ports/st_cal_fatfs.c',ROOT/'Acquisition/ports/st_cal_system.c',ROOT/'Models/test_cal_integration.c',ROOT/'Acquisition/vendor/tiny_aes/aes.c',ROOT/'Models/test_ignition.c',ROOT/'Models/test_battery.c']
         sdk=sdk_root()
         fatfs=sdk/'fatfs/src/ff.c';fobj=t/'fatfs.o'
         frun=subprocess.run([str(GCC),'-std=c11','-O2','-Wall','-Wextra','-Werror','-I',str(ROOT/'Acquisition/ports/fatfs_config'),'-I',str(fatfs.parent),'-c',str(fatfs),'-o',str(fobj)],capture_output=True,text=True,timeout=60)
@@ -51,10 +51,12 @@ def main():
                   'Flags: -std=c11 -O2 -Wall -Wextra -Werror -Wpedantic -Wconversion -Wshadow',built.stdout,built.stderr]
         if built.returncode:
             print('\n'.join(reports));return built.returncode
-        run=subprocess.run([str(exe),str(fixture),str(frames),str(calframes)],capture_output=True,text=True,timeout=60)
+        ignframes=t/'ignition.raw'
+        run=subprocess.run([str(exe),str(fixture),str(frames),str(calframes),str(ignframes)],capture_output=True,text=True,timeout=60)
         reports += [run.stdout,run.stderr]
         if run.returncode:
             print('\n'.join(reports));return run.returncode
+        png_preview(ignframes.read_bytes(),ROOT/'Models/ignition_ui_preview.png')
         rows,report=read_log(fixture)
         assert len(rows)==1500 and report['clean_close'] and report['simulated'] and not report['calibrated']
         assert all(r['force_N']=='' and r['ch1_V']=='' for r in rows)
@@ -78,7 +80,7 @@ def main():
         calibrated[512+22]=1;struct.pack_into('<I',calibrated,512+28,zlib.crc32(calibrated[512:512+28]))
         fixture.write_bytes(calibrated);values,_=read_log(fixture);assert values[0]['force_N']==''
         reports+=['PASS Python exporter: clean/uncalibrated/calibrated/invalid-ADC/truncated-tail/record-CRC/header-CRC/exclusive-output',
-                  'Preview panels: HOME, CAPTURE ONLY, STATUS, RESERVED COMBINED (synthetic values).']
+                  'Preview panels: HOME, CAPTURE ONLY, IGNITION ONLY, COMBINED, both ignition confirmations, STATUS, unavailable STOP (synthetic values).']
         png_preview(frames.read_bytes(),ROOT/'Models/ui_host_preview.png')
         png_preview(calframes.read_bytes(),ROOT/'Models/calibration_ui_preview.png')
         reports.append('FatFs R0.12c external SDK SHA256: '+hashlib.sha256(fatfs.read_bytes()).hexdigest())

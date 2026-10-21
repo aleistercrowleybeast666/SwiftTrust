@@ -1,6 +1,12 @@
 #include "st_reference.h"
 #include <limits.h>
 #include <string.h>
+const uint8_t *st_ref_ignition_key(void)
+{
+    static const uint8_t key[16] = {0x97,0x4d,0xa8,0x5c,0x32,0xf1,0x6e,0x0b,
+                                   0xd2,0x79,0x43,0xbc,0x18,0x65,0xe0,0xaf};
+    return key;
+}
 st_ads_config st_ref_ads_config(bool accepted)
 {
     return (st_ads_config){ST_REF_ADC_HZ, ST_REF_ADC_OSR, ST_REF_ADC_GAIN0, ST_REF_ADC_GAIN1, 2,

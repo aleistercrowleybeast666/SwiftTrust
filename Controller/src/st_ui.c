@@ -18,9 +18,14 @@ static unsigned count(const st_ui *u)
         return 4;
     case ST_UI_CAPTURE:
         return 4;
+    case ST_UI_IGNITION_ONLY:
+    case ST_UI_COMBINED:
+        return 3;
     case ST_UI_SETTINGS:
         return 3;
     case ST_UI_CONFIRM:
+    case ST_UI_IGNITION_CONFIRM:
+    case ST_UI_COMBINED_CONFIRM:
         return 2;
     default:
         return 1;
@@ -37,9 +42,12 @@ bool st_ui_handle(st_ui *u, st_ui_event e, st_client *c, uint32_t now)
             u->selection = 2;
             return false;
         }
-        if (u->page == ST_UI_CONFIRM)
+        if (u->page == ST_UI_CONFIRM || u->page == ST_UI_IGNITION_CONFIRM ||
+            u->page == ST_UI_COMBINED_CONFIRM)
         {
-            u->page = ST_UI_CAPTURE;
+            u->page = u->page == ST_UI_IGNITION_CONFIRM   ? ST_UI_IGNITION_ONLY
+                      : u->page == ST_UI_COMBINED_CONFIRM ? ST_UI_COMBINED
+                                                         : ST_UI_CAPTURE;
             u->selection = u->return_selection;
         }
         else
@@ -117,12 +125,28 @@ bool st_ui_handle(st_ui *u, st_ui_event e, st_client *c, uint32_t now)
         u->selection = 2;
         return false;
     case ST_UI_IGNITION_ONLY:
-        u->page = ST_UI_HOME;
-        u->selection = 1;
-        return false;
     case ST_UI_COMBINED:
-        u->page = ST_UI_HOME;
-        u->selection = 3;
+        if (u->selection == 0)
+        {
+            u->return_selection = 0;
+            u->page = u->page == ST_UI_IGNITION_ONLY ? ST_UI_IGNITION_CONFIRM
+                                                    : ST_UI_COMBINED_CONFIRM;
+            u->selection = 1;
+        }
+        else if (u->selection == 1)
+            u->unavailable = true;
+        else
+        {
+            u->selection = u->page == ST_UI_IGNITION_ONLY ? 1 : 3;
+            u->page = ST_UI_HOME;
+        }
+        return false;
+    case ST_UI_IGNITION_CONFIRM:
+    case ST_UI_COMBINED_CONFIRM:
+        /* These pages must never reuse the acquisition command path. */
+        u->unavailable = u->selection == 0;
+        u->page = u->page == ST_UI_IGNITION_CONFIRM ? ST_UI_IGNITION_ONLY : ST_UI_COMBINED;
+        u->selection = u->return_selection;
         return false;
     default:
         u->page = ST_UI_HOME;
@@ -192,7 +216,12 @@ void st_ui_render(const st_ui *u, const st_client *c, st_voltage_view own, uint3
         (void)snprintf(m->rows[6], 22, "%c BACK", u->selection == 3 ? '>' : ' ');
         break;
     case ST_UI_CONFIRM:
-        (void)snprintf(m->rows[2], 22, "START CAPTURE?");
+    case ST_UI_IGNITION_CONFIRM:
+    case ST_UI_COMBINED_CONFIRM:
+        (void)snprintf(m->rows[2], 22, "%s",
+                       u->page == ST_UI_IGNITION_CONFIRM   ? "START IGNITION?"
+                       : u->page == ST_UI_COMBINED_CONFIRM ? "START IGN + CAPTURE?"
+                                                          : "START CAPTURE?");
         (void)snprintf(m->rows[3], 22, "%c CONFIRM", u->selection == 0 ? '>' : ' ');
         (void)snprintf(m->rows[4], 22, "%c BACK", u->selection == 1 ? '>' : ' ');
         break;
@@ -200,9 +229,9 @@ void st_ui_render(const st_ui *u, const st_client *c, st_voltage_view own, uint3
     case ST_UI_COMBINED:
         (void)snprintf(m->rows[2], 22, "%s",
                        u->page == ST_UI_IGNITION_ONLY ? "IGNITION ONLY" : "IGNITION + CAPTURE");
-        (void)snprintf(m->rows[3], 22, "NOT IMPLEMENTED");
-        (void)snprintf(m->rows[4], 22, "VIEW ONLY");
-        (void)snprintf(m->rows[6], 22, "> BACK");
+        (void)snprintf(m->rows[3], 22, "%c START N/A", u->selection == 0 ? '>' : ' ');
+        (void)snprintf(m->rows[4], 22, "%c STOP N/A", u->selection == 1 ? '>' : ' ');
+        (void)snprintf(m->rows[6], 22, "%c BACK", u->selection == 2 ? '>' : ' ');
         break;
     case ST_UI_CALIBRATION:
         (void)snprintf(m->rows[2], 22, "CALIBRATION");
@@ -243,6 +272,9 @@ void st_ui_render(const st_ui *u, const st_client *c, st_voltage_view own, uint3
                            c->status.adc_errors);
         break;
     }
+    if (u->page == ST_UI_IGNITION_ONLY || u->page == ST_UI_COMBINED ||
+        u->page == ST_UI_IGNITION_CONFIRM || u->page == ST_UI_COMBINED_CONFIRM)
+        tx = "IGNITION UNAVAILABLE";
     (void)snprintf(m->rows[7], 22, "%s", u->unavailable ? "NOT IMPLEMENTED" : tx);
 }
 int32_t st_encoder_update(st_encoder *e, uint16_t counter, unsigned edges)

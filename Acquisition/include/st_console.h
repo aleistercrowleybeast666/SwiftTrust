@@ -9,6 +9,7 @@ typedef struct
     bool (*idle)(void *);
     void (*changed)(void *);
     void (*status)(void *);
+    IgnitionKeyResult (*ignition_key)(void *, const uint8_t key_or_null[16]);
     char line[80];
     unsigned used;
     bool overflow;

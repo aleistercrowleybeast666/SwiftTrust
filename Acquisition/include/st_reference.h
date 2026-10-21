@@ -28,6 +28,9 @@ typedef struct
 st_ads_config st_ref_ads_config(bool reference_electrical_profile_accepted);
 st_radio_config st_ref_radio_config(bool reference_gpio_spi_profile_accepted);
 st2_timing st_ref_link_timing(void);
+/* Shared project identity; built into both images, with no operator key entry.
+ * Public source is not a secret: this separates accidental traffic, not attackers. */
+const uint8_t *st_ref_ignition_key(void);
 /* Shared application boundary, called only after ADS readback/rate/freshness,
  * mounted storage, supply and idle guards. Clock confirmation must precede the
  * calibration callback so the first START after boot applies saved coefficients.

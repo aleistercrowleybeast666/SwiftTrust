@@ -456,6 +456,149 @@ static void stop_ordering(void)
     G("runtime queued/on-air START then newer STOP / TX_DONE ordering / late START ACK ignored / "
       "STOP RF timeout retries same ID / RF fault retains uncertainty / no automatic replay");
 }
+static void Ignition_TestRuntime(void)
+{
+    st_radio rc, rs; bus bc, bs;
+    model_radio(&rc, &bc); model_radio(&rs, &bs);
+    st_link_runtime lc, ls;
+    C(st_link_runtime_init(&lc, &rc) && st_link_runtime_init(&ls, &rs));
+    st2_client c; nv nc; client_up(&c, &nc);
+    st_logger *log = malloc(sizeof *log); C(log != NULL);
+    st_logger_init(log, (st_log_config){0}, (st_file_port){0});
+    st2_server s;
+    st2_server_init(&s, log, (st2_nv_port){0}, timing(), (uint8_t[12]){1},
+                    (uint8_t[12]){2}, 0);
+    s.epoch = 1; s.active = s.offered = true;
+    const uint8_t key[16] = {1};
+    IgnitionClient client; IgnitionServer server;
+    IgnitionClient_Init(&client, s.uid, s.peer, 2500, 100000, 4);
+    IgnitionServer_Init(&server, s.uid, s.peer);
+    C(IgnitionClient_SetKey(&client, key) == IGNITION_KEY_OK);
+    C(IgnitionServer_SetKey(&server, key) == IGNITION_KEY_OK);
+    C(IgnitionClient_SetSession(&client, 1, true) == IGNITION_SESSION_OK);
+    c.ignition = &client; s.ignition = &server;
+    uint32_t now = 0;
+    for (unsigned operation = 0; operation < 3; operation++)
+    {
+        IgnitionRequestResult result = operation == 0 ? IgnitionClient_Query(&client, true, 0, now)
+            : operation == 1 ? IgnitionClient_RequestArm(&client, 1, 1, now)
+                             : IgnitionClient_RequestDisarm(&client, now);
+        C(result == IGNITION_REQUEST_OK);
+        for (unsigned step = 0; step < 100 && client.pending; step++, now += 10)
+        {
+            st_link_client_step(&lc, &c, now, 0);
+            st_link_server_step(&ls, &s, (st2_measurement){0}, (uint64_t)now * 1000u);
+            air(&rc, &bc, &rs, &bs); air(&rs, &bs, &rc, &bc);
+        }
+        C(!client.pending && client.have_reply && client.state == IGNITION_DISABLED);
+        C(client.reason == IGNITION_REASON_UNBOUND && !client.arm_id);
+        if (operation == 0) C(client.have_details && !client.profile_id);
+        if (operation == 1) C(client.result == IGNITION_REJECTED);
+        if (operation == 2) C(client.result == IGNITION_FAILED);
+        C(!c.pending && c.next_command == 1 && log->state == ST_IDLE);
+    }
+    C(!lc.fault && !ls.fault);
+    /* A query waiting behind BUSY is replaced, never transmitted as a stale copy. */
+    C(IgnitionClient_Query(&client, true, 0, now) == IGNITION_REQUEST_OK);
+    bc.ready = false;
+    st_link_client_step(&lc, &c, now++, 0);
+    C(rc.tx_pending && rc.tx[7] == IGNITION_QUERY);
+    C(IgnitionClient_RequestDisarm(&client, now) == IGNITION_REQUEST_OK);
+    st_link_client_step(&lc, &c, now++, 0);
+    C(rc.tx_pending && rc.tx[7] == IGNITION_DISARM && client.waiting_tx);
+    bc.ready = true;
+    st_link_client_step(&lc, &c, now++, 0);
+    C(rc.tx_active && bc.tx[7] == IGNITION_DISARM);
+    free(log);
+    G("runtime authenticated 33/35B duplex query/detail/ARM/DISARM, explicit UNBOUND, no acquisition dispatch, queued request supersession");
+}
+static void Ignition_TestExpiredQueuedFire(void)
+{
+    st_radio radio; bus model; model_radio(&radio, &model);
+    st_link_runtime runtime; C(st_link_runtime_init(&runtime, &radio));
+    st2_client legacy; nv store; client_up(&legacy, &store);
+    IgnitionClient client;
+    IgnitionClient_Init(&client, legacy.peer, legacy.uid, 2500, 100000, 4);
+    C(IgnitionClient_SetKey(&client, (uint8_t[16]){1}) == IGNITION_KEY_OK);
+    C(IgnitionClient_SetSession(&client, 1, true) == IGNITION_SESSION_OK);
+    legacy.ignition = &client;
+    C(IgnitionClient_RequestArm(&client, 1, 1, 0) == IGNITION_REQUEST_OK);
+    st_link_client_step(&runtime, &legacy, 0, 0);
+    st_link_client_step(&runtime, &legacy, 1, 0);
+    C(radio.tx_active && model.writes == 1);
+    signal(&radio, &model, SX128X_IRQ_TX_DONE);
+    st_link_client_step(&runtime, &legacy, 2, 0);
+    /* An authenticated fixture grant tests only the client transport. The real
+     * acquisition endpoint can never generate this grant in the UNBOUND build. */
+    IgnitionPacket grant = {.type=IGNITION_REPLY,.epoch=1,.id=1,
+                            .data={IGNITION_COMMAND_REPLY,IGNITION_ARM_GRANTED,IGNITION_ARMED}};
+    st_put32(grant.data + 4, 9); st_put16(grant.data + 8, 50);
+    size_t length = 0;
+    C(Ignition_Encode(&client.auth, &grant, radio.rx, &length) == IGNITION_CODEC_OK);
+    radio.rx_length = (uint8_t)length; radio.rx_ready = true;
+    st_link_client_step(&runtime, &legacy, 3, 0);
+    C(client.have_grant && client.grant_deadline_ms == 50);
+    C(IgnitionClient_RequestFire(&client, 4) == IGNITION_REQUEST_OK);
+    model.ready = false;
+    st_link_client_step(&runtime, &legacy, 4, 0);
+    C(radio.tx_pending && radio.tx[7] == IGNITION_FIRE && model.writes == 1);
+    st_link_client_step(&runtime, &legacy, 51, 0);
+    C(!radio.tx_pending && !client.pending && model.writes == 1);
+    model.ready = true;
+    st_link_client_step(&runtime, &legacy, 52, 0);
+    C(!radio.tx_active && model.writes == 1);
+    G("runtime expired queued FIRE removed before radio tick, conservative grant deadline, no late or automatic transmission");
+}
+typedef struct { uint8_t slots[2][ST_NV_BYTES]; } AutoTest_Media;
+static bool AutoTest_Read(void *ctx, unsigned slot, uint8_t out[ST_NV_BYTES])
+{ AutoTest_Media *media=ctx;memcpy(out,media->slots[slot],ST_NV_BYTES);return true; }
+static bool AutoTest_Write(void *ctx, unsigned slot, const uint8_t in[ST_NV_BYTES])
+{ AutoTest_Media *media=ctx;memcpy(media->slots[slot],in,ST_NV_BYTES);return true; }
+static bool AutoTest_Idle(void *ctx) { (void)ctx;return true; }
+static void AutoTest_Runtime(void)
+{
+    AutoTest_Media ma,mc;memset(&ma,255,sizeof ma);memset(&mc,255,sizeof mc);
+    st_pairing pa,pc;
+    C(st_pairing_open(&pa,(st_nv_storage){&ma,AutoTest_Read,AutoTest_Write,true},
+                      (uint8_t[12]){1},ST_NV_ACQUISITION)==ST_NV_EMPTY);
+    C(st_pairing_open(&pc,(st_nv_storage){&mc,AutoTest_Read,AutoTest_Write,true},
+                      (uint8_t[12]){2},ST_NV_CONTROLLER)==ST_NV_EMPTY);
+    const uint8_t key[16]={1};
+    AutoLink aa,ac;
+    AutoLink_Init(&aa,&pa,key,0x5354,NULL,AutoTest_Idle);
+    AutoLink_Init(&ac,&pc,key,0x5354,NULL,AutoTest_Idle);
+    st_radio ra,rc;bus ba,bc;model_radio(&ra,&ba);model_radio(&rc,&bc);
+    st_link_runtime la,lc;C(st_link_runtime_init(&la,&ra)&&st_link_runtime_init(&lc,&rc));
+    la.auto_link=&aa;lc.auto_link=&ac;
+    st2_server server={0};st2_client client={0};
+    for(uint32_t now=0;now<200;now+=10)
+    {
+        st_link_client_step(&lc,&client,now,0);
+        st_link_server_step(&la,&server,(st2_measurement){0},(uint64_t)now*1000u);
+        air(&rc,&bc,&ra,&ba);air(&ra,&ba,&rc,&bc);
+    }
+    C(pa.store.status==ST_NV_VALID&&pc.store.status==ST_NV_VALID);
+    C(AutoLink_TakeChanged(&aa)&&AutoLink_TakeChanged(&ac));
+    C(ba.writes==1&&bc.writes==1&&ba.tx[0]==AUTO_LINK_ADVERTISE&&bc.tx[0]==AUTO_LINK_DISCOVER);
+    st2_packet decoded;uint8_t wire[35];
+    C(st2_decode(&decoded,ba.tx,ba.tx_n)&&st2_encode(&decoded,wire)==ba.tx_n&&!memcmp(wire,ba.tx,ba.tx_n));
+    C(st2_decode(&decoded,bc.tx,bc.tx_n)&&st2_encode(&decoded,wire)==bc.tx_n&&!memcmp(wire,bc.tx,bc.tx_n));
+    st_logger *logger=calloc(1,sizeof *logger);C(logger);
+    st_logger_init(logger,(st_log_config){0},(st_file_port){0});
+    C(st_nv_server_init(&server,&pa.store,logger,timing()));
+    C(st_nv_client_init(&client,&pc.store,timing()));
+    C(st2_client_connect(&client,200));
+    for(uint32_t now=200;now<1000&&client.link!=ST2_LINK_UP;now+=10)
+    {
+        st_link_client_step(&lc,&client,now,0);
+        st_link_server_step(&la,&server,(st2_measurement){0},(uint64_t)now*1000u);
+        air(&rc,&bc,&ra,&ba);air(&ra,&ba,&rc,&bc);
+    }
+    C(client.link==ST2_LINK_UP&&server.active&&client.epoch==server.epoch);
+    C(logger->state==ST_IDLE&&!client.pending);
+    free(logger);
+    G("automatic discovery through real radio encoder/RX gate, pristine UID provisioning, then durable HELLO/COMMIT; never starts capture");
+}
 int main(void)
 {
     stop_ordering();
@@ -465,6 +608,9 @@ int main(void)
     queued_api();
     server_retention();
     duplex();
+    Ignition_TestRuntime();
+    Ignition_TestExpiredQueuedFire();
+    AutoTest_Runtime();
     printf("PASS targeted runtime: %u groups, %u assertions; sizeof(runtime)=%zu\n", groups, checks,
            sizeof(st_link_runtime));
     return 0;

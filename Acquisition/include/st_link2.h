@@ -1,6 +1,7 @@
 #ifndef ST_LINK2_H
 #define ST_LINK2_H
 #include "st_core.h"
+#include "st_ignition.h"
 /* Message type only: no version field and no version bits on the wire. */
 enum
 {
@@ -16,6 +17,10 @@ enum
     ST2_CAL_COMMAND,
     ST2_CAL_QUERY,
     ST2_CAL_REPLY,
+    ST2_IGN_REQUEST,
+    ST2_IGN_REPLY,
+    ST2_DISCOVER,
+    ST2_ADVERTISE,
     ST2_MAX = 35
 };
 enum
@@ -37,7 +42,7 @@ enum
 };
 typedef struct
 {
-    uint8_t type, flags, section, fragment, count, data[16], uid[12], peer[12];
+    uint8_t type, flags, section, fragment, count, data[16], uid[12], peer[12], tag[16];
     uint32_t epoch;
     uint16_t id, mv;
     uint64_t counter;
@@ -83,6 +88,7 @@ typedef struct
 typedef struct
 {
     st_logger *logger;
+    IgnitionServer *ignition;
     st2_cal_port calibration;
     uint8_t cal_request[14], cal_view[64], cal_next;
     uint32_t cal_last_ms;
@@ -154,6 +160,7 @@ typedef struct
     st_transaction_state transaction;
     st2_stop_state stop;
     uint32_t stop_requested_ms;
+    IgnitionClient *ignition;
 } st2_client;
 void st2_client_init(st2_client *, st2_nv_port, st2_timing, const uint8_t uid[12],
                      const uint8_t peer[12]);

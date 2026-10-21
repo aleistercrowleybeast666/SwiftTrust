@@ -22,6 +22,7 @@ static st_radio_hal radio_hal;
 static st_radio radio;
 static st_link_runtime link;
 static st2_client client;
+static IgnitionClient ignition;
 static st_g0_oled_port oled_port;
 static st_oled oled;
 static st_ui ui;
@@ -33,12 +34,14 @@ static st_cal_remote cal_remote;
 static st_cal_ui cal_ui;
 static st_journal journal;
 static st_pairing pairing;
+static AutoLink auto_link;
 static st_console console;
 static st_flash_window flash_window;
 static volatile bool adc_done;
 static volatile uint16_t adc_raw;
 static bool paired, change_pair, adc_busy, oled_reported;
 static uint32_t last_ms, voltage_ms, adc_started, render_ms;
+static uint32_t auto_connect_ms;
 static uint64_t uptime_ms;
 static st_voltage supply;
 static st_voltage_view supply_view;
@@ -224,7 +227,7 @@ static void board_init(void)
 static bool idle(void *ctx)
 {
     (void)ctx;
-    return !client.pending && !radio.tx_active && !radio.tx_pending && supply.valid &&
+    return !client.pending && !ignition.pending && !radio.tx_active && !radio.tx_pending && supply.valid &&
            supply.mv >= 2700 && supply.mv <= 3600 && supply_view.age_ms <= 1000;
 }
 static void changed(void *ctx)
@@ -241,6 +244,19 @@ static void status(void *ctx)
                    oled.failed ? 0u : 1u, (unsigned)pairing.store.status, (unsigned long)supply.mv,
                    supply.valid ? 1u : 0u);
     emit(NULL, s);
+    emit(NULL, ignition.auth.key_bound ? "IGN PROJECT CHECK READY / NO EXTERNAL FEEDBACK\r\n"
+                                       : "IGN WAIT AUTO LINK\r\n");
+}
+static IgnitionKeyResult Ignition_SetConsoleKey(void *ctx, const uint8_t key[16])
+{
+    (void)ctx;
+    if (!paired || !idle(NULL) || link.length)
+        return IGNITION_KEY_BUSY;
+    client.link = ST2_LINK_DOWN;
+    client.have_status = false;
+    client.epoch = 0;
+    (void)IgnitionClient_SetSession(&ignition, 0, false);
+    return IgnitionClient_SetKey(&ignition, key);
 }
 static void yield(void *ctx)
 {
@@ -252,10 +268,17 @@ static void radio_init(void)
 {
     st_radio_init(&radio, st_radio_hal_port(&radio_hal), st_ref_radio_config(true));
     (void)st_link_runtime_init(&link, &radio);
+    link.auto_link = &auto_link;
 }
 static void client_init(void)
 {
     paired = st_nv_client_init(&client, &pairing.store, st_ref_link_timing());
+    st2_timing timing = st_ref_link_timing();
+    IgnitionClient_Init(&ignition, pairing.store.identity.peer_uid, (const uint8_t *)UID_BASE,
+                         timing.ack_rto_ms, timing.operation_ms, timing.attempts);
+    if (paired && IgnitionClient_SetKey(&ignition, st_ref_ignition_key()) != IGNITION_KEY_OK)
+        fatal();
+    client.ignition = &ignition;
     st_cal_remote_init(&cal_remote, &client, NULL, now_ms);
     st_cal_ui_init(&cal_ui, st_cal_remote_port(&cal_remote));
     st_ui_attach_calibration(&ui, &cal_ui);
@@ -323,8 +346,10 @@ int main(void)
     (void)st_journal_open(&journal, st_flash_journal_port(&flash_window));
     (void)st_pairing_open(&pairing, st_journal_storage(&journal), (const uint8_t *)UID_BASE,
                           ST_NV_CONTROLLER);
+    AutoLink_Init(&auto_link, &pairing, st_ref_ignition_key(), 0x5354, NULL, idle);
     console = (st_console){
-        .pair = &pairing, .emit = emit, .idle = idle, .changed = changed, .status = status};
+        .pair = &pairing, .emit = emit, .idle = idle, .changed = changed, .status = status,
+        .ignition_key = Ignition_SetConsoleKey};
     radio_hal = (st_radio_hal){.spi = &rf_spi,
                                .cs = GPIOA,
                                .cs_pin = GPIO_PIN_15,
@@ -349,6 +374,7 @@ int main(void)
         uptime_ms += (uint32_t)(ms - last_ms);
         last_ms = ms;
         voltage_step(ms);
+        change_pair |= AutoLink_TakeChanged(&auto_link);
         if (change_pair)
         {
             change_pair = false;
@@ -374,11 +400,17 @@ int main(void)
             event(ST_UI_PRESS, ms);
         if (paired)
         {
+            if (!radio.failed && idle(NULL) && (uint32_t)(ms - auto_connect_ms) >= 2000 &&
+                (client.link == ST2_LINK_DOWN ||
+                 (client.link == ST2_LINK_UP && !st2_client_fresh(&client, ms))))
+            {
+                auto_connect_ms = ms;
+                (void)st2_client_connect(&client, ms);
+            }
+            st_ui2_service(&ui, &client, ms);
             st_cal_remote_step(&cal_remote, ui.page == ST_UI_CALIBRATION);
-            st_link_client_step(&link, &client, ms, ms % 101u);
         }
-        else
-            st_radio_tick(&radio, ms);
+        st_link_client_step(&link, &client, ms, ms % 101u);
         st_oled_service(&oled, ms);
         if ((uint32_t)(ms - render_ms) >= 100)
         {
@@ -387,7 +419,7 @@ int main(void)
             if (ui.page == ST_UI_STATUS)
             {
                 if (!paired)
-                    (void)snprintf(model.rows[2], 22, "PAIR VIA UART: INFO");
+                    (void)snprintf(model.rows[2], 22, "AUTO DISCOVER...");
                 else if (radio.failed)
                     (void)snprintf(model.rows[2], 22, "RF FAULT: CONNECT");
                 else if (pairing.store.status != ST_NV_VALID)

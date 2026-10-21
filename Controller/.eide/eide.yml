@@ -154,6 +154,15 @@
       },
       {
         "path": "../Acquisition/ports/st_flash_journal.c"
+      },
+      {
+        "path": "../Acquisition/src/st_ignition.c"
+      },
+      {
+        "path": "../Acquisition/vendor/tiny_aes/aes.c"
+      },
+      {
+        "path": "../Acquisition/src/st_auto_link.c"
       }
     ],
     "folders": []

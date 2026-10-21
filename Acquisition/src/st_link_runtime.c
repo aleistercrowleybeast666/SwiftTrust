@@ -44,7 +44,12 @@ void st_link_server_step(st_link_runtime *l, st2_server *s, st2_measurement m, u
         uint8_t rx[49];
         size_t n = 0, out = 0;
         if (st_radio_receive(l->radio, rx, &n))
-            out = st2_server_receive(s, rx, n, m, now, l->packet);
+        {
+            if (l->auto_link && (rx[0] == AUTO_LINK_DISCOVER || rx[0] == AUTO_LINK_ADVERTISE))
+                out = AutoLink_Receive(l->auto_link, rx, n, l->packet);
+            else
+                out = st2_server_receive(s, rx, n, m, now, l->packet);
+        }
         if (!out)
             out = st2_server_poll(s, m, now, l->packet);
         l->length = (uint8_t)out;
@@ -57,18 +62,36 @@ void st_link_client_step(st_link_runtime *l, st2_client *c, uint32_t now, uint32
     if (!c || !role(l, ROLE_CLIENT))
         return;
     st_radio *r = l->radio;
+    IgnitionClient *ignition = c->ignition;
+    if (ignition)
+        (void)IgnitionClient_SetSession(ignition, c->epoch, c->link == ST2_LINK_UP);
     uint8_t due[ST2_MAX];
     size_t n = 0;
     (void)st2_client_tx_due(c, now, due, &n); /* apply total deadline before any queued TX */
+    if (ignition)
+        (void)IgnitionClient_TxDue(ignition, now, due, &n);
     if (l->awaiting_tx && r->tx_pending && !r->tx_active)
     {
         uint8_t current[ST2_MAX];
         size_t size = st2_encode(&c->request, current);
-        bool live = c->link != ST2_LINK_DOWN && (c->link != ST2_LINK_UP || c->pending);
-        if (!live || size != l->length || memcmp(current, l->packet, size))
+        bool live = l->ignition_tx
+                        ? IgnitionClient_RequestMatches(ignition, l->packet, l->length)
+                        : c->link != ST2_LINK_DOWN && (c->link != ST2_LINK_UP || c->pending);
+        if (!l->ignition_tx && ignition && ignition->pending &&
+            ignition->request[7] == IGNITION_DISARM)
+            live = false; /* Reorder only an unsent packet; on-air traffic cannot be recalled. */
+        if (l->ignition_tx)
+            size = 0; /* The authenticated request is retained byte-for-byte. */
+        if (!live || (!l->ignition_tx &&
+            (size != l->length || memcmp(current, l->packet, size))))
         {
             if (st_radio_cancel_queued(r, l->packet, l->length))
-                c->waiting_tx_done = false; /* Canceled unsent copy has no future TX_DONE. */
+            {
+                if (l->ignition_tx && ignition)
+                    ignition->waiting_tx = false;
+                else
+                    c->waiting_tx_done = false;
+            }
             l->awaiting_tx = false;
             l->length = 0;
         }
@@ -77,7 +100,13 @@ void st_link_client_step(st_link_runtime *l, st2_client *c, uint32_t now, uint32
     if (r->tx_done != l->observed_done || r->tx_timeouts != l->observed_timeouts)
     {
         if (l->awaiting_tx)
-            st2_client_tx_done(c, now, jitter);
+        {
+            if (l->ignition_tx)
+                IgnitionClient_TxDone(ignition, l->packet, l->length, now, jitter,
+                                      r->tx_timeouts != l->observed_timeouts);
+            else
+                st2_client_tx_done(c, now, jitter);
+        }
         l->awaiting_tx = false;
         l->length = 0;
     }
@@ -85,6 +114,8 @@ void st_link_client_step(st_link_runtime *l, st2_client *c, uint32_t now, uint32
     l->observed_timeouts = r->tx_timeouts;
     if (r->failed)
     {
+        if (ignition)
+            (void)IgnitionClient_SetSession(ignition, 0, false);
         l->fault = true;
         c->link = ST2_LINK_DOWN;
         c->have_status = false;
@@ -98,13 +129,37 @@ void st_link_client_step(st_link_runtime *l, st2_client *c, uint32_t now, uint32
     }
     uint8_t rx[49];
     if (st_radio_receive(r, rx, &n))
-        (void)st2_client_receive(c, rx, n, now);
+    {
+        if (l->auto_link && (rx[0] == AUTO_LINK_DISCOVER || rx[0] == AUTO_LINK_ADVERTISE))
+            (void)AutoLink_Receive(l->auto_link, rx, n, due);
+        else if (ignition && rx[0] == ST2_IGN_REPLY)
+            IgnitionClient_Receive(ignition, rx, n, now);
+        else
+            (void)st2_client_receive(c, rx, n, now);
+    }
+    if (ignition)
+        (void)IgnitionClient_SetSession(ignition, c->epoch, c->link == ST2_LINK_UP);
     n = 0;
-    if (st2_client_tx_due(c, now, due, &n) && send_ready(l) && st_radio_send(r, due, n))
+    bool ignition_due = ignition && ignition->pending &&
+                         (ignition->request[7] == IGNITION_DISARM ||
+                          (c->link == ST2_LINK_UP && !c->pending && c->stop == ST2_STOP_NONE));
+    bool transmit = ignition_due ? IgnitionClient_TxDue(ignition, now, due, &n)
+                                 : st2_client_tx_due(c, now, due, &n);
+    if (!transmit && l->auto_link && send_ready(l))
+    {
+        if (AutoLink_TxDue(l->auto_link, now, due, &n))
+            (void)st_radio_send(r, due, n);
+        return;
+    }
+    if (transmit && send_ready(l) && st_radio_send(r, due, n))
     {
         memcpy(l->packet, due, n);
         l->length = (uint8_t)n;
         l->awaiting_tx = true;
-        st2_client_tx_accepted(c);
+        l->ignition_tx = ignition_due;
+        if (ignition_due)
+            IgnitionClient_TxAccepted(ignition, due, n, now);
+        else
+            st2_client_tx_accepted(c);
     }
 }

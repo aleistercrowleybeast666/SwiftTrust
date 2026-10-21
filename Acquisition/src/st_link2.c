@@ -15,6 +15,12 @@ static size_t wire_length(const st2_packet *p)
         return 9;
     case ST2_CAL_COMMAND:
         return 23;
+    case ST2_IGN_REQUEST:
+    case ST2_DISCOVER:
+    case ST2_ADVERTISE:
+        return 33;
+    case ST2_IGN_REPLY:
+        return 35;
     case ST2_CAL_REPLY:
         return p->count == 16 ? 26 : 0;
     case ST2_ACK:
@@ -34,6 +40,8 @@ static size_t wire_length(const st2_packet *p)
 }
 static bool fields_valid(const st2_packet *p)
 {
+    if (p->type == ST2_DISCOVER || p->type == ST2_ADVERTISE)
+        return p->id != 0;
     if (p->type == ST2_HELLO)
         return p->counter != 0;
     if (!p->epoch)
@@ -42,6 +50,10 @@ static bool fields_valid(const st2_packet *p)
         return p->counter != 0;
     if (!p->id)
         return false;
+    /* Transport validation only. Identity/CMAC and all action semantics are
+     * checked again by the ignition endpoint before any state is changed. */
+    if (p->type == ST2_IGN_REQUEST || p->type == ST2_IGN_REPLY)
+        return true;
     if (p->type == ST2_STATUS)
         return (p->flags & 7u) <= ST_FAULT && (!(p->flags & 32u) || p->mv != 65535);
     if (p->type == ST2_ACK)
@@ -72,7 +84,13 @@ size_t st2_encode(const st2_packet *p, uint8_t out[ST2_MAX])
         return 0;
     memset(out, 0, n);
     out[0] = p->type;
-    if (p->type == ST2_HELLO)
+    if (p->type == ST2_DISCOVER || p->type == ST2_ADVERTISE)
+    {
+        st_put16(out + 1, p->id);
+        memcpy(out + 3, p->uid, 12);
+        memcpy(out + 15, p->tag, 16);
+    }
+    else if (p->type == ST2_HELLO)
     {
         memcpy(out + 1, p->peer, 12);
         memcpy(out + 13, p->uid, 12);
@@ -106,6 +124,12 @@ size_t st2_encode(const st2_packet *p, uint8_t out[ST2_MAX])
                 out[7] = p->fragment;
                 memcpy(out + 8, p->data, 16);
             }
+            if (p->type == ST2_IGN_REQUEST || p->type == ST2_IGN_REPLY)
+            {
+                size_t prefix = p->type == ST2_IGN_REQUEST ? 15u : 17u;
+                memcpy(out + 7, p->data, prefix - 7u);
+                memcpy(out + prefix, p->tag, 16);
+            }
             if (p->type == ST2_DETAILS_QUERY || p->type == ST2_DETAILS_REPLY)
                 out[7] = p->section;
             if (p->type == ST2_DETAILS_REPLY)
@@ -135,7 +159,13 @@ bool st2_decode(st2_packet *p, const uint8_t *in, size_t n)
         p->count = 16;
     if (wire_length(p) != n)
         return false;
-    if (p->type == ST2_HELLO)
+    if (p->type == ST2_DISCOVER || p->type == ST2_ADVERTISE)
+    {
+        p->id = st_get16(in + 1);
+        memcpy(p->uid, in + 3, 12);
+        memcpy(p->tag, in + 15, 16);
+    }
+    else if (p->type == ST2_HELLO)
     {
         memcpy(p->peer, in + 1, 12);
         memcpy(p->uid, in + 13, 12);
@@ -168,6 +198,12 @@ bool st2_decode(st2_packet *p, const uint8_t *in, size_t n)
             {
                 p->fragment = in[7];
                 memcpy(p->data, in + 8, 16);
+            }
+            if (p->type == ST2_IGN_REQUEST || p->type == ST2_IGN_REPLY)
+            {
+                size_t prefix = p->type == ST2_IGN_REQUEST ? 15u : 17u;
+                memcpy(p->data, in + 7, prefix - 7u);
+                memcpy(p->tag, in + prefix, 16);
             }
             if (p->type == ST2_DETAILS_QUERY || p->type == ST2_DETAILS_REPLY)
                 p->section = in[7];
@@ -316,7 +352,12 @@ size_t st2_server_receive(st2_server *s, const uint8_t *in, size_t n, st2_measur
         if (!(s->offered && p.counter == s->last_counter))
         {
             uint32_t epoch = 0;
-            if (p.counter <= s->last_counter || !s->nv.reserve_epoch ||
+            if (p.counter <= s->last_counter)
+                return 0;
+            if (s->ignition)
+                (void)IgnitionServer_SetSession(s->ignition, 0, false);
+            s->active = false;
+            if (!s->nv.reserve_epoch ||
                 !s->nv.reserve_epoch(s->nv.ctx, p.counter, &epoch) || !epoch)
                 return 0;
             cal_reset(s);
@@ -324,6 +365,8 @@ size_t st2_server_receive(st2_server *s, const uint8_t *in, size_t n, st2_measur
             s->epoch = epoch;
             s->offered = true;
             s->active = false;
+            if (s->ignition)
+                (void)IgnitionServer_SetSession(s->ignition, 0, false);
             s->have_command = false;
             s->terminal_pending = false;
             s->have_status = false;
@@ -341,10 +384,19 @@ size_t st2_server_receive(st2_server *s, const uint8_t *in, size_t n, st2_measur
         if (p.counter != s->last_counter)
             return 0;
         s->active = true;
+        if (s->ignition)
+            (void)IgnitionServer_SetSession(s->ignition, s->epoch, true);
         return send_status(s, m, (uint32_t)(now / 1000), out);
     }
     if (!s->active)
         return 0;
+    if (p.type == ST2_IGN_REQUEST)
+    {
+        if (!s->ignition ||
+            IgnitionServer_SetSession(s->ignition, s->epoch, true) != IGNITION_SESSION_OK)
+            return 0;
+        return IgnitionServer_Receive(s->ignition, in, n, out);
+    }
     finish_command(s, m);
     if (p.type == ST2_DETAILS_QUERY)
     {
@@ -362,6 +414,8 @@ size_t st2_server_receive(st2_server *s, const uint8_t *in, size_t n, st2_measur
     }
     if (p.type == ST2_CAL_COMMAND || p.type == ST2_CAL_QUERY)
     {
+        if (IgnitionServer_IsBusy(s->ignition))
+            return send_ack(s, p.id, ack_flags(s, m, ST2_STATE_REJECT), out);
         if (s->have_command && p.id < s->last_command)
             return send_ack(s, p.id, ack_flags(s, m, ST2_OLD), out);
         if (s->have_command && p.id == s->last_command)
@@ -416,7 +470,8 @@ size_t st2_server_receive(st2_server *s, const uint8_t *in, size_t n, st2_measur
     {
         bool accepted =
             p.type == ST2_START
-                ? ((!s->calibration.locked || !s->calibration.locked(s->calibration.ctx)) &&
+                ? (!IgnitionServer_IsBusy(s->ignition) &&
+                   (!s->calibration.locked || !s->calibration.locked(s->calibration.ctx)) &&
                    (!s->calibration.prepare_start ||
                     s->calibration.prepare_start(s->calibration.ctx)) &&
                    st_logger_start(s->logger, now))
@@ -450,6 +505,12 @@ size_t st2_server_poll(st2_server *s, st2_measurement m, uint64_t now, uint8_t o
     {
         s->terminal_pending = false;
         return send_ack(s, s->last_command, s->last_flags, out);
+    }
+    if (s->ignition)
+    {
+        size_t ignition_length = IgnitionServer_Poll(s->ignition, out);
+        if (ignition_length)
+            return ignition_length;
     }
     if (s->cal_cached && s->cal_next < 4)
         return cal_reply(s, out);

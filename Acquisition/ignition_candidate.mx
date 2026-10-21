@@ -1,0 +1,24 @@
+config load ${PROJECT_ROOT}\Acquisition\SwiftThrust_Acquisition_Candidate\SwiftThrust_Acquisition_Candidate.ioc
+get version
+set pin PA0-WKUP TIM2_CH1
+lock pin PA0-WKUP true
+set gpio parameters PA0-WKUP GPIO_Label CAND_IGNITION_SIGNAL
+set gpio parameters PA0-WKUP GPIO_PuPd GPIO_PULLDOWN
+set mode TIM2 "PWM Generation1 CH1"
+set mode TIM2 Internal
+set mode TIM2 OPM_bit
+set ip parameters TIM2 Prescaler 15
+set ip parameters TIM2 Period 5000000
+set ip parameters TIM2 OCMode_PWM TIM_OCMODE_PWM2
+set ip parameters TIM2 Pulse 1
+set ip parameters TIM2 TIM_OnePulse_Mode TIM_OPMODE_SINGLE
+get mode active TIM2
+get ip parameters TIM2 Prescaler
+get ip parameters TIM2 Period
+get ip parameters TIM2 OCMode_PWM
+get ip parameters TIM2 Pulse
+get ip parameters TIM2 TIM_OnePulse_Mode
+set ip parameters ADC1 SamplingTime-0#ChannelRegularConversion ADC_SAMPLETIME_480CYCLES
+isPluginError "Pinout & Configuration"
+config save ${PROJECT_ROOT}\Acquisition\SwiftThrust_Acquisition_Candidate\SwiftThrust_Acquisition_Candidate.ioc
+exit

@@ -268,10 +268,29 @@
       "F411_SDIO_HZ": 48000000,
       "G071_SYSCLK_HZ": 16000000
     },
-    "voltage": "MCU_VDDA_from_factory_VREFINT_not_battery_SOC",
+    "voltage": "acquisition_PC0_battery_divider_10k_10k_100nF_VREFINT_compensated_controller_SELF_VDDA",
+    "battery_reference": {
+      "pin": "PC0",
+      "adc": "ADC1_IN10",
+      "divider_numerator": 2,
+      "divider_denominator": 1,
+      "four_three_two_one_boundaries_mv": [3900, 3700, 3500],
+      "last_led_blink_below_mv": 3300,
+      "blink_hz": 1,
+      "hysteresis_mv": 30,
+      "hardware_tested": false
+    },
+    "ignition_reference": {
+      "pin": "PA0",
+      "timer": "TIM2_CH1_AF1_PWM2_OPM",
+      "pulse_ms": 5000,
+      "arm_ms": 10000,
+      "external_feedback": "UNKNOWN",
+      "hardware_tested": false
+    },
     "nv": "internal_flash_two_region_journal_idle_only_preserve_on_upgrade",
     "sensor": "SENSOR.CFG_explicit_rating_else_raw_only",
-    "ignition_reserved_only": {
+    "additional_reserved_pins": {
       "F411": [
         "PA11",
         "PA12"

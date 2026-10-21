@@ -253,6 +253,15 @@ class Regression(unittest.TestCase):
         for board in PARTS:
             validate_ioc(board, read_csv(ROOT / board / "pin_candidates.csv"))
 
+    def test_ignition_single_pulse_saved_in_cube(self):
+        values = read_ioc(ROOT / "Acquisition/SwiftThrust_Acquisition_Candidate/SwiftThrust_Acquisition_Candidate.ioc")
+        self.assertEqual(values["TIM2.Prescaler"], "15")
+        self.assertEqual(values["TIM2.Period"], "5000000")
+        self.assertEqual(values["TIM2.Pulse"], "1")
+        self.assertEqual(values["TIM2.OCMode_PWM"], "TIM_OCMODE_PWM2")
+        self.assertEqual(values["VP_TIM2_VS_OPM.Mode"], "OPM_bit")
+        self.assertEqual(values["ADC1.SamplingTime-0\\#ChannelRegularConversion"], "ADC_SAMPLETIME_480CYCLES")
+
     def test_analog_candidate_stays_unverified_and_unbound(self):
         config = json.loads((ROOT / "Models/config_pending.json").read_text(encoding="utf8"))
         candidate = config["hardware_candidate"]

@@ -169,6 +169,21 @@
       },
       {
         "path": "ports/st_flash_journal.c"
+      },
+      {
+        "path": "src/st_ignition.c"
+      },
+      {
+        "path": "vendor/tiny_aes/aes.c"
+      },
+      {
+        "path": "src/st_auto_link.c"
+      },
+      {
+        "path": "ports/st_ignition_f4.c"
+      },
+      {
+        "path": "src/st_battery.c"
       }
     ],
     "folders": []

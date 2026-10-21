@@ -2,6 +2,7 @@
 #include "st_pairing.h"
 #include "st_journal.h"
 #include "st_console.h"
+#include "st_auto_link.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -291,6 +292,77 @@ static void reference_parameters(void)
     st_radio_config radio = st_ref_radio_config(true);
     CHECK(radio.frequency_hz == 2473000000u && radio.tx_timeout_ms == 500);
 }
+static void automatic_link(void)
+{
+    media acquisition_media, controller_media;
+    fresh(&acquisition_media); fresh(&controller_media);
+    st_journal acquisition_journal, controller_journal;
+    st_pairing acquisition_pair, controller_pair;
+    CHECK(st_journal_open(&acquisition_journal, port(&acquisition_media)));
+    CHECK(st_journal_open(&controller_journal, port(&controller_media)));
+    CHECK(st_pairing_open(&acquisition_pair, st_journal_storage(&acquisition_journal), own,
+                          ST_NV_ACQUISITION) == ST_NV_EMPTY);
+    CHECK(st_pairing_open(&controller_pair, st_journal_storage(&controller_journal), peer,
+                          ST_NV_CONTROLLER) == ST_NV_EMPTY);
+    AutoLink acquisition, controller;
+    AutoLink_Init(&acquisition, &acquisition_pair, st_ref_ignition_key(), 0x5354,
+                   &acquisition_media, idle);
+    AutoLink_Init(&controller, &controller_pair, st_ref_ignition_key(), 0x5354,
+                   &controller_media, idle);
+    uint8_t request[35], reply[35], bad[35], ignored[35]; size_t length = 0;
+    CHECK(AutoLink_TxDue(&controller, 0, request, &length) && length == AUTO_LINK_BYTES);
+    CHECK(!AutoLink_TxDue(&controller, 1999, bad, &length));
+    for (unsigned i = 0; i < AUTO_LINK_BYTES; i++)
+    {
+        memcpy(bad, request, AUTO_LINK_BYTES); bad[i] ^= 1;
+        CHECK(!AutoLink_Receive(&acquisition, bad, AUTO_LINK_BYTES, reply));
+    }
+    memcpy(bad, request, AUTO_LINK_BYTES); bad[20] ^= 1;
+    st_put16(bad+31, st_crc16(bad,31));
+    CHECK(!AutoLink_Receive(&acquisition, bad, AUTO_LINK_BYTES, reply));
+    CHECK(acquisition_pair.store.status == ST_NV_EMPTY && !acquisition_media.calls);
+    acquisition_media.idle = false;
+    CHECK(!AutoLink_Receive(&acquisition, request, AUTO_LINK_BYTES, reply));
+    acquisition_media.idle = true;
+    CHECK(AutoLink_Receive(&acquisition, request, AUTO_LINK_BYTES, reply) == AUTO_LINK_BYTES);
+    CHECK(AutoLink_TakeChanged(&acquisition) && !AutoLink_TakeChanged(&acquisition));
+    CHECK(acquisition_pair.store.status == ST_NV_VALID);
+    memcpy(bad, reply, AUTO_LINK_BYTES); bad[16] ^= 1; st_put16(bad+31,st_crc16(bad,31));
+    CHECK(!AutoLink_Receive(&controller, bad, AUTO_LINK_BYTES, ignored));
+    CHECK(controller_pair.store.status == ST_NV_EMPTY);
+    CHECK(!AutoLink_Receive(&controller, reply, AUTO_LINK_BYTES, ignored));
+    CHECK(AutoLink_TakeChanged(&controller) && controller_pair.store.status == ST_NV_VALID);
+    CHECK(!memcmp(acquisition_pair.store.identity.peer_uid, peer, 12));
+    CHECK(!memcmp(controller_pair.store.identity.peer_uid, own, 12));
+    unsigned writes = acquisition_media.calls;
+    CHECK(AutoLink_Receive(&acquisition, request, AUTO_LINK_BYTES, reply) == AUTO_LINK_BYTES);
+    CHECK(acquisition_media.calls == writes && !AutoLink_TakeChanged(&acquisition));
+    CHECK(st_journal_open(&acquisition_journal, port(&acquisition_media)));
+    CHECK(st_pairing_open(&acquisition_pair, st_journal_storage(&acquisition_journal), own,
+                          ST_NV_ACQUISITION) == ST_NV_VALID);
+    CHECK(st_journal_open(&controller_journal, port(&controller_media)));
+    CHECK(st_pairing_open(&controller_pair, st_journal_storage(&controller_journal), peer,
+                          ST_NV_CONTROLLER) == ST_NV_VALID);
+    st2_nv_port acq_nv = st_nv_link_port(&acquisition_pair.store);
+    st2_nv_port ctrl_nv = st_nv_link_port(&controller_pair.store);
+    uint64_t counter = 0; uint32_t epoch = 0;
+    CHECK(ctrl_nv.reserve_counter(ctrl_nv.ctx, &counter) && counter == 1);
+    CHECK(acq_nv.reserve_epoch(acq_nv.ctx, counter, &epoch) && epoch == 0x01000001);
+    CHECK(!acq_nv.reserve_epoch(acq_nv.ctx, counter, &epoch));
+    media third_media; fresh(&third_media);
+    st_journal third_journal; st_pairing third_pair;
+    CHECK(st_journal_open(&third_journal, port(&third_media)));
+    uint8_t third_uid[12]; memcpy(third_uid,peer,12); third_uid[0]++;
+    CHECK(st_pairing_open(&third_pair,st_journal_storage(&third_journal),third_uid,
+                          ST_NV_CONTROLLER) == ST_NV_EMPTY);
+    AutoLink third;
+    AutoLink_Init(&third,&third_pair,st_ref_ignition_key(),0x5354,&third_media,idle);
+    CHECK(AutoLink_TxDue(&third,0,bad,&length));
+    CHECK(!AutoLink_Receive(&acquisition,bad,length,reply)); /* Cannot replace remembered peer. */
+    CHECK(!memcmp(acquisition_pair.store.identity.peer_uid,peer,12));
+    acquisition_pair.store.status = ST_NV_DAMAGED;
+    CHECK(!AutoLink_Receive(&acquisition,request,AUTO_LINK_BYTES,reply));
+}
 int main(void)
 {
     journal_cycles();
@@ -298,7 +370,8 @@ int main(void)
     compaction_cuts();
     console_pair();
     reference_parameters();
-    printf("PASS reference integration: 5 groups, %u checks; 256 torn writes, 97 compaction cuts, "
+    automatic_link();
+    printf("PASS reference integration: 6 groups, %u checks; automatic UID link, 256 torn writes, 97 compaction cuts, "
            "128 reboot/counter cycles\n",
            checks);
     return 0;

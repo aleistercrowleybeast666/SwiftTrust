@@ -6,9 +6,9 @@
 
 参考板配置与首次配对、接线、传感器配置、NV保留区和升级边界见 [REFERENCE_APPLICATION](Models/REFERENCE_APPLICATION.md)。稀疏HEX/ELF可由 `python -B Models/build_reference.py --artifacts` 生成到本地 `dist`；自动烧录仍拒绝执行。没有连接或烧录硬件，板子/电气/时序/TF最坏延迟与射频距离尚未上板确认。
 
-默认无传感器规格时记录原始ADC，不伪造力值；标定需按真实传感器填写 [SENSOR.CFG.example](Models/SENSOR.CFG.example)。电压显示是MCU VDDA，不是电池SOC。点火仅保留静态菜单和未配置PA11/PA12标记，没有执行、协议或GPIO输出。
+默认无传感器规格时记录原始ADC，不伪造力值；标定需按真实传感器填写 [SENSOR.CFG.example](Models/SENSOR.CFG.example)。采集板PC0经1:2分压读取18650电压，PB6～PB9四灯分档，低于3.30V末灯闪烁；遥控SELF仍是MCU VDDA。PA0已输出自主5秒单次高电平，点火经过ARM及独立FIRE确认，外部执行级/点火反馈仍未知。两端自动发现、记住UID并重连，无需手动配钥。无线参数保持原值，仅开启高灵敏度LNA。完整字段、菜单及接线见[当前R7协议与流程](Models/LORA_PROTOCOL.md)。
 
-完整离线回归50组/54,398断言及导出检查、无线owner7组/383断言、新增Flash/配置故障模型均通过；双板真实ReferenceApp ARM编译通过。具体证据见 [构建审查](Models/BOARD_BUILD_REVIEW.md) 和 [交接](HANDOFF.md)。无 `.work`、SDK副本或额外远端仓库。
+离线验证覆盖点火去重/超时/中止、真实驱动寄存器模型、自动连接、四灯电量和原采集链；双板ReferenceApp ARM构建生成本地稀疏HEX/ELF。当前验证结果见`Models/firmware_host_validation.log`、`Models/link_runtime_validation.log`、`Models/ignition_pulse_validation.log`、`Models/reference_arm_validation.log`及[交接](HANDOFF.md)。没有硬件运行或距离测试结论。
 
 **PCB尚未冻结，最终接线/极性、外部ADC时钟和传感器电气参数必须先核对。** 此版本可按参考配置安排上板验证，尚未实际板测。首次START及取消重启修复的失败→通过证据见 [专项审查](Models/FIRST_START_REVIEW.md)。
 

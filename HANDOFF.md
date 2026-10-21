@@ -1,3 +1,21 @@
+# 2026-10-21 真实逻辑脉冲、自动连接与电池显示
+
+当前实现以[完整R7协议与流程](Models/LORA_PROTOCOL.md)为准。采集板PA0/物理14脚/AF1 TIM2_CH1采用PWM2+OPM，自主高5秒后低；STOP/BACK可提前截止，重复FIRE不重启。ARM许可10秒，独立FIRE确认默认BACK；组合模式先等CAPTURING再ARM，正常脉冲结束继续记录，STOP/BACK收尾。无执行级反馈或物理保险输入，显示MCU状态不等于点火成功。
+
+两端使用内置项目校验，首次空白设备0x0F/0x10自动发现并持久记住UID，再自动HELLO/COMMIT；旧NV损坏或另一UID不自动覆盖。固定密钥公开，仅用于减少误包风险。原射频参数和10秒心跳保持，仅开启高灵敏度LNA。
+
+采集板PC0/物理8脚/ADC1_IN10通过10k+10k分压、100nF对地读取单节18650；VREFINT补偿VDDA，ADC1交替低速转换，ADS高速链路不变。PB6～PB9四灯分界3.90/3.70/3.50V，低于3.30V末灯1Hz闪烁，30mV回差及1/4 IIR；失效/过期全灭。采集STATUS mV改成电池电压，SELF保持遥控VDDA。
+
+CubeMX已实际保存PA0单脉冲、PC0采样时间480周期；候选IOC时钟16MHz/PSC15，实际ReferenceApp 84MHz定时器/PSC83，均1MHz。实际初始化仍由reference_main和st_ignition_f4负责，未用Cube代码覆盖应用。当前未访问探针、串口或烧录。验证见本轮Models日志，下文为历史。
+
+最终离线结果：主回归58组/55,498断言；无线owner10组/703断言；Flash/自动配对6组/76,654检查；实际F4脉冲驱动寄存器模型30检查；CubeMX/引脚与配置24测试通过。两板ReferenceApp ARM重建并生成稀疏HEX/ELF；采集FLASH65020B/RAM55624B，遥控FLASH56672B/RAM9992B，均不覆盖NV。没有上板或电气验证。
+
+# 2026-10-21 协议阶段历史交接
+
+已按用户要求保留原频点/功率/SF/BW/CR及普通链路时序，仅在两端无线初始化增加高灵敏度LNA。新增R6认证请求0x0D/回复0x0E、CMAC、独立命令/查询ID、缓存与有界重试，并接入双板ReferenceApp及点火页面。点火执行硬件固定UNBOUND，ARM/FIRE只拒绝，DISARM不冒充已确认关闭；没有点火GPIO或执行回调。
+
+临时密钥通过本地串口IGNKEY设置到RAM，重启清除，不写NV/TF；配置后须显式CONNECT。完整帧格式及何时发送、接收、回复见[完整协议流程](Models/LORA_IGNITION_PROTOCOL_DRAFT.md)。本轮不访问硬件、不烧录；验证日志随本轮代码更新。下文保留先前采集应用交接。
+
 # 2026-10-20 双板参考应用交接
 
 当前工作已经从组件链接推进为两板ReferenceApp实际应用：两个 `board/reference_main.c` 是可执行入口，包含初始化、调度与IRQ，不再以CRC/WFI当完成。说明与接线以 [Models/REFERENCE_APPLICATION.md](Models/REFERENCE_APPLICATION.md) 为准。普通提交/推送后由交接回复给出实际SHA。

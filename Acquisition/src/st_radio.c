@@ -153,6 +153,8 @@ void st_radio_tick(st_radio *r, uint32_t now)
             break;
         case 3:
             s = sx128x_set_pkt_type(r, SX128X_PKT_TYPE_LORA);
+            if (s == SX128X_STATUS_OK)
+                s = sx128x_set_lna_settings(r, SX128X_LNA_HIGH_SENSITIVITY_MODE);
             break;
         case 4:
             s = sx128x_set_rf_freq(r, r->config.frequency_hz);

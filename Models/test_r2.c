@@ -113,12 +113,36 @@ static void details_ui(void){nv cn={0},sn={0};st_logger l;st_logger_init(&l,(st_
   st_ui_init(&u);u.selection=item;C(!st_ui2_handle(&u,ST_UI_PRESS,&c,100));
   st_ui_page expected[]={ST_UI_STATUS,ST_UI_IGNITION_ONLY,ST_UI_CAPTURE,ST_UI_COMBINED};C(u.page==expected[item]);
   if(item==1||item==3){
-   st_ui2_render(&u,&c,(st_voltage_view){0},100,&model);C(strstr(model.rows[3],"NOT IMPLEMENTED")&&strstr(model.rows[6],"BACK"));
+   /* A live client makes accidental acquisition dispatch observable. */
+   c.link=ST2_LINK_UP;c.have_status=true;c.received_ms=100;c.next_command=41;
+   c.flags=(uint8_t)((item==1?ST_IDLE:ST_CAPTURING)|(ST2_TF_OPEN<<3));
+   uint8_t client_before[sizeof(c)];memcpy(client_before,&c,sizeof(c));
+   st_ui_page confirmation=item==1?ST_UI_IGNITION_CONFIRM:ST_UI_COMBINED_CONFIRM;
+   st_ui2_render(&u,&c,(st_voltage_view){0},100,&model);
+   C(strstr(model.rows[3],"> START N/A")&&strstr(model.rows[4],"STOP N/A")&&strstr(model.rows[6],"BACK"));
+   C(strstr(model.rows[7],"IGNITION UNAVAILABLE"));
    for(unsigned j=0;j<12;j++)C(!st_ui2_handle(&u,ST_UI_NEXT,&c,100)&&!c.pending);
+   C(u.selection==0);
+   C(!st_ui2_handle(&u,ST_UI_PRESS,&c,100)&&u.page==confirmation&&u.selection==1);
+   st_ui2_render(&u,&c,(st_voltage_view){0},100,&model);C(strstr(model.rows[4],"> BACK"));
+   C(!st_ui2_handle(&u,ST_UI_PRESS,&c,100)&&u.page==expected[item]&&u.selection==0);
+   C(!st_ui2_handle(&u,ST_UI_PRESS,&c,100)&&u.page==confirmation);
+   C(!st_ui2_handle(&u,ST_UI_BACK,&c,100)&&u.page==expected[item]&&u.selection==0);
+   C(!st_ui2_handle(&u,ST_UI_PRESS,&c,100)&&u.page==confirmation);
+   C(!st_ui2_handle(&u,ST_UI_PREV,&c,100)&&u.selection==0);
+   C(!st_ui2_handle(&u,ST_UI_PRESS,&c,100)&&u.page==expected[item]&&u.unavailable);
+   st_ui2_render(&u,&c,(st_voltage_view){0},100,&model);C(strstr(model.rows[7],"NOT IMPLEMENTED"));
+   C(!st_ui2_handle(&u,ST_UI_NEXT,&c,100)&&u.selection==1);
+   C(!st_ui2_handle(&u,ST_UI_PRESS,&c,100)&&u.page==expected[item]&&u.unavailable);
+   C(!st_ui2_handle(&u,ST_UI_NEXT,&c,100)&&u.selection==2);
+   st_ui2_render(&u,&c,(st_voltage_view){0},100,&model);C(strstr(model.rows[6],"> BACK"));
    C(!st_ui2_handle(&u,ST_UI_PRESS,&c,100)&&u.page==ST_UI_HOME&&u.selection==item&&!c.pending);
+   C(!st_ui2_handle(&u,ST_UI_PRESS,&c,100)&&u.page==expected[item]);
+   C(!st_ui2_handle(&u,ST_UI_BACK,&c,100)&&u.page==ST_UI_HOME&&u.selection==item);
+   C(!memcmp(client_before,&c,sizeof(c)));
   }else C(!st_ui2_handle(&u,ST_UI_BACK,&c,100)&&u.page==ST_UI_HOME&&u.selection==item);
  }
 
- G("R2 consistent two-fragment diagnostic snapshot / reorder and duplicate / changed duplicate rejection / request ID isolation / menu emits only R2 START");
+ G("R2 diagnostic snapshot / request isolation / mode START-STOP-BACK / safe confirmation parents / unavailable ignition leaves live RF client unchanged");
 }
 unsigned st_test_r2(unsigned *out){codec();sessions();transactions();scheduling();details_ui();*out+=groups;return checks;}

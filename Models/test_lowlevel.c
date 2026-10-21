@@ -3,6 +3,7 @@
 #include "st_radio.h"
 #include "st_ui.h"
 #include "st_debug.h"
+#include "sx128x_regs.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -70,6 +71,7 @@ static void radio_test(void){static rf_bus b;memset(&b,0,sizeof(b));st_radio r;
  st_radio_init(&r,(st_radio_port){&b,rf_command,rf_reset,rf_ready},c);
  for(unsigned i=0;i<20&&r.phase<13&&!r.failed;i++)st_radio_tick(&r,i);
  C(!r.failed&&r.phase==13&&b.reset_count==1&&b.patch_seen);
+ C((b.regs[SX128X_REG_LNA_REGIME]&0xC0u)==0xC0u);
  st2_packet packet={.type=ST2_START,.epoch=123,.id=7};uint8_t bytes[49],received[49];size_t n=st2_encode(&packet,bytes),rn=0;
  C(st_radio_send(&r,bytes,n));st_radio_tick(&r,20);C(r.tx_active&&!r.tx_pending&&b.last_length==n&&!memcmp(bytes,b.last_write,n));
  b.irq=SX128X_IRQ_TX_DONE;st_radio_irq_isr(&r);st_radio_tick(&r,30);C(!r.tx_active&&r.tx_done==1);

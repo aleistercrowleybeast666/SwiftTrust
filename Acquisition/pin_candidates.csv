@@ -20,7 +20,7 @@ PB12,33,GPIO_Output,RADIO_CS,radio,idle_high_candidate
 PC6,37,GPIO_Input,RADIO_BUSY,radio,candidate
 PC7,38,GPIO_EXTI7,RADIO_DIO1,radio,rising_edge_candidate
 PB2,28,GPIO_Output,RADIO_NRESET,radio,idle_high_candidate
-PC0,8,ADC1_IN10,ACQUISITION_BATTERY,power,divider_unbound
+PC0,8,ADC1_IN10,ACQUISITION_BATTERY,power,divider_10k_10k_candidate
 PB6,58,GPIO_Input,LED_VOLT_1,voltage indicators,polarity_unbound
 PB7,59,GPIO_Input,LED_VOLT_2,voltage indicators,polarity_unbound
 PB8,61,GPIO_Input,LED_VOLT_3,voltage indicators,polarity_unbound
@@ -29,3 +29,4 @@ PA13,46,SYS_JTMS-SWDIO,SWDIO,debug,reserved_debug
 PA14,49,SYS_JTCK-SWCLK,SWCLK,debug,reserved_debug
 PA9,42,USART1_TX,DEBUG_UART_TX,debug serial,3v3_logic_candidate_not_bound
 PA10,43,USART1_RX,DEBUG_UART_RX,debug serial,3v3_logic_candidate_not_bound
+PA0-WKUP,14,TIM2_CH1,IGNITION_SIGNAL,logic output,5s_one_pulse_candidate

@@ -20,7 +20,7 @@ Acquisition,PB12,33,GPIO_Output,RADIO_CS,radio,reference_contract_hardware_unver
 Acquisition,PC6,37,GPIO_Input,RADIO_BUSY,radio,reference_contract_hardware_unverified
 Acquisition,PC7,38,GPIO_EXTI7,RADIO_DIO1,radio,reference_contract_hardware_unverified
 Acquisition,PB2,28,GPIO_Output,RADIO_NRESET,radio,reference_contract_hardware_unverified
-Acquisition,PC0,8,RESERVED,ACQUISITION_BATTERY,power,not_configured_by_ReferenceApp
+Acquisition,PC0,8,ADC1_IN10,ACQUISITION_BATTERY,power,reference_contract_hardware_unverified
 Acquisition,PB6,58,GPIO_Output,LED_VOLT_1,voltage indicators,reference_active_high_VDDA
 Acquisition,PB7,59,GPIO_Output,LED_VOLT_2,voltage indicators,reference_active_high_VDDA
 Acquisition,PB8,61,GPIO_Output,LED_VOLT_3,voltage indicators,reference_active_high_VDDA
@@ -51,3 +51,4 @@ Controller,PA9,19,USART1_TX,DEBUG_UART_TX,debug serial,reference_contract_hardwa
 Controller,PA10,21,USART1_RX,DEBUG_UART_RX,debug serial,reference_contract_hardware_unverified
 Controller,PA11,22,RESERVED,STATIC_FUTURE_PLACEHOLDER,reserved,no_GPIO_configuration_no_write_no_protocol
 Controller,PA12,23,RESERVED,STATIC_FUTURE_PLACEHOLDER,reserved,no_GPIO_configuration_no_write_no_protocol
+Acquisition,PA0-WKUP,14,TIM2_CH1,IGNITION_SIGNAL,logic output,reference_contract_hardware_unverified

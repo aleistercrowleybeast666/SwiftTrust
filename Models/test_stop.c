@@ -375,12 +375,15 @@ static void ui_messages(void)
     status(f, ST_FAULT);
     C(!st_ui2_handle(&f->ui, ST_UI_PRESS, c, f->now));
     render(f, "STATE UNAVAILABLE");
-    f->ui.page = ST_UI_COMBINED;
+    C(!st_ui2_handle(&f->ui, ST_UI_BACK, c, f->now) && f->ui.page == ST_UI_HOME);
+    C(!st_ui2_handle(&f->ui, ST_UI_NEXT, c, f->now) && f->ui.selection == 3);
+    C(!st_ui2_handle(&f->ui, ST_UI_PRESS, c, f->now) && f->ui.page == ST_UI_COMBINED);
     st_ui_model model;
     st_ui2_render(&f->ui, c, (st_voltage_view){0}, f->now, &model);
-    C(!strcmp(model.rows[3], "NOT IMPLEMENTED"));
+    C(strstr(model.rows[3], "START N/A") && strstr(model.rows[4], "STOP N/A"));
+    C(!strcmp(model.rows[7], "IGNITION UNAVAILABLE"));
     free(f);
-    G("STOP UI distinguishes busy/link/state/exhaustion from reserved NOT IMPLEMENTED");
+    G("STOP UI distinguishes busy/link/state/exhaustion from unavailable ignition menus");
 }
 unsigned st_test_stop(unsigned *out)
 {

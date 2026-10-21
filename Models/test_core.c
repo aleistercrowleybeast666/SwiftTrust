@@ -214,15 +214,20 @@ static void test_protocol_ui(const char *images) {
     CHECK(d.opens==opens&&l.state==ST_IDLE);GROUP("mutated/truncated packets and unknown type never change acquisition");
     st_ui_init(&ui);(void)st_ui_handle(&ui,ST_UI_PREV,&c,9200);CHECK(ui.selection==3);
     (void)st_ui_handle(&ui,ST_UI_PRESS,&c,9200);CHECK(ui.page==ST_UI_COMBINED&&!c.pending);
+    CHECK(!st_ui_handle(&ui,ST_UI_PRESS,&c,9200)&&ui.page==ST_UI_COMBINED_CONFIRM&&ui.selection==1&&!c.pending);
+    CHECK(!st_ui_handle(&ui,ST_UI_PRESS,&c,9200)&&ui.page==ST_UI_COMBINED&&!c.pending);
+    CHECK(!st_ui_handle(&ui,ST_UI_NEXT,&c,9200));CHECK(!st_ui_handle(&ui,ST_UI_NEXT,&c,9200));
     CHECK(!st_ui_handle(&ui,ST_UI_PRESS,&c,9200)&&ui.page==ST_UI_HOME&&!c.pending);
     CHECK(ui.selection==3);
     st_ui_model model;uint8_t frame[1024];FILE *f=fopen(images,"wb");CHECK(f!=NULL);
     st_voltage_view own={.kind=ST_V_MEASURED,.mv=4100};
-    st_ui_page pages[]={ST_UI_HOME,ST_UI_CAPTURE,ST_UI_STATUS,ST_UI_COMBINED};
-    for(unsigned i=0;i<4;i++) {ui.page=pages[i];ui.selection=0;ui.unavailable=false;
+    st_ui_page pages[]={ST_UI_HOME,ST_UI_CAPTURE,ST_UI_IGNITION_ONLY,ST_UI_COMBINED,
+        ST_UI_IGNITION_CONFIRM,ST_UI_COMBINED_CONFIRM,ST_UI_STATUS,ST_UI_COMBINED};
+    for(unsigned i=0;i<sizeof(pages)/sizeof(pages[0]);i++) {ui.page=pages[i];
+        ui.selection=(i==4||i==5||i==7)?1u:0u;
         c.transaction=i==1?ST_TX_WAIT_STATE:ST_TX_NONE;
-        c.status.state=i==1?ST_STARTING:(i==2?ST_CAPTURING:ST_IDLE);
-        c.status.storage=i==2?1:0;ui.unavailable=false;
+        c.status.state=i==1?ST_STARTING:(i==6?ST_CAPTURING:ST_IDLE);
+        c.status.storage=i==6?1:0;ui.unavailable=i==7;
         st2_client active={.link=ST2_LINK_UP,.have_status=true,.received_ms=9200,.mv=c.status.mv,
             .flags=(uint8_t)(c.status.state|(ST2_TF_OPEN<<3)|32u|64u),.transaction=c.transaction,
             .timing={10000,2200,2500,100000,4}};
@@ -232,7 +237,7 @@ static void test_protocol_ui(const char *images) {
     }
     CHECK(fclose(f)==0);ui.page=ST_UI_STATUS;st_ui_render(&ui,&c,own,14000,&model);
     CHECK(strstr(model.rows[0],"LOST")&&strstr(model.rows[2],"OLD"));
-    GROUP("menu rotate/select/back / safe-default confirmation / static reserved pages / rendered 128x64 framebuffers");
+    GROUP("menu rotate/select/back / safe-default confirmation / unavailable mode actions / rendered 128x64 framebuffers");
 }
 typedef struct { bool active,error;unsigned wait,count,data_bytes,windows;const uint8_t *p;
     size_t n;uint8_t copy[32],pixels[1024]; } i2c;
@@ -276,9 +281,12 @@ unsigned st_test_stop(unsigned *groups_out);
 unsigned st_test_storage(unsigned *groups_out);
 unsigned st_test_calibration(unsigned *groups_out,const char *images);
 unsigned st_test_cal_integration(unsigned *groups_out);
+unsigned st_test_ignition(unsigned *groups_out,const char *images);
+unsigned st_test_battery(unsigned *groups_out);
 int main(int argc,char **argv) {
-    CHECK(argc==4);test_crc_adc();test_ring();test_voltage();test_logger(argv[1]);
-    test_protocol_ui(argv[2]);test_oled_input();checks+=st_test_lowlevel(&groups);checks+=st_test_r2(&groups);checks+=st_test_stop(&groups);checks+=st_test_storage(&groups);checks+=st_test_cal_integration(&groups);checks+=st_test_calibration(&groups,argv[3]);
+    CHECK(argc==5);test_crc_adc();test_ring();test_voltage();test_logger(argv[1]);
+    test_protocol_ui(argv[2]);test_oled_input();checks+=st_test_lowlevel(&groups);checks+=st_test_r2(&groups);checks+=st_test_stop(&groups);checks+=st_test_storage(&groups);checks+=st_test_cal_integration(&groups);checks+=st_test_calibration(&groups,argv[3]);checks+=st_test_ignition(&groups,argv[4]);
+    checks+=st_test_battery(&groups);
     printf("PASS total: %u groups, %u assertions; host sizeof(logger)=%zu, sizeof(oled)=%zu\n",groups,checks,sizeof(st_logger),sizeof(st_oled));
     return 0;
 }

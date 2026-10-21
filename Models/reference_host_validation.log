@@ -1,14 +1,17 @@
-2026-10-20T07:08:43.331941+00:00
-PASS reference integration: 5 groups, 75564 checks; 256 torn writes, 97 compaction cuts, 128 reboot/counter cycles
+2026-10-21T11:07:14.626800+00:00
+PASS reference integration: 6 groups, 76654 checks; automatic UID link, 256 torn writes, 97 compaction cuts, 128 reboot/counter cycles
 Synthetic flash model only; no MCU/TF/RF/electrical/power-loss hardware test.
 Strict C11 warnings including conversion/shadow are errors.
 SHA256 Acquisition/src/st_core.c f030b589b888984c48f5fd99c74f75376a61d0c6384bda27900cc5930f90ce7e
 SHA256 Acquisition/src/st_logger.c c12df0288ba0f48bb64d671457535e8111347818837ec3725e0044a3e6e3a4a6
-SHA256 Acquisition/src/st_link2.c f39f412d7bcc800faf0fd1d7c9399884d2bfbbd2f101eb82554c5a8c9737fd2e
+SHA256 Acquisition/src/st_link2.c 2eac79cf65f2ec33ef5360ee8c9c44f26118fd5f582cc4425b2abcaa3088c952
+SHA256 Acquisition/src/st_ignition.c 3374bb8093dcb0edd134074ca5252c9fe25900f3395c4331d43946c27e4ded1b
+SHA256 Acquisition/src/st_auto_link.c 9046df0ac5c913e79f41ca78049fb395ca0e19e970e59a126abcc05bf7f0eab0
 SHA256 Acquisition/src/st_nv.c 7a143df7af7c8ed706e28dd038bbaf5251e8384e2881eee5bc89225b28ba0fdc
 SHA256 Acquisition/src/st_pairing.c cc563ab4618ab53c6b2a2bdb928217a1f310f630cf80a0cc1d3069aab88b7ef4
 SHA256 Acquisition/src/st_journal.c aa19671b7c7a0206c6c14c027661043bbe88b3ec5ef4ce06042238fd718d8b1c
-SHA256 Acquisition/src/st_reference.c 31179f0b06cfc9877d62b403c94c3b199b24041623884e944182f0e00acdfc86
+SHA256 Acquisition/src/st_reference.c c8f7d88b0e1bf31765c6cc3af7b34017902049a53f289f9646d6440ca135ce81
 SHA256 Acquisition/src/st_cal.c 6d37da45e8ac1f930bf2894d4d3eb02deb7cff33bc5fb1826f5769a34b9e9850
-SHA256 Acquisition/src/st_console.c b67d76c3fb581ce7555777dde6f6967e64444148be0a25a842f31a9a6dd8c4a7
-SHA256 Models/test_reference.c 1aa2db7eebb47451dcbb4e6fa5578f98d7b638c9066d7f7f616e5e4e9a6091f8
+SHA256 Acquisition/src/st_console.c 400ec1bacf9af385fbc83de4d61b94f2ff41210c723f057d939c0877fd8d7795
+SHA256 Acquisition/vendor/tiny_aes/aes.c f7f78b44654efd3542b6886923dd05194286807ebcfeb078ea05d21fe901ee9e
+SHA256 Models/test_reference.c 41b71a5d5f4434c47e490fa091c03b1e725c05492a7bb40f70c371808c8d6203

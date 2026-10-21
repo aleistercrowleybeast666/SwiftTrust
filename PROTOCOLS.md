@@ -1,6 +1,8 @@
-# SwiftThrust 日志与遥测协议 · 文档修订R4
+# SwiftThrust 日志与遥测协议 · 文档修订R7
 
-> 当前无线包无版本字段/版本位；首字节仅TYPE。12B状态、9B启停、10B ACK已完成软件实现及Host回归；板级持久化、应用接线和实物链路尚未验收。STLOG001不变，无点火触发协议。
+> 当前完整无线字段、自动连接、点火脉冲、电池显示及操作流程以[完整R7协议](Models/LORA_PROTOCOL.md)为准。首字节仅TYPE，无版本字段；旧R4布局和STLOG001不变。采集STATUS mV现为PC0测得的单节电池电压，遥控SELF仍为VDDA。PA0已接通5秒MCU信号，外部执行级反馈未知；所有物理链路仍待板测。
+
+2026-10-21：R7沿用0x0D请求和0x0E回复，新增33B的0x0F发现/0x10应答；两端内置项目校验、自动保存首次对端UID并握手。最大包仍35B；射频原参数不变，仅开启高灵敏度LNA。固定项目密钥公开，用于降低误包风险，不是对恶意仿造的防护。
 
 2026-10-20｜数据采集与状态；硬件未验收。
 
@@ -93,9 +95,9 @@ ADC编号：芯片CH0用于推力原始码，芯片CH1用于激励/监测原始�
 
 命令：`python -B Models/export_stlog.py input.BIN output.csv`。CSV排他新建，已有同名文件不覆盖。它是通用CSV，**尚未验证UNDERLINE专用导入兼容**。
 
-## 3. 当前无线短包契约（文档修订R4，不在包内放版本）
+## 3. 无线短包契约（R4布局兼容与R6认证扩展，不在包内放版本）
 
-2026-10-20：按用户追加要求，取消R2草案的版本/类型合并字节。首字节仅为完整8位 **TYPE**，值0x01…0x0C；没有版本字段，也没有版本位。代码内部`st2_`名称仅用于区别旧实现，不在空中传输。两端必须部署同一文档修订的配套固件；未来改同一包型的语义可能无法仅靠长度识别，因此需要一起更新两端。未知包型、错误长度、CRC或未绑定epoch均拒绝。TF的STLOG001标识不改。
+2026-10-20取消R2草案的版本/类型合并字节；2026-10-21在原0x01…0x0C基础上增加0x0D/0x0E。首字节仅为完整8位 **TYPE**，没有版本字段或版本位。代码内部`st2_`名称不在空中传输。两端部署配套固件；未知包型、错误长度、CRC或未绑定epoch均拒绝，新包额外验证CMAC。TF的STLOG001标识不改。
 
 所有多字节应用字段均为小端。末尾CRC16采用CCITT-FALSE：poly=0x1021、init=0xFFFF、非反射、xorout=0，覆盖CRC前全部字节，低字节先发。LoRa物理CRC也保持开启。
 
@@ -129,7 +131,7 @@ ACCEPTED仅表示接受。START在日志头写入/sync并进入CAPTURING后、ST
 
 客户端先持久增加计数；服务端核对配对UID、只接受大于已持久记录的新计数，并持久提交计数与从不复用的epoch后才回复。重复HELLO使用同一提议，不反复分配。COMMIT后以STATUS确认建链，随后才接受启停。服务端重启时没有活跃映射，旧短包无效；上次已持久使用的旧HELLO也拒绝。任一端重启、超时重建或序号耗尽都应发起新会话。
 
-**已实现状态机和持久化回调失败时的拒绝行为，尚未实现实际板上Flash/EEPROM持久化后端及配对配置。** `st2_nv_port`无回调/写入失败/耗尽时建链失败；不能用RAM测试存储宣称掉电后防重放。epoch分配器还须保证所管理配对域内不重复，不能直接用未检查的随机数代替。持久化必须提交后才返回true，并解决掉电原子性/磨损；布局需随板级方案确认。
+**ReferenceApp已接入片内Flash journal及本地配对，物理掉电/磨损仍待板测。** 布局与升级保留区见`Models/REFERENCE_APPLICATION.md`。`st2_nv_port`无回调/写入失败/耗尽时建链失败，不用RAM或随机数替代持久防重放；持久化提交后才返回成功。新协议临时密钥与这份持久epoch历史分开管理，不能清零NV来重新配钥。
 
 UID和CRC没有密码学认证能力。此契约用于已管理的配对域；不提供恶意发射源认证。若不准备完成持久化映射，可另行评审显式来源/boot的较长格式，不能带缺失前置条件上线12B格式。
 
@@ -173,6 +175,14 @@ COMMAND偏移：TYPE@0、epoch u32@1、id u16@5、action@7、unit@8、milli_unit
 CAL命令/查询与START/STOP共享单调ID流。缓存最后完整请求字节和四片视图，重复SAVE只重发结果；冲突或旧ID拒绝。控制器四片完整前不宣布完成，STATUS不能完成标定操作。重试等待`ack_rto+3*max_airtime+jitter`；草稿超出operation会话租期取消，已提交结果不因租期消失。丢SAVE回复应显示结果未知，并查询实际状态/active revision。START在草稿期被锁，创建日志前重新核对并应用活动profile；采集中不允许换参数。配对UID/CRC不是密码认证；无点火动作。
 
 TF参数文件实际保存和恢复的限制、真实卡掉电不确定性及编译证据见`Models/CALIBRATION.md`、`Models/BOARD_BUILD_REVIEW.md`。
+
+### R6认证请求与回复扩展
+
+新增IGN_REQUEST=0x0D，33B：TYPE1＋epoch4＋ID2＋action1＋selector1＋argument4＋profile2＋CMAC16＋CRC2。action=0 QUERY、1 ARM、2 FIRE、3 DISARM；查询selector=0快速/1详情、argument为目标命令ID或0、profile=0。ARM/FIRE的selector=1仅点火/2联动，ARM argument=0，FIRE argument=arm_id，profile非零；DISARM后三字段全0。
+
+IGN_REPLY=0x0E，每包35B：TYPE1＋epoch4＋ID2＋payload10＋CMAC16＋CRC2。payload[0]kind为0命令、1查询、2详情。主回复剩余9B为result1/state1/reason1/arm_id4/remaining_ms2；详情剩余9B为known_mask2/pass_mask2/点火电源mV2/profile2/capability1。快速查询回一包，完整查询回主回复和详情两包，冻结快照按ID一致重组。
+
+命令和查询各有独立非零单调ID；重复请求只回缓存，查询不覆盖三个命令结果槽。点火包CMAC覆盖STIGN2、方向、双方UID及帧前缀；发现包使用独立STDISC1域，见[完整R7流程](Models/LORA_PROTOCOL.md)。ARM许可10秒，独立确认后FIRE一次，PA0高5秒自主低；STOP/BACK撤销并关闭MCU信号。普通STATUS不完成点火事务，外部反馈未知。
 
 ### 3.5 空中时间与吞吐含义
 
