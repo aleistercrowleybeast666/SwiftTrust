@@ -3,13 +3,19 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
+#include "../../Common/Inc/st_project_config.h"
 
 enum
 {
     IGNITION_REQUEST = 0x0D,
     IGNITION_REPLY = 0x0E,
-    IGNITION_MAX_BYTES = 35,
-    IGNITION_REQUEST_BYTES = 33,
+    IGNITION_MAX_BYTES = ST_PROTOCOL_MAX_BYTES,
+    IGNITION_REQUEST_BYTES = 42,
+    IGNITION_REPLY_BYTES = 44,
+    IGNITION_ACTION_OFFSET = 16,
+    IGNITION_MODE_OFFSET = 17,
+    IGNITION_ID_OFFSET = 12,
+    IGNITION_PROFILE_OFFSET = 22,
     IGNITION_KEY_BYTES = 16,
     IGNITION_DETAIL_BYTES = 9,
     IGNITION_QUERY = 0,
@@ -45,9 +51,10 @@ enum
     IGNITION_REASON_PROFILE = 4,
     IGNITION_REASON_LOCAL = 5,
     IGNITION_REASON_OUTPUT = 6,
-    IGNITION_ARM_MS = 10000,
-    IGNITION_PULSE_MS = 5000,
-    IGNITION_SIGNAL_PROFILE = 1,
+    IGNITION_ARM_MS = ST_OUTPUT_ARM_MS,
+    IGNITION_PULSE_MS = ST_OUTPUT_HARDWARE_ENABLED ? ST_OUTPUT_REAL_DURATION_MS
+                                                   : ST_OUTPUT_SIMULATION_MS,
+    IGNITION_SIGNAL_PROFILE = ST_OUTPUT_PROFILE_ID,
     IGNITION_REASON_HISTORY = 16
 };
 
@@ -100,22 +107,22 @@ typedef struct
 typedef struct
 {
     uint32_t epoch;
-    uint16_t id;
+    uint32_t id;
     uint8_t type, data[10];
 } IgnitionPacket;
 
 void Ignition_ClearMemory(void *, size_t);
 IgnitionCodecResult Ignition_ComputeCmac(const uint8_t key[16], const uint8_t *, size_t,
-                                       uint8_t tag[16]);
+                                         uint8_t tag[16]);
 IgnitionCodecResult Ignition_Encode(const IgnitionAuth *, const IgnitionPacket *,
-                                  uint8_t out[35], size_t *);
-IgnitionCodecResult Ignition_Decode(const IgnitionAuth *, uint8_t expected_type,
-                                  const uint8_t *, size_t, IgnitionPacket *);
+                                    uint8_t out[IGNITION_MAX_BYTES], size_t *);
+IgnitionCodecResult Ignition_Decode(const IgnitionAuth *, uint8_t expected_type, const uint8_t *,
+                                    size_t, IgnitionPacket *);
 
 typedef struct
 {
-    uint16_t id;
-    uint8_t request[8], reply[35];
+    uint32_t id;
+    uint8_t request[8], reply[IGNITION_MAX_BYTES];
     bool valid;
 } IgnitionCommandCache;
 typedef enum
@@ -140,9 +147,9 @@ typedef struct IgnitionServer
 {
     IgnitionAuth auth;
     uint32_t epoch, retired_epoch;
-    uint16_t last_command, last_query;
+    uint32_t last_command, last_query;
     IgnitionCommandCache commands[3];
-    uint8_t query_request[8], query_reply[2][35], query_count, query_next;
+    uint8_t query_request[8], query_reply[2][IGNITION_MAX_BYTES], query_count, query_next;
     bool query_cached;
     IgnitionOutputPort output;
     uint32_t arm_id, deadline_ms;
@@ -153,8 +160,9 @@ void IgnitionServer_Init(IgnitionServer *, const uint8_t acquisition_uid[12],
                          const uint8_t controller_uid[12]);
 IgnitionKeyResult IgnitionServer_SetKey(IgnitionServer *, const uint8_t key_or_null[16]);
 IgnitionSessionResult IgnitionServer_SetSession(IgnitionServer *, uint32_t epoch, bool active);
-size_t IgnitionServer_Receive(IgnitionServer *, const uint8_t *, size_t, uint8_t out[35]);
-size_t IgnitionServer_Poll(IgnitionServer *, uint8_t out[35]);
+size_t IgnitionServer_Receive(IgnitionServer *, const uint8_t *, size_t,
+                              uint8_t out[IGNITION_MAX_BYTES]);
+size_t IgnitionServer_Poll(IgnitionServer *, uint8_t out[IGNITION_MAX_BYTES]);
 IgnitionOutputResult IgnitionServer_BindOutput(IgnitionServer *, IgnitionOutputPort);
 void IgnitionServer_Service(IgnitionServer *);
 bool IgnitionServer_IsBusy(const IgnitionServer *);
@@ -164,9 +172,11 @@ typedef struct IgnitionClient
     IgnitionAuth auth;
     uint32_t epoch, retired_epoch, started_ms, first_tx_ms, last_done_ms, received_ms;
     uint32_t ack_rto_ms, operation_ms, jitter_ms, grant_deadline_ms;
-    uint16_t next_command, next_query, profile_id;
+    uint32_t next_command;
+    uint32_t *transaction_source;
+    uint16_t profile_id;
     unsigned attempts, max_attempts;
-    uint8_t request[33], replies[2][10], seen, mode;
+    uint8_t request[IGNITION_REQUEST_BYTES], replies[2][10], seen, mode;
     uint8_t state, result, reason, details[9];
     uint32_t arm_id;
     bool pending, waiting_tx, sent, have_reply, have_details, have_grant;
@@ -179,16 +189,17 @@ void IgnitionClient_Init(IgnitionClient *, const uint8_t acquisition_uid[12],
 IgnitionKeyResult IgnitionClient_SetKey(IgnitionClient *, const uint8_t key_or_null[16]);
 IgnitionSessionResult IgnitionClient_SetSession(IgnitionClient *, uint32_t epoch, bool active);
 IgnitionRequestResult IgnitionClient_Query(IgnitionClient *, bool details,
-                                          uint16_t target_command_id, uint32_t now_ms);
-IgnitionRequestResult IgnitionClient_RequestArm(IgnitionClient *, uint8_t mode,
-                                               uint16_t profile_id, uint32_t now_ms);
+                                           uint32_t target_command_id, uint32_t now_ms);
+IgnitionRequestResult IgnitionClient_RequestArm(IgnitionClient *, uint8_t mode, uint16_t profile_id,
+                                                uint32_t now_ms);
 IgnitionRequestResult IgnitionClient_RequestFire(IgnitionClient *, uint32_t now_ms);
 IgnitionRequestResult IgnitionClient_RequestDisarm(IgnitionClient *, uint32_t now_ms);
-bool IgnitionClient_TxDue(IgnitionClient *, uint32_t now_ms, uint8_t out[35], size_t *);
+bool IgnitionClient_TxDue(IgnitionClient *, uint32_t now_ms, uint8_t out[IGNITION_MAX_BYTES],
+                          size_t *);
 bool IgnitionClient_RequestMatches(const IgnitionClient *, const uint8_t *, size_t);
 void IgnitionClient_TxAccepted(IgnitionClient *, const uint8_t *, size_t, uint32_t now_ms);
 void IgnitionClient_TxDone(IgnitionClient *, const uint8_t *, size_t, uint32_t now_ms,
-                         uint32_t jitter_ms, bool timed_out);
+                           uint32_t jitter_ms, bool timed_out);
 void IgnitionClient_Receive(IgnitionClient *, const uint8_t *, size_t, uint32_t now_ms);
 void IgnitionClient_Fail(IgnitionClient *);
 #endif

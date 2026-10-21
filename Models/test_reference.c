@@ -277,6 +277,10 @@ static void reference_parameters(void)
     CHECK(sensor.configured && sensor.binding.gain0 == 1 && sensor.binding.rate_millihz == 2000000);
     CHECK(sensor.binding.rated_force_nn == UINT64_C(1000000000000));
     char bad[512];
+    (void)snprintf(bad,sizeof bad,"%sAUTO_ZERO=1\n",valid);
+    CHECK(st_ref_sensor_parse(&sensor,bad,strlen(bad))&&sensor.auto_zero);
+    (void)snprintf(bad,sizeof bad,"%sAUTO_ZERO=2\n",valid);
+    CHECK(!st_ref_sensor_parse(&sensor,bad,strlen(bad)));
     (void)snprintf(bad, sizeof bad, "%sACK_SENSOR_RATING=1\n", valid);
     CHECK(!st_ref_sensor_parse(&sensor, bad, strlen(bad)));
     CHECK(!sensor.configured);
@@ -305,12 +309,15 @@ static void automatic_link(void)
     CHECK(st_pairing_open(&controller_pair, st_journal_storage(&controller_journal), peer,
                           ST_NV_CONTROLLER) == ST_NV_EMPTY);
     AutoLink acquisition, controller;
-    AutoLink_Init(&acquisition, &acquisition_pair, st_ref_ignition_key(), 0x5354,
+    AutoLink_Init(&acquisition, &acquisition_pair, st_ref_ignition_key(), ST_PROJECT_PAIR_ID,
                    &acquisition_media, idle);
-    AutoLink_Init(&controller, &controller_pair, st_ref_ignition_key(), 0x5354,
+    AutoLink_Init(&controller, &controller_pair, st_ref_ignition_key(), ST_PROJECT_PAIR_ID,
                    &controller_media, idle);
-    uint8_t request[35], reply[35], bad[35], ignored[35]; size_t length = 0;
+    uint8_t request[ST2_MAX], reply[ST2_MAX], bad[ST2_MAX], ignored[ST2_MAX]; size_t length = 0;
     CHECK(AutoLink_TxDue(&controller, 0, request, &length) && length == AUTO_LINK_BYTES);
+    AutoLink another_set=acquisition;another_set.network=ST_PROJECT_PAIR_ID+1u;
+    CHECK(!AutoLink_Receive(&another_set,request,length,reply));
+    CHECK(acquisition_pair.store.status==ST_NV_EMPTY&&!acquisition_media.calls);
     CHECK(!AutoLink_TxDue(&controller, 1999, bad, &length));
     for (unsigned i = 0; i < AUTO_LINK_BYTES; i++)
     {
@@ -318,7 +325,7 @@ static void automatic_link(void)
         CHECK(!AutoLink_Receive(&acquisition, bad, AUTO_LINK_BYTES, reply));
     }
     memcpy(bad, request, AUTO_LINK_BYTES); bad[20] ^= 1;
-    st_put16(bad+31, st_crc16(bad,31));
+    st_put16(bad+AUTO_LINK_BYTES-2, st_crc16(bad,AUTO_LINK_BYTES-2));
     CHECK(!AutoLink_Receive(&acquisition, bad, AUTO_LINK_BYTES, reply));
     CHECK(acquisition_pair.store.status == ST_NV_EMPTY && !acquisition_media.calls);
     acquisition_media.idle = false;
@@ -327,7 +334,7 @@ static void automatic_link(void)
     CHECK(AutoLink_Receive(&acquisition, request, AUTO_LINK_BYTES, reply) == AUTO_LINK_BYTES);
     CHECK(AutoLink_TakeChanged(&acquisition) && !AutoLink_TakeChanged(&acquisition));
     CHECK(acquisition_pair.store.status == ST_NV_VALID);
-    memcpy(bad, reply, AUTO_LINK_BYTES); bad[16] ^= 1; st_put16(bad+31,st_crc16(bad,31));
+    memcpy(bad, reply, AUTO_LINK_BYTES); bad[16] ^= 1; st_put16(bad+AUTO_LINK_BYTES-2,st_crc16(bad,AUTO_LINK_BYTES-2));
     CHECK(!AutoLink_Receive(&controller, bad, AUTO_LINK_BYTES, ignored));
     CHECK(controller_pair.store.status == ST_NV_EMPTY);
     CHECK(!AutoLink_Receive(&controller, reply, AUTO_LINK_BYTES, ignored));
@@ -356,7 +363,7 @@ static void automatic_link(void)
     CHECK(st_pairing_open(&third_pair,st_journal_storage(&third_journal),third_uid,
                           ST_NV_CONTROLLER) == ST_NV_EMPTY);
     AutoLink third;
-    AutoLink_Init(&third,&third_pair,st_ref_ignition_key(),0x5354,&third_media,idle);
+    AutoLink_Init(&third,&third_pair,st_ref_ignition_key(),ST_PROJECT_PAIR_ID,&third_media,idle);
     CHECK(AutoLink_TxDue(&third,0,bad,&length));
     CHECK(!AutoLink_Receive(&acquisition,bad,length,reply)); /* Cannot replace remembered peer. */
     CHECK(!memcmp(acquisition_pair.store.identity.peer_uid,peer,12));

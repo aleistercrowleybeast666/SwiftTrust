@@ -12,10 +12,7 @@ typedef enum
     ST_UI_CONFIRM,
     ST_UI_IGNITION_ONLY,
     ST_UI_COMBINED,
-    ST_UI_CALIBRATION,
-    ST_UI_IGNITION_CONFIRM,
-    ST_UI_COMBINED_CONFIRM,
-    ST_UI_FIRE_CONFIRM
+    ST_UI_CALIBRATION
 } st_ui_page;
 typedef enum
 {
@@ -36,34 +33,42 @@ typedef enum
 typedef struct
 {
     st_ui_page page;
-    unsigned selection, return_selection;
-    bool unavailable;
-    bool combined_starting;
-    uint8_t ignition_mode;
-    uint16_t ignition_target;
+    unsigned selection;
+    unsigned top;
+    st_ui_page parent;
+    StTaskMode mode;
+    uint8_t confirm_action;
+    bool await_arm;
+    uint32_t ignition_target;
     uint32_t ignition_poll_ms;
+    uint32_t sensor_poll_ms;
     st_ui_notice notice;
     st_cal_ui *calibration;
 } st_ui;
 typedef struct
 {
-    char rows[8][22];
+    char rows[ST_OLED_ROWS][ST_UI_ROW_BYTES];
     bool inverse;
     uint8_t inverse_row, inverse_column;
+    bool inverse_digit;
 } st_ui_model;
 void st_ui_init(st_ui *u);
 void st_ui_attach_calibration(st_ui *, st_cal_ui *);
-/* Returns true only when a START/STOP transaction was actually created. */
-bool st_ui_handle(st_ui *u, st_ui_event e, st_client *c, uint32_t now_ms);
-void st_ui_render(const st_ui *u, const st_client *c, st_voltage_view own, uint32_t now_ms,
-                  st_ui_model *m);
 /* Active compact RF entry points; true also covers queued STOP intent and a
- * created ignition request. ReferenceApp binds the remote 5s MCU signal. */
+ * created ignition request. real output remains disabled pending review. */
 bool st_ui2_handle(st_ui *, st_ui_event, st2_client *, uint32_t now_ms);
 void st_ui2_service(st_ui *, st2_client *, uint32_t now_ms);
 void st_ui2_render(const st_ui *, const st2_client *, st_voltage_view, uint32_t now_ms,
                    st_ui_model *);
 void st_ui_raster(const st_ui_model *m, uint8_t frame[1024]);
+typedef enum
+{
+    UI_TEXT_OK,
+    UI_TEXT_INVALID,
+    UI_TEXT_MISSING_GLYPH,
+    UI_TEXT_TOO_WIDE
+} UiTextResult;
+UiTextResult Ui_ValidateText(const char *, unsigned *pixels);
 typedef struct
 {
     uint16_t counter;
@@ -75,8 +80,19 @@ typedef struct
 {
     bool raw, stable, initialized;
     uint32_t changed_ms;
+    uint32_t pressed_ms;
+    bool long_sent, boot_held;
 } st_button;
 bool st_button_press(st_button *b, bool pressed, uint32_t now_ms, uint32_t debounce_ms);
+typedef enum
+{
+    ST_BUTTON_NONE,
+    ST_BUTTON_SHORT,
+    ST_BUTTON_LONG
+} StButtonEvent;
+StButtonEvent Button_Update(st_button *, bool pressed, uint32_t now_ms);
+const char *Ui_Text(const char *chinese, const char *english);
+unsigned Ui_GetItemCount(const st_ui *);
 
 typedef struct
 {

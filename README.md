@@ -1,15 +1,25 @@
-# SwiftThrust
+# SwiftThrust R8
 
-高速原始推力数据采集、TF日志与无线遥控采集/标定系统。GitHub仓库按用户指定拼写为SwiftTrust，本地项目名SwiftThrust。两板分别为STM32F411RCT6+ADS131M02+SDIO TF+E28，以及STM32G071KBT6+SSD1306+单编码器+E28。
+高速原始推力采集、TF日志与无线遥控系统。仓库名为SwiftTrust，本地项目名SwiftThrust。采集端STM32F411RCT6 + ADS131M02 + SDIO/FatFs；遥控端STM32G071KBT6 + SSD1306 + 编码器；无线E28-2G4M12SX。
 
-当前已实现双板可执行参考应用：功能main、HAL时钟/外设/MSP/IRQ、ADC DMA与TF协作调度、无线会话/状态/启停/标定、OLED/编码器、MCU VDDA与四灯、片内Flash持久化配对及故障处理。打开 `SwiftThrust.code-workspace`，两个EIDE工程都选择 **ReferenceApp**。旧 **LinkCheck** 仅CRC/WFI，不能作为运行固件。
+R8统一四行菜单、基础任务状态、Pair/UID/会话/32位事务和七类无线消息。默认中文（所需中文字模子集），可编译英文。进入子菜单和START确认均默认“返回”；正常返回、状态过期及重连不停止采集，STOP等TF sync/close完成才确认。采集与点火中的执行动作需独立确认，有限动作结束继续采集。仅点火页没有停止菜单，不显示“点火成功”。
 
-参考板配置与首次配对、接线、传感器配置、NV保留区和升级边界见 [REFERENCE_APPLICATION](Models/REFERENCE_APPLICATION.md)。稀疏HEX/ELF可由 `python -B Models/build_reference.py --artifacts` 生成到本地 `dist`；自动烧录仍拒绝执行。没有连接或烧录硬件，板子/电气/时序/TF最坏延迟与射频距离尚未上板确认。
+**真实输出默认关闭，等待单独审核硬件启用和时长。** 1秒仅用于软件模拟负载候选测试，不能据此连接火工品。未烧录、未接入硬件测试，无无线距离或点火安全验收结论。
 
-默认无传感器规格时记录原始ADC，不伪造力值；标定需按真实传感器填写 [SENSOR.CFG.example](Models/SENSOR.CFG.example)。采集板PC0经1:2分压读取18650电压，PB6～PB9四灯分档，低于3.30V末灯闪烁；遥控SELF仍是MCU VDDA。PA0已输出自主5秒单次高电平，点火经过ARM及独立FIRE确认，外部执行级/点火反馈仍未知。两端自动发现、记住UID并重连，无需手动配钥。无线参数保持原值，仅开启高灵敏度LNA。完整字段、菜单及接线见[当前R7协议与流程](Models/LORA_PROTOCOL.md)。
+- [完整R8协议、所有收发触发条件与菜单流程](Models/LORA_PROTOCOL_R8.md)
+- [R8交付、测试与修改清单](Models/R8_DELIVERY.md)
+- [日志STLOG001规范](PROTOCOLS.md)
+- [参考应用、NV分区与构建接入](Models/REFERENCE_APPLICATION.md)（硬件基础资料；R8行为以最新协议为准）
+- [单传感器配置示例](Models/SENSOR.CFG.example)
 
-离线验证覆盖点火去重/超时/中止、真实驱动寄存器模型、自动连接、四灯电量和原采集链；双板ReferenceApp ARM构建生成本地稀疏HEX/ELF。当前验证结果见`Models/firmware_host_validation.log`、`Models/link_runtime_validation.log`、`Models/ignition_pulse_validation.log`、`Models/reference_arm_validation.log`及[交接](HANDOFF.md)。没有硬件运行或距离测试结论。
+编译期参数集中在 `Common/Inc/st_project_config.h`；PCB映射在各自board/BSP。每套设备的32位Pair ID需不同，两端需一致；首次保存实际STM32 UID后拒绝另一设备接管。射频保持2473MHz/+12dBm/SF10/BW812.5kHz/CR4/5，CRC、高灵敏度LNA和AGC保留；STATUS每2秒。两端PB0链路灯已通过CubeMX资源检查，正常常亮、4秒慢闪、7秒快闪，驱动故障双短闪；实物引脚/极性仍待核对。
 
-**PCB尚未冻结，最终接线/极性、外部ADC时钟和传感器电气参数必须先核对。** 此版本可按参考配置安排上板验证，尚未实际板测。首次START及取消重启修复的失败→通过证据见 [专项审查](Models/FIRST_START_REVIEW.md)。
+ADC DMA、SDIO/FatFs协作调度、STLOG001原始记录、SENSOR.CFG/CAL0.BIN/CAL1.BIN永久标定保留。可选本次会话零点与永久斜率分开，不在采集中持续追零；原始码不变。自动置零默认关闭；菜单开关仅本次上电有效，启动默认值可在SENSOR.CFG配置。
 
-START待确认期间的STOP及提示小修已完成，详见 [STOP_ORDER_REVIEW](Models/STOP_ORDER_REVIEW.md)。本次交付后暂停开发，等待用户上板实测反馈。
+R7无线与R8不兼容，需两端一起升级；不清除原NV配对及计数区域，不改变升级边界。STLOG001只使用头部保留区追加可识别的SZR1元数据，旧导出器仍可读取。旧[R7协议](Models/LORA_PROTOCOL.md)仅供历史参考。
+
+打开 `SwiftThrust.code-workspace`，两端EIDE选择 **ReferenceApp**。旧LinkCheck不是运行固件。离线检查：
+
+`python -X utf8 -B Models/run_host_tests.py`，英文加 `--english`；另运行 `check_link_runtime.py`、`check_reference.py`、`check_ignition_f4.py`、`validate_candidates.py`。配置SDK_ROOT、HOST_CC、ARM_GCC_ROOT后，`python -X utf8 -B Models/build_reference.py --artifacts`生成本地稀疏HEX/ELF到dist，不自动烧录。
+
+PC0沿用18650分压采样，PB6～9四灯电压分档；遥控MCU VDDA明确标注为供电参考，不能当作遥控电池电压。PCB尚未冻结，上板前仍须核对引脚、外部ADC时钟、电源、LED极性和存储最坏延迟。

@@ -10,20 +10,21 @@
  * MCU timestamp scale is nominal HSI; its accuracy must be measured on a board. */
 enum
 {
-    ST_REF_ADC_HZ = 8192000,
-    ST_REF_ADC_OSR = 2048,
-    ST_REF_ADC_RATE_MILLIHZ = 2000000,
-    ST_REF_BRIDGE_UV = 2500000,
-    ST_REF_ADC_GAIN0 = 1,
-    ST_REF_ADC_GAIN1 = 1,
-    ST_REF_UART_BAUD = 115200
+    ST_REF_ADC_HZ = ST_ADC_CLOCK_HZ,
+    ST_REF_ADC_OSR = ST_ADC_OSR,
+    ST_REF_ADC_RATE_MILLIHZ = ST_ADC_RATE_MILLIHZ,
+    ST_REF_BRIDGE_UV = ST_BRIDGE_EXCITATION_UV,
+    ST_REF_ADC_GAIN0 = ST_ADC_GAIN_CH0,
+    ST_REF_ADC_GAIN1 = ST_ADC_GAIN_CH1,
+    ST_REF_UART_BAUD = ST_DEBUG_UART_BAUD
 };
-#define ST_REF_RADIO_HZ UINT32_C(2473000000)
+#define ST_REF_RADIO_HZ ST_RADIO_FREQUENCY_HZ
 typedef struct
 {
     st_cal_binding binding;
     st_cal_policy policy;
     bool configured;
+    bool auto_zero;
 } st_ref_sensor;
 st_ads_config st_ref_ads_config(bool reference_electrical_profile_accepted);
 st_radio_config st_ref_radio_config(bool reference_gpio_spi_profile_accepted);

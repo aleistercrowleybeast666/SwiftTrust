@@ -3,8 +3,8 @@ import datetime,hashlib,os,subprocess,tempfile
 from pathlib import Path
 ROOT=Path(__file__).resolve().parents[1]
 cc=os.environ.get('HOST_CC','gcc')
-names=['st_core','st_logger','st_link2','st_ignition','st_auto_link','st_nv','st_pairing','st_journal','st_reference','st_cal','st_console']
-sources=[ROOT/'Acquisition/src'/f'{n}.c' for n in names]+[ROOT/'Acquisition/vendor/tiny_aes/aes.c',ROOT/'Models/test_reference.c']
+names=['st_core','st_frame','st_logger','st_link2','st_ignition','st_auto_link','st_nv','st_pairing','st_journal','st_reference','st_cal','st_console']
+sources=[ROOT/'Acquisition/src'/f'{n}.c' for n in names]+[ROOT/'Common/Src/st_task.c',ROOT/'Acquisition/vendor/tiny_aes/aes.c',ROOT/'Models/test_reference.c']
 with tempfile.TemporaryDirectory(prefix='swift-ref-host-') as d:
  exe=Path(d)/'reference.exe'
  cmd=[cc,'-std=c11','-O2','-Wall','-Wextra','-Werror','-Wpedantic','-Wconversion','-Wshadow',

@@ -25,9 +25,10 @@ typedef enum
 } st_cal_ui_page;
 typedef struct
 {
-    char rows[6][22];
+    char rows[ST_OLED_ROWS][ST_UI_ROW_BYTES];
     bool inverse;
     uint8_t inverse_row, inverse_column;
+    bool inverse_digit;
 } st_cal_panel;
 typedef struct st_cal_ui
 {

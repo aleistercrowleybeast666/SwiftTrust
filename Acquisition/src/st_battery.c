@@ -3,8 +3,11 @@
 #define BATTERY_MIN_VALID_MV 500u
 /* Coarse room-temperature low/moderate-load Li-ion curve. Last band <3.5V;
  * below about 3.3V is its lower half. Real cell/load shifts these thresholds. */
-static const st_voltage_policy battery_policy = {{500,3500,3700,3900},
-    BATTERY_HYSTERESIS_MV,BATTERY_FRESH_MS,true};
+static const st_voltage_policy battery_policy = {
+    {500, ST_BATTERY_TWO_MV, ST_BATTERY_THREE_MV, ST_BATTERY_FOUR_MV},
+    BATTERY_HYSTERESIS_MV,
+    BATTERY_FRESH_MS,
+    true};
 void Battery_Invalidate(BatteryMonitor *battery)
 {
     if (!battery)
@@ -22,17 +25,17 @@ void Battery_Update(BatteryMonitor *battery, uint16_t code, const st_voltage *vd
         Battery_Invalidate(battery);
         return;
     }
-    st_voltage measured = st_voltage_from_adc(code,vdda->mv,BATTERY_DIVIDER_NUMERATOR,
-                                               BATTERY_DIVIDER_DENOMINATOR,now,true,true);
-    if (!measured.valid || measured.mv < BATTERY_MIN_VALID_MV || measured.mv > BATTERY_MAX_VALID_MV ||
-        code == 4095)
+    st_voltage measured = st_voltage_from_adc(code, vdda->mv, BATTERY_DIVIDER_NUMERATOR,
+                                              BATTERY_DIVIDER_DENOMINATOR, now, true, true);
+    if (!measured.valid || measured.mv < BATTERY_MIN_VALID_MV ||
+        measured.mv > BATTERY_MAX_VALID_MV || code == 4095)
     {
         Battery_Invalidate(battery);
         return;
     }
     /* 10Hz samples, 1/4 IIR: suppress RF/load flicker without a slow multi-second lag. */
-    battery->filtered_mv = battery->initialized ? (battery->filtered_mv * 3u + measured.mv + 2u) / 4u
-                                               : measured.mv;
+    battery->filtered_mv =
+        battery->initialized ? (battery->filtered_mv * 3u + measured.mv + 2u) / 4u : measured.mv;
     battery->initialized = true;
     measured.mv = battery->filtered_mv;
     battery->voltage = measured;
@@ -41,7 +44,7 @@ st_voltage_view Battery_Evaluate(BatteryMonitor *battery, uint64_t now)
 {
     if (!battery)
         return (st_voltage_view){0};
-    battery->view = st_voltage_evaluate(&battery_policy,&battery->voltage,now,battery->view);
+    battery->view = st_voltage_evaluate(&battery_policy, &battery->voltage, now, battery->view);
     st_voltage_view display = battery->view;
     if (display.kind != ST_V_MEASURED && display.kind != ST_V_LOW)
     {

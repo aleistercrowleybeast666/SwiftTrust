@@ -26,6 +26,14 @@ static void header_build(st_logger *l)
     h[57] = c->gain_ch1;
     h[58] = c->wire_count;
     h[59] = (uint8_t)((c->calibration_valid ? 1 : 0) | (c->simulated ? 2 : 0));
+    if (c->session_zero_valid)
+    {
+        memcpy(h + 60, "SZR1", 4);
+        st_put32(h + 64, (uint32_t)c->calibration_zero_raw);
+        st_put32(h + 68, (uint32_t)c->session_zero_raw);
+        st_put32(h + 72, c->zero_samples);
+        st_put64(h + 76, c->zero_time_us);
+    }
     st_put32(h + 508, st_crc32(h, 508));
 }
 void st_logger_init(st_logger *l, st_log_config cfg, st_file_port port)

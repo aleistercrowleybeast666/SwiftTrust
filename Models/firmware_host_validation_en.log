@@ -1,0 +1,157 @@
+2026-10-21T18:14:45.546264+00:00
+Host-only synthetic regression. No MCU/RF/SD/OLED hardware accessed.
+Official vendor source compiled separately with -Wall -Wextra -Werror; project code retains conversion/shadow checks; vendor remains unmodified.
+Compiler: gcc.exe (Rev5, Built by MSYS2 project) 16.1.0
+Flags: -std=c11 -O2 -Wall -Wextra -Werror -Wpedantic -Wconversion -Wshadow
+PASS CRC vectors / ADS signed24 / bad CRC-status-padding / record CRC
+PASS SPSC FIFO / full-drop-new / 32-bit index wrap
+PASS voltage missing/stale/real-zero / four tiers / hysteresis / unbound policy
+PASS async open/header-sync/capture/drain/footer-sync/close / two retained staging buffers / durable sequence
+PASS sequence-gap count / nonmonotonic timestamp / corrupt ADC preserved and flagged
+PASS slow-card backlog / bounded SRAM / exact overflow count / complete footer ordering
+PASS short write latches fault / no false durable / no automatic overwrite restart
+PASS submit and asynchronous storage errors
+PASS STOP during STARTING / empty file closes / no capture enable
+PASS R1 legacy compatibility: wire sizes / duplicate-idempotence survives QUERY / conflicting ID / ACK != actual state / stale status replay
+PASS R1 legacy compatibility: lost ACK recovered by fresh actual STATUS / stale-link start blocked / voltage preserved after STOP
+PASS R1 legacy compatibility: immutable retries / retry interval and attempt budget / bounded transaction timeout
+PASS R1 legacy compatibility: new boot cancels pending / old-boot command and old STATUS rejected
+PASS R1 legacy compatibility: mutated/truncated packets and unknown type never change acquisition
+PASS R8 actual C four-row renderer framebuffer previews
+PASS SSD1306 init/display-on-after-clear / 0x3C / address window / 16-byte chunks / retained buffer / bus fault
+PASS encoder wrap/detents / button bounce / held-at-boot suppression / one event per press
+PASS ADS hardware-reset timing / full 24-bit frames / delayed command response / ID / three write ACKs and readbacks / LOCK / startup drain
+PASS ADS CRC/readback rejection / timer wrap / unverified analog profile never ready
+PASS SH1106 0x3C / eight page addresses / two-column offset / all 1024 bytes / SSD1306 profile separation
+PASS official SX128x LoRa init and SF erratum / reset despite BUSY / variable-length TX-RX / IRQ-CRC / timeout / BUSY latch / unverified profile (R8 framing)
+PASS debug UART foreground queue / nonblocking busy / retained TX bytes / 256B-per-second limit / overflow drop
+PASS R8 seven logical types / exact lengths / 32-bit IDs / every byte corruption and truncation / explicit R7 rejection
+PASS R8 Pair/UID isolation / resumed session after loss and controller reboot / no NV writes or file restart / acquisition reboot UNKNOWN
+PASS R8 duplicate result cache / conflicting and old transactions / IDs cross65535 / STATUS cannot complete START / late reply cannot replace STOP
+PASS R8 on-demand diagnostic query uses common ID / frozen two-part DATA / reorder / duplicate / late view cannot replace new query
+PASS R8 exact2s heartbeat / independent STATUS sequence / bidirectional receipt ACK / old ACK does not refresh LED age
+PASS R8 four fixed rows / default BACK / safe confirmation / output no STOP or blank cursor / scrolling / task labels / UTF8 / long-short button / 4s-7s LED
+PASS STOP ordering: lost/late START ACK, STOP before delayed START, STARTING/REC/source-cancel, same-ID retries, held close, lost terminal ACK, IDLE status cannot confirm, explicit restart
+PASS STOP sync failure reports FAILED, never CLOSED or restart-ready
+PASS STOP bounded retries/timeout, already-IDLE barrier, retained uncertainty blocks START, explicit same-ID retry recovers lost completion
+PASS STOP fresh-state gate, queue expiry across timer wrap, malformed completion rejected, failed reconnect retains intent, explicit reconnect cancels without START replay
+PASS R8 BACK navigation preserves recording task
+PASS block DMA-aligned retained bounce / unaligned caller / two-sector roundtrip / bounds / wrap timeout / removal / frozen tick / latched failure
+PASS real FatFs diskio interface / unbound and wrong drive / geometry / unknown erase size / read-write-sync / hot removal
+PASS unmodified FatFs R0.12c + real worker + logger + diskio on synthetic RAM FAT16 / 1500 records / file size / per-record CRC / END / durable close (no physical SD)
+PASS cooperative real FatFs/worker/diskio: 2kHz model continues in sector waits, logger service never reenters FatFs, 3000 records without drop, clean STOP
+PASS cal real FatFs two1KiB files / prepare-sync-seal-sync-close-readback / startup reload / capture guard / every sector IO fail with0-17-511B torn writes / old file byte-exact / uncertain commit reconciled / foreign binding refused
+PASS cal end-to-end compact RF command -> readonly DMA queue -> service -> real FatFs/diskio -> verified active -> START metadata / duplicate SAVE no IO / cancel and injected write failure retain old / remount reload (synthetic card only)
+PASS NV explicit blank provisioning / alternating slots / reopened counter / paired identity mismatch / monotonic peer counter / assigned epoch range exhaustion
+PASS NV simulated cut at all97 byte boundaries / no automatic rollback from damaged programmed slot / committed-but-error skips used counter / bad CRC / unverified storage / read failure
+PASS R8 stable512 session zero / raw unchanged / permanent slope-zero isolated / SZR1 compatible header / no running adjustment / off restores calibration / gap-timeout-cancel
+PASS actual reference START preparation: saved coefficients in first STLOG header, source guard, wizard cancel, source cancel during STARTING, restart and raw-only path
+PASS cal real-DMA tap queue / raw bytes unchanged / stale edge discard / uint32 wrap / bounded drain / overflow and DMA-error reject candidate / capture busy preserves active
+PASS R8 cal 32B command / 18B query / four35B frozen reply fragments / reorder-duplicate-conflict / CRC-truncation / old epoch / save executes once / START lock and apply / session lease cancel
+PASS cal remote menu waits for complete reply / lost SAVE reply yields RESULT UNKNOWN / explicit query reconciles durable result / capture-time mutation rejected
+PASS cal background read-only query keeps encoder responsive / explicit action supersedes poll / previous cached outcome cannot complete a new command
+PASS cal explicit g/kg/N milli-units / saved standard gravity / nearest-nN conversion / zero and overflow / invalid unit and gravity
+PASS cal profile CRC roundtrip and every-byte corruption / negative polarity / binding invalidation / simulation provenance / raw capture and record bytes unchanged
+PASS cal CRC/noise/gap/timeout/expired-zero rejection / reference range / save failure or unbound storage / cancellation / changed config and concurrent profile preserve old active values
+PASS cal encoder-only preset/custom workflow / safe-default confirmations / full value and unit / select-versus-edit / monochrome inverse digit / no RF transaction / save only after reviewed candidate
+PASS cal editor0..9 wrap and fixed decimal / nine-digit upper bound / zero and over-range refusal / unit switch explicitly clears draft / visible return paths / busy gate and cancel retain old profile
+PASS ignition RFC4493 CMAC vectors: empty, full block, partial block and multiple blocks
+PASS ignition IGNITION_REQUEST_BYTES/35B codec, full transport roundtrip, CRC/MAC/UID/key mutations and strict action fields
+PASS ignition UNBOUND rejection, UNKNOWN physical inputs, DISARM cannot confirm closure, cache isolation, high-water fence and retired epochs
+PASS ignition frozen full-query reorder/retry, conservative grant deadline, FIRE exactly one transmission, uncertain result and DISARM preemption
+PASS ignition local key provisioning without echo / malformed and busy rejection
+PASS bound signal: 10s ARM expiry/wrap, mode binding, one configured simulation pulse, duplicate FIRE, lockout, DISARM fence, local fault and reconnect cutoff
+PASS R8 output simulation: independent default-BACK ARM/FIRE / one execution / no STOP menu / navigation no replay / eight state previews
+PASS battery PC0 divide-by-two/VDDA compensation, 4/3/2/1 LEDs, lower half 1Hz blink, filter/hysteresis, stale/invalid OFF
+PASS total: 60 groups, 57547 assertions; host sizeof(logger)=41752, sizeof(oled)=1104
+
+PASS Python exporter: clean/uncalibrated/calibrated/SZR1-and-old-header-compatibility/invalid-ADC/truncated-tail/record-CRC/header-CRC/exclusive-output
+R8 previews: four fixed rows, home, three modes, default BACK confirmation, sensor settings, scrollable status, calibration and eight output task states (synthetic values).
+FatFs R0.12c external SDK SHA256: 511a87724dadd27a358bac32e37e66d6808eeb514eb773734f18878ed731b3dc
+Source SHA256:
+85c8921a5d8042d6b417e361f8b00301751742ace178881db9beb376076ae486 Acquisition/src/st_ads.c
+2314f94f8a83a40ab0040f3d7742ff20e4709f000744c9cda97fe48c08e80f29 Acquisition/src/st_auto_link.c
+30185ab8933072143b5935b9b98457dc96ef287a9b6d86f0874e9ae9e248ab94 Acquisition/src/st_battery.c
+ad108c5001481ea463dc8c09d05c13c6f6fe8d46789c806523aa01ca2ff83cce Acquisition/src/st_block.c
+6d37da45e8ac1f930bf2894d4d3eb02deb7cff33bc5fb1826f5769a34b9e9850 Acquisition/src/st_cal.c
+a43d3157fe80b972d67854d5d58eaf85c1f85b8db410759d4d51154b7a45fb9d Acquisition/src/st_cal_endpoint.c
+975c605e05a924e4530d26ccddcb00563e214c135f78cc53b9e9e1f017b4fd44 Acquisition/src/st_cal_input.c
+9356e7ba2b2b199a14c4ae8dfeee5b117dfd4d2f8919e0f6e5073bb010096d50 Acquisition/src/st_cal_service.c
+7890a758ab3add4fa5d3eefd7442cbd3f0c8c81d9c4e2353e3aa15d292bb2055 Acquisition/src/st_cal_view.c
+400ec1bacf9af385fbc83de4d61b94f2ff41210c723f057d939c0877fd8d7795 Acquisition/src/st_console.c
+f030b589b888984c48f5fd99c74f75376a61d0c6384bda27900cc5930f90ce7e Acquisition/src/st_core.c
+5a83f4be52f3d1f5cf6150d40e104ff9be3754a68794df27618fb4a78ceb1a64 Acquisition/src/st_debug.c
+706d8ee3bb95b903922f43e1e0e5765c925c1e8876ee6feeb001b22d4dd3a7f6 Acquisition/src/st_frame.c
+4bdd16a974de09d5ef109d73a1844b2bab8cc36f2e7ab5ef5b567330a7b2c99a Acquisition/src/st_ignition.c
+aa19671b7c7a0206c6c14c027661043bbe88b3ec5ef4ce06042238fd718d8b1c Acquisition/src/st_journal.c
+de8a4538955f70cbabbc2c318e5c8b6ff682dc1a0b455b8e3e1b2c4d106b0b5b Acquisition/src/st_link2.c
+4220f26a50a181659fa08ea14b1c2c2ace2170e8b1630a41c0a12963efd7e008 Acquisition/src/st_link_runtime.c
+9a381ae1666ebe11dd83381de46c1e159f66fb73e2f50c3051dad5fe0b5dd10f Acquisition/src/st_logger.c
+a0ca0ca424f70d8c875eeb140884fd7a0c36e376e9a7c753312f028b69150102 Acquisition/src/st_nv.c
+cc563ab4618ab53c6b2a2bdb928217a1f310f630cf80a0cc1d3069aab88b7ef4 Acquisition/src/st_pairing.c
+cf4674098beea581aed9c8ee120a39e6ee2768600ae5c1e391f1fcf10d5d35c9 Acquisition/src/st_protocol.c
+c9752823c363767545a93556bbe19c5f8648bce656b7b0715509298d09e94166 Acquisition/src/st_radio.c
+0afe00dc495f1c569e608d736c0f12a0e8c68a9af5d2169c1a18ef9e908e55ef Acquisition/src/st_reference.c
+ed81cf3426421f58d531d466168d56ed3be1c84d2a28cb3703e30fd4ac21b2df Acquisition/src/st_session_zero.c
+55aa38ad94a91d5db562c07e8e116a4b602a3f2707eff2f4ff89c4efd81121d5 Controller/src/st_cal_remote.c
+ccfb2ae7e61d2e54776ac8f906fcf2dd8f3b08081dd7ee6091d2db562d0780ec Controller/src/st_cal_ui.c
+b62c7def77658e989c69bcd0f32140aa61b619ce8e1b11519661cefd78061f9c Controller/src/st_oled.c
+3bd25d23464a0082fdae37513a5ea1c86ff5bb2459ad6ac164f529bdcfb1f79d Controller/src/st_raster.c
+7fb36903e44832e27806854b1788f411a2cb6deb0c88c1bf8c102d0658f8b029 Controller/src/st_ui.c
+9be4425c500b3afc41d237e91b36323ef9191a04b309dc2f5c6584182cae406e Controller/src/st_ui2.c
+bd423410290c533af04dc69111e59f16072a1cd62e12a9cad6ee210a4ab35816 Common/Src/st_task.c
+0a10c858e820b2aa84d0cc38c7ae91388d781dc38f757173bed6897ea1b0f352 Models/test_core.c
+01954676e81944aee59f7cf7264b8a7b86ac001b26e055e57100c1098652e734 Models/test_lowlevel.c
+61f9f32ed5ea78ceb39683ef78cba0ee1aefc0bfdc7e0e0c9c8ced7395b67f77 Models/test_r2.c
+d5d6a666d6560e427d5f2bd2bf7a695d6d9e0b758e52b1b1066d128f3133a77d Models/test_stop.c
+112b2bf3edc2a76f0506d57da1d8da6b10e6bd7f0f6b18e8eecfd0834d6026f2 Models/test_storage.c
+0af7c3d76edfef1e66580c411f246e1d027d83785e70a6bc8384f1da2af387c7 Models/test_calibration.c
+6e83666d557634404362aa74afba3ba436f98a0f4e957d9796df1e7465545121 Acquisition/ports/st_diskio.c
+87e5ffc80c69b2c81d49f33be98d96f2ac05975d536d4e0356d829d79e37f33f Acquisition/ports/st_fatfs_worker.c
+b21599fb07c2ff60c89e30e0d440df113f32dbadd33c4909555bb1a546460df3 Acquisition/ports/st_cal_fatfs.c
+f99d419af57f09add95838ef40bf9ee6e77caa10b1c8004a50eb1f3b9ea6bde0 Acquisition/ports/st_cal_system.c
+1011e21b4094559ecbef9d3eb674e5557acdbbd0a9ab5fe57da95208c91b6ee7 Models/test_cal_integration.c
+f7f78b44654efd3542b6886923dd05194286807ebcfeb078ea05d21fe901ee9e Acquisition/vendor/tiny_aes/aes.c
+6118d1c25f8f6025c1325dbb7da4e29e9b6614a813e988127b1db964aef77aff Models/test_ignition.c
+fce3244bc3113721aa10c41852f89a2cc980be5eeaa74dd4ae5fd492ac50ec06 Models/test_battery.c
+601b65e1b20b1f634495ab481e10d5ae9e3ca39b6b88eef46dcafdc72146a8ce Acquisition/vendor/semtech_sx128x/sx128x.c
+193a3aa7e17aedc7869fbe910350e598b4ce0b690592d9f452722d2f198f0b95 Common/Inc/st_project_config.h
+8832cfeda61dbaa392bcba2900726be52411e968f8720cab43c336257b2ef1b4 Common/Inc/st_task.h
+e8b37ff483637167208fa12916541ea96a9b8c8d59e3a12b2026af0a8fdde300 Acquisition/include/st_ads.h
+1d2455020db65d946b3fe387df5f79ec0e806e0f167aa67d6bf6a77f11f841cb Acquisition/include/st_auto_link.h
+0218c86b8624037d6915f46ea0ebee19b2a111e03a3e4746a4358c5bc78050f0 Acquisition/include/st_battery.h
+1f520f2c4af4a711850a2f8145928c499cc20869af7db7e6edba1d2a8d3c121f Acquisition/include/st_block.h
+46edaac876109c0d071a73bc766c5fa2ad8be5bb48afdd03637cb75ef7203b39 Acquisition/include/st_bsp.h
+c12dd43850118b430f85d9e8ea1df704aac31b31397cabc39548990cb56880a1 Acquisition/include/st_cal.h
+99037c6f0d68d2f665b3c26c257e1f1279e71a462cb8dcaf9d4f2ea4f0e2cbff Acquisition/include/st_cal_endpoint.h
+8387596958af2008d26c24bf544a8b4acab494a8f87a84a767d512d4c554e6cc Acquisition/include/st_cal_input.h
+14130280ebe0f0916659995255eee18cebf552c9a26b490d083c86915ad1ef89 Acquisition/include/st_cal_service.h
+425247ce9f76d52c62207b6ee2537a9166aedfd99aa49454161e04ff5513fd07 Acquisition/include/st_console.h
+0581ac5300414bed7de218989976354f1ce77f694bce93f366d32739760362bb Acquisition/include/st_core.h
+1761f0eb5bd3d7f208afe2b45b29a9a9d9e363ce7602d67a07cc4698a88855d8 Acquisition/include/st_debug.h
+bf981039dd031969ec3f82d71a964ef79f9fa47edc2aba1dd7f591771c8299d3 Acquisition/include/st_ignition.h
+648c5ebabf9244f3b6c3f85425848c98755893c4c1a1361fa0f9063039ee9379 Acquisition/include/st_journal.h
+9ed899446c5b27443a6cff5f9659008727cf7d22222ab71a03103793010ca35a Acquisition/include/st_link2.h
+e7a70c2297077ca718f2816e96e04a0306faba3523c0b53d0c0b7376d86d472e Acquisition/include/st_link_runtime.h
+a5e4240c40b5254c7bdda55c6f35c01b6b39027aa1b40a66d9e5ae835eef8004 Acquisition/include/st_nv.h
+0d82b065bd80fa4076507a88799e74d6d9fd40b6c77461ae2590a20d4c7ee998 Acquisition/include/st_pairing.h
+a88e812907445919bf457438a9f383afdedf3b7c7479bae2520e8fe02b0a6a6a Acquisition/include/st_radio.h
+b222082667a9d2522a9db7a6f47019ef9e7455b1d41bcbbfcd44b8a0bdcbd389 Acquisition/include/st_reference.h
+6f3ed3611a6788bffa27337480f67fca799db07f3bd0da863a7c57755f4bae23 Acquisition/include/st_session_zero.h
+30ef1772fe0d57d35d328755643f9adc8bf32db7ce3264723e7cae5675bd5b8c Controller/include/st_cal_remote.h
+1d8f1982c0640b346fd265d51def2573a8138bb6a23eea543edf290a365753e3 Controller/include/st_cal_ui.h
+e4e601548fcd6ec4842fa2ed623eb53e36e1a02d7d745865c593ccf9bed95701 Controller/include/st_controller_bsp.h
+2fb6b5a46a1445a6c18ca0a568696f016866a99c5b28cb6882c75e0725ebd102 Controller/include/st_ui.h
+34ea22cf74dc2c21172929a7d8373cced945b1803ef56e52d7127fb1f42973f7 Acquisition/ports/fatfs_config/ffconf.h
+1a4698f7bbf13aeb856a7843b430289d5f06813849f459891c3b59ef740647f5 Acquisition/ports/st_ads_hal.h
+a6448905c8c3240043c9e2cd2973e22a316f3cca34e50efe5b7738ad7e503e39 Acquisition/ports/st_cal_fatfs.h
+4a3122f62160dac4bda0d096f9dc90748edd9e148f45ff14ebd6e6d6c396e73a Acquisition/ports/st_cal_system.h
+4e3a5195c249d96b3452b59185946633ee526fd81e985d7d48fe6875cb48ddd4 Acquisition/ports/st_debug_uart_hal.h
+662a3913c0448783c542acea6e0df7cdf6099056bdf23cbb68698721dd7d4e23 Acquisition/ports/st_diskio.h
+12ae1f62e42a4f0a60fca6b7842acf81864d6eaae6a80b69b2fe16095b231c1e Acquisition/ports/st_f4_capture.h
+e0b2e383aac4a8bd007380a39a45fa676b57a6821bbc6dfe608c619bd7d44b5b Acquisition/ports/st_fatfs_worker.h
+8c6c5a0cb817b5b0e4932ade79da4fa2e521d0a73dff12c09c8cb37f941485a3 Acquisition/ports/st_flash_journal.h
+2de6d494f15d2d586a73923cf6fe9916822b78b3e4f187c0731f66d412aba779 Acquisition/ports/st_ignition_f4.h
+fa923aa7c2a52717d2ae0949638f3d23e6bc70293eca590010a9d2d64a2a4039 Acquisition/ports/st_radio_hal.h
+4420167f20e27a68bda4271e0334e7e8d5856ebbaad4d7020f9b42701f218166 Acquisition/ports/st_sdio_hal.h
+4df686d9b35d953204b1ed779c9c26abd41d5942586ce58527eafcfa5093b091 Controller/ports/st_g0_oled.h

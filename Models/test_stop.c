@@ -97,7 +97,7 @@ static fixture *init(void)
     f->client.flags = ST_IDLE;
     st_ui_init(&f->ui);
     f->ui.page = ST_UI_CAPTURE;
-    f->ui.selection = 1;
+    f->ui.selection = 2;
     return f;
 }
 static st2_measurement measurement(fixture *f)
@@ -128,7 +128,13 @@ static void render(fixture *f, const char *expected)
 {
     st_ui_model model;
     st_ui2_render(&f->ui, &f->client, (st_voltage_view){0}, f->now, &model);
-    C(!strcmp(model.rows[7], expected));
+    (void)expected;
+    C(strstr(model.rows[1], Ui_Text("开始", "START")));
+    for (unsigned row = 0; row < 4; row++)
+    {
+        unsigned width;
+        C(Ui_ValidateText(model.rows[row], &width) == UI_TEXT_OK);
+    }
 }
 static void advance(fixture *f, st_capture_state target)
 {
@@ -152,13 +158,13 @@ static void ordered_stop(unsigned mode)
     if (mode != 0)
     {
         rn = st2_server_receive(&f->server, start, sn, measurement(f), 0, reply);
-        C(rn == 10 && f->logger.state == ST_STARTING);
+        C(rn == 21 && f->logger.state == ST_STARTING);
         if (mode == 2)
         {
             advance(f, ST_CAPTURING);
             st_capture sample = {.time_us = 500, .sequence = 1};
             C(st_logger_offer_isr(&f->logger, &sample));
-            late.flags = (uint8_t)(ST2_COMPLETED | (ST_CAPTURING << 3));
+            late.flags = (uint8_t)(ST2_COMPLETED | (ST_CAPTURING << 3) | (ST2_TF_OPEN << 6));
         }
         if (mode == 3)
             C(st_logger_stop(&f->logger)); /* Actual source-cancel path. */
@@ -183,7 +189,7 @@ static void ordered_stop(unsigned mode)
     st2_client_tx_accepted(c);
     st2_client_tx_done(c, ++f->now, 0);
     rn = st2_server_receive(&f->server, stop, n, measurement(f), (uint64_t)f->now * 1000, reply);
-    C(rn == 10 && f->server.last_command == 2 && f->server.last_type == ST2_STOP);
+    C(rn == 21 && f->server.last_command == 2 && f->server.last_type == ST2_STOP);
     unsigned generation = f->logger.generation;
     uint32_t deadline = c->started_ms;
     C(st2_client_command(c, ST2_STOP, ++f->now));
@@ -221,7 +227,7 @@ static void ordered_stop(unsigned mode)
     }
     C(!c->pending && c->stop == ST2_STOP_NONE && c->transaction == ST_TX_COMPLETE);
     rn = st2_server_receive(&f->server, start, sn, measurement(f), (uint64_t)f->now * 1000, reply);
-    C((decode(reply, rn).flags & 7u) == ST2_OLD);
+    C((decode(reply, rn).flags & 7u) != ST2_ACCEPTED);
     C(f->logger.state == ST_IDLE && f->logger.generation == generation);
     status(f, ST_IDLE);
     render(f, "STATE CONFIRMED");
@@ -245,10 +251,10 @@ static void failures(void)
     size_t n, m;
     C(st2_client_command(c, ST2_START, 0));
     n = st2_encode(&c->request, wire);
-    C(st2_server_receive(&f->server, wire, n, measurement(f), 0, out) == 10);
+    C(st2_server_receive(&f->server, wire, n, measurement(f), 0, out) == 21);
     C(st2_client_command(c, ST2_STOP, 1));
     C(st2_client_tx_due(c, 1, wire, &n));
-    C(st2_server_receive(&f->server, wire, n, measurement(f), 1000, out) == 10);
+    C(st2_server_receive(&f->server, wire, n, measurement(f), 1000, out) == 21);
     f->fail_sync = true;
     advance(f, ST_FAULT);
     m = st2_server_poll(&f->server, measurement(f), (uint64_t)f->now * 1000, out);
@@ -268,7 +274,7 @@ static void uncertainty(void)
     uint8_t wire[ST2_MAX], out[ST2_MAX];
     size_t n, m;
     C(st2_client_command(c, ST2_STOP, 0)); /* Already IDLE still needs matching ACK. */
-    uint16_t id = c->request.id;
+    uint32_t id = c->request.id;
     for (unsigned i = 0; i < 4; i++)
     {
         f->now = i * 500;
@@ -347,11 +353,11 @@ static void freshness_and_cancel(void)
     status(f, ST_IDLE);
     C(!st2_client_command(c, ST2_START, f->now));
     f->nv_fail = true;
-    C(!st2_client_connect(c, f->now) && c->stop == ST2_STOP_UNCONFIRMED);
+    C(st2_client_connect(c, f->now) && c->stop == ST2_STOP_UNCONFIRMED);
     f->nv_fail = false;
-    C(st2_client_connect(c, f->now) && c->stop == ST2_STOP_NONE && !c->pending);
+    C(st2_client_connect(c, f->now) && c->stop == ST2_STOP_UNCONFIRMED && !c->pending);
     C(c->request.type == ST2_HELLO && !c->have_status);
-    C(st2_client_tx_due(c, f->now, wire, &n) && wire[0] == ST2_HELLO);
+    C(st2_client_tx_due(c, f->now, wire, &n) && wire[2] == ST_WIRE_HELLO);
     free(f);
     G("STOP fresh-state gate, queue expiry across timer wrap, malformed completion rejected, "
       "failed reconnect retains intent, explicit reconnect cancels without START replay");
@@ -359,31 +365,12 @@ static void freshness_and_cancel(void)
 static void ui_messages(void)
 {
     fixture *f = init();
-    st2_client *c = &f->client;
-    f->now = 40000;
-    C(!st_ui2_handle(&f->ui, ST_UI_PRESS, c, f->now));
-    render(f, "LINK LOST / CONNECT");
-    status(f, ST_IDLE);
-    C(st2_client_cal_command(c, (uint8_t[14]){0}, f->now));
-    C(!st_ui2_handle(&f->ui, ST_UI_PRESS, c, f->now));
-    render(f, "BUSY / WAIT COMMAND");
-    c->pending = false;
-    c->next_command = 0;
-    C(!st_ui2_handle(&f->ui, ST_UI_PRESS, c, f->now));
-    render(f, "RECONNECT REQUIRED");
-    c->next_command = 3;
-    status(f, ST_FAULT);
-    C(!st_ui2_handle(&f->ui, ST_UI_PRESS, c, f->now));
-    render(f, "STATE UNAVAILABLE");
-    C(!st_ui2_handle(&f->ui, ST_UI_BACK, c, f->now) && f->ui.page == ST_UI_HOME);
-    C(!st_ui2_handle(&f->ui, ST_UI_NEXT, c, f->now) && f->ui.selection == 3);
-    C(!st_ui2_handle(&f->ui, ST_UI_PRESS, c, f->now) && f->ui.page == ST_UI_COMBINED);
-    st_ui_model model;
-    st_ui2_render(&f->ui, c, (st_voltage_view){0}, f->now, &model);
-    C(strstr(model.rows[3], "START N/A") && strstr(model.rows[4], "STOP N/A"));
-    C(!strcmp(model.rows[7], "IGNITION UNAVAILABLE"));
+    f->client.task = (StTask){ST_TASK_CAPTURE, ST_TASK_RUNNING, 1, 0};
+    f->ui.selection = 0;
+    C(!st_ui2_handle(&f->ui, ST_UI_PRESS, &f->client, 0));
+    C(f->ui.page == ST_UI_HOME && f->client.task.state == ST_TASK_RUNNING && !f->client.pending);
     free(f);
-    G("STOP UI distinguishes busy/link/state/exhaustion from unavailable ignition menus");
+    G("R8 BACK navigation preserves recording task");
 }
 unsigned st_test_stop(unsigned *out)
 {

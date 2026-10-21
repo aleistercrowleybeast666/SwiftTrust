@@ -2,7 +2,7 @@
 #define ST_LINK2_H
 #include "st_core.h"
 #include "st_ignition.h"
-/* Message type only: no version field and no version bits on the wire. */
+/* Internal operations. Wire messages share one R8 header and seven logical kinds. */
 enum
 {
     ST2_STATUS = 0x01,
@@ -21,7 +21,23 @@ enum
     ST2_IGN_REPLY,
     ST2_DISCOVER,
     ST2_ADVERTISE,
-    ST2_MAX = 35
+    ST2_SENSOR_COMMAND,
+    ST2_SENSOR_QUERY,
+    ST2_SENSOR_REPLY,
+    ST2_TASK_QUERY,
+    ST2_TASK_REPLY,
+    ST2_STATUS_ACK,
+    ST2_MAX = ST_PROTOCOL_MAX_BYTES
+};
+enum
+{
+    ST_WIRE_HELLO = 1,
+    ST_WIRE_HELLO_ACK,
+    ST_WIRE_STATUS,
+    ST_WIRE_COMMAND,
+    ST_WIRE_RESULT,
+    ST_WIRE_QUERY,
+    ST_WIRE_DATA
 };
 enum
 {
@@ -43,8 +59,9 @@ enum
 typedef struct
 {
     uint8_t type, flags, section, fragment, count, data[16], uid[12], peer[12], tag[16];
-    uint32_t epoch;
-    uint16_t id, mv;
+    uint32_t epoch, id, pair_id;
+    uint16_t mv;
+    uint8_t mode, task_state, errors;
     uint64_t counter;
 } st2_packet;
 size_t st2_encode(const st2_packet *, uint8_t out[ST2_MAX]);
@@ -84,7 +101,16 @@ typedef struct
     bool (*locked)(void *);
     bool (*prepare_start)(void *);
     void (*reset)(void *);
+    bool (*start_waiting)(void *);
+    bool (*start_failed)(void *);
+    bool (*sensor_snapshot)(void *, uint8_t out[12]);
+    void (*begin_start)(void *);
 } st2_cal_port;
+typedef struct
+{
+    uint32_t id;
+    uint8_t request[ST2_MAX], reply[ST2_MAX], view[64], request_n, reply_n;
+} StTransactionCache;
 typedef struct
 {
     st_logger *logger;
@@ -96,13 +122,21 @@ typedef struct
     st2_nv_port nv;
     st2_timing timing;
     uint8_t uid[12], peer[12], last_type, last_result, last_flags;
-    uint32_t epoch, last_status_ms;
+    uint32_t epoch, last_status_ms, pair_id;
     uint64_t last_counter;
-    uint16_t last_command, status_sequence;
+    uint64_t now_us;
+    uint32_t last_command, status_sequence;
+    StTask task;
+    bool start_deferred, output_started;
+    uint32_t highest_id, cal_id;
+    uint32_t peer_received_ms, peer_status_sequence;
+    bool have_peer_status;
+    StTransactionCache history[8];
+    uint8_t history_next;
     bool offered, active, have_command, terminal_pending, have_status, quality_sticky;
     uint8_t previous_flags;
     uint16_t previous_mv;
-    uint16_t detail_id;
+    uint32_t detail_id;
     uint8_t detail_section, detail_next, snapshot[23];
     bool detail_cached;
 } st2_server;
@@ -121,11 +155,11 @@ size_t st2_server_poll(st2_server *, st2_measurement, uint64_t, uint8_t out[ST2_
 typedef struct
 {
     uint32_t epoch;
-    uint16_t id;
+    uint32_t id;
     uint8_t section, seen, data[23];
     bool complete;
 } st2_details;
-size_t st2_details_begin(st2_details *, uint32_t epoch, uint16_t request_id, uint8_t out[ST2_MAX]);
+size_t st2_details_begin(st2_details *, uint32_t epoch, uint32_t request_id, uint8_t out[ST2_MAX]);
 bool st2_details_receive(st2_details *, const uint8_t *, size_t);
 typedef enum
 {
@@ -153,7 +187,17 @@ typedef struct
     uint32_t cal_received_ms;
     uint64_t counter;
     uint32_t epoch, received_ms, last_send_ms, started_ms, retry_jitter_ms;
-    uint16_t status_sequence, next_command, mv;
+    uint32_t status_sequence, next_command, pair_id;
+    uint16_t mv;
+    StTask task;
+    uint8_t remote_task, remote_mode, errors;
+    bool resumed, need_recovery;
+    bool driver_fault;
+    bool output_started;
+    uint8_t sensor_view[12];
+    bool sensor_have_view;
+    st2_details details;
+    uint32_t details_received_ms;
     uint8_t flags;
     unsigned attempts;
     bool have_status, pending, waiting_tx_done, have_sent;
@@ -162,6 +206,25 @@ typedef struct
     uint32_t stop_requested_ms;
     IgnitionClient *ignition;
 } st2_client;
+typedef enum
+{
+    ST_LINK_REQUEST_REJECTED,
+    ST_LINK_REQUEST_OK
+} StLinkRequestResult;
+StLinkRequestResult Link_RequestSensor(st2_client *, uint8_t action, bool enabled, uint32_t now_ms);
+StLinkRequestResult Link_QueryTask(st2_client *, uint32_t now_ms);
+StLinkRequestResult Link_QueryDetails(st2_client *, uint32_t now_ms);
+typedef enum
+{
+    ST_LINK_WAIT,
+    ST_LINK_OK,
+    ST_LINK_SLOW,
+    ST_LINK_LOST,
+    ST_LINK_DRIVER_FAULT
+} StLinkHealth;
+StLinkHealth Link_GetHealth(bool have_status, uint32_t received_ms, uint32_t now_ms,
+                            bool driver_fault);
+bool Link_GetLed(StLinkHealth, uint32_t now_ms);
 void st2_client_init(st2_client *, st2_nv_port, st2_timing, const uint8_t uid[12],
                      const uint8_t peer[12]);
 bool st2_client_connect(st2_client *, uint32_t now_ms);

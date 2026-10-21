@@ -28,7 +28,7 @@ typedef struct
     unsigned phase;
     bool failed, tx_pending, rx_ready, tx_active;
     _Atomic(bool) irq;
-    uint8_t tx[49], rx[49], tx_length, rx_length;
+    uint8_t tx[ST_PROTOCOL_MAX_BYTES], rx[ST_PROTOCOL_MAX_BYTES], tx_length, rx_length;
     uint32_t tx_started_ms, last_poll_ms, busy_since_ms, tx_done, tx_timeouts, rx_errors,
         rx_dropped;
     bool busy_seen;
@@ -39,7 +39,7 @@ void st_radio_irq_isr(st_radio *);
 void st_radio_tick(st_radio *, uint32_t now_ms);
 /* One queued packet. STATUS can replace queued STATUS; commands/ACK are never overwritten. */
 bool st_radio_send(st_radio *, const uint8_t *, size_t);
-bool st_radio_receive(st_radio *, uint8_t out[49], size_t *n);
+bool st_radio_receive(st_radio *, uint8_t out[ST_PROTOCOL_MAX_BYTES], size_t *n);
 /* Exclusive radio owner only. Cancel exactly matching queued bytes, never an
  * on-air transmission. Used before tick when protocol epoch/request changes. */
 bool st_radio_cancel_queued(st_radio *, const uint8_t *, size_t);

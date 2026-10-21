@@ -10,6 +10,8 @@ typedef struct
     uint32_t observed_done, observed_timeouts;
     uint8_t packet[ST2_MAX], length, role;
     bool awaiting_tx, fault, ignition_tx;
+    bool status_ack_due;
+    uint32_t status_ack_sequence;
 } st_link_runtime;
 /* One foreground owner of radio tick/send/receive and this protocol endpoint.
  * Caller has initialized/verified radio GPIO/SPI/config and live HAL tick.

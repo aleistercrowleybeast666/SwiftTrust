@@ -1,6 +1,6 @@
-2026-10-21T10:54:59.643972+00:00
+2026-10-21T18:08:52.121074+00:00
 Focused RF/protocol runtime regression on software event model only. No radio, GPIO, COM, ADC or card accessed.
-Prior full43-group calibration baseline is not rerun or relabelled as this test.
+R8 targeted runtime; full host and FatFs suites have separate reports.
 PASS runtime queued/on-air START then newer STOP / TX_DONE ordering / late START ACK ignored / STOP RF timeout retries same ID / RF fault retains uncertainty / no automatic replay
 PASS runtime client queues once / attempts only after RF acceptance / real TX_DONE and timeout counters anchor retry / no early ACK timer
 PASS runtime superseded queued query and old-session START canceled before driver tick / only new explicit request transmitted
@@ -8,23 +8,27 @@ PASS runtime total deadline removes unsent command / radio failure makes link un
 PASS runtime exact-byte queued cancellation / bad length and mismatch refused / on-air transmission never recalled / busy-unverified bind rejected
 PASS runtime server holds frozen reply while RF busy / no snapshot overwrite / all four calibration fragments transmitted in order with bounded slots
 PASS runtime duplex official radio-state-machine model / durable-callback handshake / actual epoch mapping / four-fragment cal result / no automatic START
-PASS runtime authenticated 33/35B duplex query/detail/ARM/DISARM, explicit UNBOUND, no acquisition dispatch, queued request supersession
+PASS runtime authenticated R8 42/44B duplex query/detail/ARM/DISARM, explicit UNBOUND, no acquisition dispatch, queued request supersession
 PASS runtime expired queued FIRE removed before radio tick, conservative grant deadline, no late or automatic transmission
+PASS R8 STOP cancels queued FIRE before radio tick; next transmission is STOP, no deferred execution
 PASS automatic discovery through real radio encoder/RX gate, pristine UID provisioning, then durable HELLO/COMMIT; never starts capture
-PASS targeted runtime: 10 groups, 703 assertions; sizeof(runtime)=64
+PASS R8 finite output ends automatically / subsequent DISARM preserves ENDED / UNKNOWN never creates a new action
+PASS targeted runtime: 12 groups, 931 assertions; sizeof(runtime)=104
 Source/header SHA256:
+bd423410290c533af04dc69111e59f16072a1cd62e12a9cad6ee210a4ab35816 Common/Src/st_task.c
+706d8ee3bb95b903922f43e1e0e5765c925c1e8876ee6feeb001b22d4dd3a7f6 Acquisition/src/st_frame.c
 f030b589b888984c48f5fd99c74f75376a61d0c6384bda27900cc5930f90ce7e Acquisition/src/st_core.c
-9046df0ac5c913e79f41ca78049fb395ca0e19e970e59a126abcc05bf7f0eab0 Acquisition/src/st_auto_link.c
+2314f94f8a83a40ab0040f3d7742ff20e4709f000744c9cda97fe48c08e80f29 Acquisition/src/st_auto_link.c
 cc563ab4618ab53c6b2a2bdb928217a1f310f630cf80a0cc1d3069aab88b7ef4 Acquisition/src/st_pairing.c
-7a143df7af7c8ed706e28dd038bbaf5251e8384e2881eee5bc89225b28ba0fdc Acquisition/src/st_nv.c
-c12df0288ba0f48bb64d671457535e8111347818837ec3725e0044a3e6e3a4a6 Acquisition/src/st_logger.c
-2eac79cf65f2ec33ef5360ee8c9c44f26118fd5f582cc4425b2abcaa3088c952 Acquisition/src/st_link2.c
-3374bb8093dcb0edd134074ca5252c9fe25900f3395c4331d43946c27e4ded1b Acquisition/src/st_ignition.c
+a0ca0ca424f70d8c875eeb140884fd7a0c36e376e9a7c753312f028b69150102 Acquisition/src/st_nv.c
+9a381ae1666ebe11dd83381de46c1e159f66fb73e2f50c3051dad5fe0b5dd10f Acquisition/src/st_logger.c
+de8a4538955f70cbabbc2c318e5c8b6ff682dc1a0b455b8e3e1b2c4d106b0b5b Acquisition/src/st_link2.c
+4bdd16a974de09d5ef109d73a1844b2bab8cc36f2e7ab5ef5b567330a7b2c99a Acquisition/src/st_ignition.c
 f7f78b44654efd3542b6886923dd05194286807ebcfeb078ea05d21fe901ee9e Acquisition/vendor/tiny_aes/aes.c
-74884719255059be4053860777a51d596efda904c51ca81449481f5db704eb83 Acquisition/src/st_radio.c
-413b24e1994bc20e8582778c6ea215ac2b1ee99556810a44dc8ef7dace63b5b8 Acquisition/src/st_link_runtime.c
-79e5522854005c3a3396eaa27e1802cc88f7be9e291c0b0da447f09ae37b61fe Models/test_link_runtime.c
+c9752823c363767545a93556bbe19c5f8648bce656b7b0715509298d09e94166 Acquisition/src/st_radio.c
+4220f26a50a181659fa08ea14b1c2c2ace2170e8b1630a41c0a12963efd7e008 Acquisition/src/st_link_runtime.c
+ef1c593041827785991f52b89087fba9758ff90106ce7b1403cf456cde6230a7 Models/test_link_runtime.c
 601b65e1b20b1f634495ab481e10d5ae9e3ca39b6b88eef46dcafdc72146a8ce Acquisition/vendor/semtech_sx128x/sx128x.c
-a4315aaf0e99b2f44b6002c019821273f2ad2b9a34d8bd38342be28bb604fc44 Acquisition/include/st_link_runtime.h
-79e191c46770c92b3ae50b37b8e0529884d45459a7a07440e0fb29d639c8efc3 Acquisition/include/st_radio.h
-805d2094b13c971a36e29dd0b84754f9470038f307b276d7643080be9e5c26aa Acquisition/include/st_link2.h
+e7a70c2297077ca718f2816e96e04a0306faba3523c0b53d0c0b7376d86d472e Acquisition/include/st_link_runtime.h
+a88e812907445919bf457438a9f383afdedf3b7c7479bae2520e8fe02b0a6a6a Acquisition/include/st_radio.h
+9ed899446c5b27443a6cff5f9659008727cf7d22222ab71a03103793010ca35a Acquisition/include/st_link2.h

@@ -2,6 +2,7 @@
 #include "st_reference.h"
 #include "st_cal_remote.h"
 #include "st_cal_ui.h"
+#include "st_ui.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -126,20 +127,20 @@ static void exchange(fixture *f, bool duplicate)
     uint8_t in[ST2_MAX], out[4][ST2_MAX];
     size_t lens[4];
     size_t n = st2_encode(&f->client.request, in);
-    C(n == 9 || n == 23);
+    C(n == 18 || n == 32);
     lens[0] = st2_server_receive(&f->server, in, n, (st2_measurement){0}, f->now, out[0]);
-    C(lens[0] == 26);
+    C(lens[0] == 35);
     for (unsigned i = 1; i < 4; i++)
     {
         lens[i] = st2_server_poll(&f->server, (st2_measurement){0}, f->now, out[i]);
-        C(lens[i] == 26);
+        C(lens[i] == 35);
     }
     if (duplicate)
     {
         unsigned saves = f->saves;
         uint8_t retry[ST2_MAX];
-        C(st2_server_receive(&f->server, in, n, (st2_measurement){0}, f->now, retry) == 26);
-        C(!memcmp(out[0], retry, 26) && f->saves == saves);
+        C(st2_server_receive(&f->server, in, n, (st2_measurement){0}, f->now, retry) == 35);
+        C(!memcmp(out[0], retry, 35) && f->saves == saves);
         /* The retry's pending fragments do not mutate the cached snapshot. */
     }
     C(st2_client_receive(&f->client, out[3], lens[3], now_ms(f)));
@@ -174,10 +175,10 @@ static void prepare(fixture *f)
     C(view(f).state == ST_CAL_ZERO_READY);
     /* All START paths, including a direct wire request, respect the wizard lock. */
     C(st2_client_command(&f->client, ST2_START, now_ms(f)));
-    uint8_t in[35], out[35];
+    uint8_t in[ST2_MAX], out[ST2_MAX];
     size_t n = st2_encode(&f->client.request, in);
     n = st2_server_receive(&f->server, in, n, (st2_measurement){0}, f->now, out);
-    C(n == 10 && st2_client_receive(&f->client, out, n, now_ms(f)) &&
+    C(n == 21 && st2_client_receive(&f->client, out, n, now_ms(f)) &&
       f->client.transaction == ST_TX_REJECTED);
     C(f->logger.state == ST_IDLE);
     request(f, ST_CAL_ACTION_ZERO, NULL);
@@ -244,7 +245,7 @@ static void rpc_tests(void)
     init(f);
     prepare(f);
     request(f, ST_CAL_ACTION_SAVE, NULL);
-    uint8_t command[35], bad[35], reply[35];
+    uint8_t command[ST2_MAX], bad[ST2_MAX], reply[ST2_MAX];
     size_t n = st2_encode(&f->client.request, command);
     for (size_t i = 0; i < n; i++)
     {
@@ -262,7 +263,7 @@ static void rpc_tests(void)
     n = st2_encode(&conflict, bad);
     n = st2_server_receive(&f->server, bad, n, (st2_measurement){0}, f->now, reply);
     st2_packet ack;
-    C(n == 10 && st2_decode(&ack, reply, n) && (ack.flags & 7u) == ST2_CONFLICT &&
+    C(n == 21 && st2_decode(&ack, reply, n) && (ack.flags & 7u) == ST2_CONFLICT &&
       f->active.revision == 2);
     conflict.epoch++;
     n = st2_encode(&conflict, bad);
@@ -279,7 +280,7 @@ static void rpc_tests(void)
     (void)st2_server_poll(&f->server, (st2_measurement){0}, f->now, reply);
     C(f->service.workflow.state == ST_CAL_CANCELLED && f->active.revision == 2);
     free(f);
-    G("cal 23B command / 9B query / four26B frozen reply fragments / reorder-duplicate-conflict / "
+    G("R8 cal 32B command / 18B query / four35B frozen reply fragments / reorder-duplicate-conflict / "
       "CRC-truncation / old epoch / save executes once / START lock and apply / session lease "
       "cancel");
 }
@@ -290,9 +291,9 @@ static void uncertainty_tests(void)
     init(f);
     prepare(f);
     request(f, ST_CAL_ACTION_SAVE, NULL);
-    uint8_t wire[35], reply[35];
+    uint8_t wire[ST2_MAX], reply[ST2_MAX];
     size_t n = st2_encode(&f->client.request, wire);
-    C(st2_server_receive(&f->server, wire, n, (st2_measurement){0}, f->now, reply) == 26);
+    C(st2_server_receive(&f->server, wire, n, (st2_measurement){0}, f->now, reply) == 35);
     C(f->active.revision == 2 && f->saves == 1); /* all replies lost */
     st2_client_tx_accepted(&f->client);
     st2_client_tx_done(&f->client, now_ms(f), 0);
@@ -305,20 +306,20 @@ static void uncertainty_tests(void)
     ui.page = ST_CAL_UI_RESULT;
     st_cal_panel panel;
     st_cal_ui_render(&ui, &panel);
-    C(!strcmp(panel.rows[0], "WAIT RESPONSE"));
+    C(!strcmp(panel.rows[1], Ui_Text("等待匹配结果", "WAIT MATCHED RESULT")));
     f->now += (uint64_t)(f->client.timing.operation_ms + 1) * 1000;
     C(!st2_client_tx_due(&f->client, now_ms(f), wire, &n));
     C(view(f).uncertain);
     (void)st2_server_poll(&f->server, (st2_measurement){0}, f->now, reply);
     C(f->service.workflow.state == ST_CAL_COMMITTED);
     st_cal_ui_render(&ui, &panel);
-    C(!strcmp(panel.rows[0], "RESULT UNKNOWN"));
+    C(!strcmp(panel.rows[1], Ui_Text("结果未确认", "RESULT UNKNOWN")));
     C(strcmp(panel.rows[1], "OLD PROFILE RETAINED"));
     f->client.received_ms = now_ms(f);
     query(f);
     C(view(f).state == ST_CAL_COMMITTED && !view(f).uncertain);
     st_cal_ui_render(&ui, &panel);
-    C(!strcmp(panel.rows[0], "CALIBRATION SAVED"));
+    C(!strcmp(panel.rows[1], Ui_Text("标定已保存", "CALIBRATION SAVED")));
     /* Rejected capture-time SAVE cannot mutate the accepted profile. */
     f->client.flags = ST_IDLE;
     f->logger.state = ST_CAPTURING;
@@ -339,7 +340,7 @@ static void background_query_test(void)
     exchange(f, false);
     C(view(f).state == ST_CAL_ZERO_READY);
     C(st2_client_cal_command(&f->client, NULL, now_ms(f)));
-    uint16_t query_id = f->client.request.id;
+    uint32_t query_id = f->client.request.id;
     C(!view(f).pending && view(f).state == ST_CAL_ZERO_READY);
     st_cal_ui ui;
     st_cal_ui_init(&ui, st_cal_remote_port(&f->remote));
@@ -392,7 +393,7 @@ static void application_command(fixture *f, uint8_t type, uint16_t id)
     size_t n = st2_encode(&request, in);
     size_t got = st2_server_receive(&f->server, in, n, (st2_measurement){0}, f->now, out);
     st2_packet reply;
-    C(got == 10 && st2_decode(&reply, out, got));
+    C(got == 21 && st2_decode(&reply, out, got));
     if ((reply.flags & 7u) != ST2_ACCEPTED)
         fprintf(stderr, "reference command type=%u id=%u result=%u state=%u\n", type, id,
                 reply.flags & 7u, (unsigned)f->logger.state);
@@ -471,8 +472,74 @@ static void first_application_start(void)
     G("actual reference START preparation: saved coefficients in first STLOG header, source guard, "
       "wizard cancel, source cancel during STARTING, restart and raw-only path");
 }
+static void session_zero_tests(void)
+{
+    fixture *f = malloc(sizeof *f);
+    C(f);
+    init(f);
+    st_cal_profile permanent = f->active;
+    st2_cal_port port = st_cal_endpoint_port(&f->endpoint);
+    uint8_t enable[14] = {8, 1};
+    C(port.request(port.ctx, enable));
+    port.begin_start(port.ctx);
+    C(!port.prepare_start(port.ctx) && port.start_waiting(port.ctx));
+    for (uint32_t seq = 0; seq < ST_ZERO_WINDOW_SAMPLES; seq++)
+    {
+        f->now += 500;
+        st_capture c = capture(2222, seq, f->now), saved = c;
+        C(st_cal_input_offer_isr(&f->endpoint.input, &c));
+        st_cal_endpoint_step(&f->endpoint);
+        C(!memcmp(&c, &saved, sizeof c));
+    }
+    C(f->endpoint.zero.state == ST_ZERO_READY && port.prepare_start(port.ctx));
+    C(f->logger.config.session_zero_valid && f->logger.config.session_zero_raw == 2222 &&
+      f->logger.config.zero_raw == 2222);
+    C(f->logger.config.calibration_zero_raw == permanent.zero_raw &&
+      f->logger.config.nano_newtons_per_count == permanent.nano_newtons_per_count);
+    C(!memcmp(&f->active, &permanent, sizeof permanent) && !f->saves);
+    start_file file = {0};
+    f->logger.port = (st_file_port){&file, start_submit, start_poll};
+    f->logger.config.boot_epoch = 23;
+    C(st_logger_start(&f->logger, f->now));
+    C(!memcmp(f->logger.header + 60, "SZR1", 4));
+    C(st_get32(f->logger.header + 64) == (uint32_t)permanent.zero_raw &&
+      st_get32(f->logger.header + 68) == 2222);
+    C(st_get32(f->logger.header + 72) == ST_ZERO_WINDOW_SAMPLES);
+    C(SessionZero_Apply(&f->endpoint.zero, &f->logger) == ST_ZERO_BUSY);
+    /* A new start with auto-zero off restores permanent calibration. */
+    f->logger.state = ST_IDLE;
+    atomic_store(&f->logger.capture_enabled, false);
+    f->logger.inflight = false;
+    port.reset(port.ctx);
+    enable[1] = 0;
+    C(port.request(port.ctx, enable));
+    port.begin_start(port.ctx);
+    C(port.prepare_start(port.ctx) && !f->logger.config.session_zero_valid &&
+      f->logger.config.zero_raw == permanent.zero_raw);
+    uint8_t zero[14] = {7};
+    C(port.request(port.ctx, zero));
+    f->now += 500;
+    st_capture c = capture(2222, 1, f->now);
+    C(st_cal_input_offer_isr(&f->endpoint.input, &c));
+    f->now += 500;
+    c = capture(2222, 3, f->now);
+    C(st_cal_input_offer_isr(&f->endpoint.input, &c));
+    st_cal_endpoint_step(&f->endpoint);
+    C(port.start_failed(port.ctx));
+    port.reset(port.ctx);
+    C(port.request(port.ctx, zero));
+    f->now += (ST_ZERO_TIMEOUT_MS + 1u) * UINT64_C(1000);
+    st_cal_endpoint_step(&f->endpoint);
+    C(port.start_failed(port.ctx));
+    port.reset(port.ctx);
+    C(f->endpoint.zero.state == ST_ZERO_IDLE && !memcmp(&permanent, &f->active, sizeof permanent));
+    free(f);
+    G("R8 stable512 session zero / raw unchanged / permanent slope-zero isolated / SZR1 compatible "
+      "header / no running adjustment / off restores calibration / gap-timeout-cancel");
+}
 unsigned st_test_cal_integration(unsigned *out)
 {
+    session_zero_tests();
     first_application_start();
     input_tests();
     rpc_tests();

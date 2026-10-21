@@ -256,11 +256,22 @@ class Regression(unittest.TestCase):
     def test_ignition_single_pulse_saved_in_cube(self):
         values = read_ioc(ROOT / "Acquisition/SwiftThrust_Acquisition_Candidate/SwiftThrust_Acquisition_Candidate.ioc")
         self.assertEqual(values["TIM2.Prescaler"], "15")
-        self.assertEqual(values["TIM2.Period"], "5000000")
+        self.assertEqual(values["TIM2.Period"], "1000000") # simulation candidate; hardware disabled
         self.assertEqual(values["TIM2.Pulse"], "1")
         self.assertEqual(values["TIM2.OCMode_PWM"], "TIM_OCMODE_PWM2")
         self.assertEqual(values["VP_TIM2_VS_OPM.Mode"], "OPM_bit")
         self.assertEqual(values["ADC1.SamplingTime-0\\#ChannelRegularConversion"], "ADC_SAMPLETIME_480CYCLES")
+
+    def test_r8_link_led_is_free_gpio_and_saved_low(self):
+        for board, (_, filename, _) in PARTS.items():
+            rows=read_csv(ROOT/board/'pin_candidates.csv')
+            led=[r for r in rows if r['role']=='LINK_LED']
+            self.assertEqual(len(led),1)
+            self.assertEqual(led[0]['pin'],'PB0')
+            self.assertEqual(led[0]['signal'],'GPIO_Output')
+            validate_pins(rows,pin_db(filename))
+            values=read_ioc(ROOT/board/f'SwiftThrust_{board}_Candidate'/f'SwiftThrust_{board}_Candidate.ioc')
+            self.assertEqual(values['PB0.PinState'],'GPIO_PIN_RESET')
 
     def test_analog_candidate_stays_unverified_and_unbound(self):
         config = json.loads((ROOT / "Models/config_pending.json").read_text(encoding="utf8"))

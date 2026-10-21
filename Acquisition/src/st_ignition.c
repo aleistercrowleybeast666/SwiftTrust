@@ -6,8 +6,8 @@
 
 #define IGNITION_CMAC_RB 0x87u
 #define IGNITION_AUTH_CONTEXT_BYTES 31u
-#define IGNITION_PREFIX_REQUEST 15u
-#define IGNITION_PREFIX_REPLY 17u
+#define IGNITION_PREFIX_REQUEST 24u
+#define IGNITION_PREFIX_REPLY 26u
 #define IGNITION_SOFTWARE_KNOWN (1u << 6)
 #define IGNITION_MAX_RTO_MS 60000u
 #define IGNITION_MAX_OPERATION_MS 600000u
@@ -16,7 +16,8 @@
 
 _Static_assert((unsigned)IGNITION_MAX_BYTES == (unsigned)ST2_MAX, "shared radio payload bound");
 _Static_assert((unsigned)IGNITION_REQUEST == (unsigned)ST2_IGN_REQUEST &&
-               (unsigned)IGNITION_REPLY == (unsigned)ST2_IGN_REPLY, "shared wire types");
+                   (unsigned)IGNITION_REPLY == (unsigned)ST2_IGN_REPLY,
+               "shared wire types");
 void Ignition_ClearMemory(void *memory, size_t length)
 {
     volatile uint8_t *bytes = memory;
@@ -34,7 +35,7 @@ static void Ignition_ShiftSubkey(uint8_t key[16])
         key[15] ^= IGNITION_CMAC_RB;
 }
 IgnitionCodecResult Ignition_ComputeCmac(const uint8_t key[16], const uint8_t *message,
-                                       size_t length, uint8_t tag[16])
+                                         size_t length, uint8_t tag[16])
 {
     if (!key || (!message && length) || !tag)
         return IGNITION_CODEC_INVALID;
@@ -77,7 +78,7 @@ static bool Ignition_FieldsValid(const IgnitionPacket *packet)
         uint32_t arm = st_get32(data + 2);
         uint16_t profile = st_get16(data + 6);
         if (data[0] == IGNITION_QUERY)
-            return data[1] <= 1 && arm <= UINT16_MAX && !profile;
+            return data[1] <= 1 && !profile;
         if (data[0] == IGNITION_DISARM)
             return !data[1] && !arm && !profile;
         if (data[0] != IGNITION_ARM && data[0] != IGNITION_FIRE)
@@ -96,32 +97,33 @@ static bool Ignition_FieldsValid(const IgnitionPacket *packet)
            data[3] <= IGNITION_REASON_HISTORY;
 }
 static IgnitionCodecResult Ignition_MakeTag(const IgnitionAuth *auth, uint8_t type,
-                                          const uint8_t *prefix, size_t length, uint8_t tag[16])
+                                            const uint8_t *prefix, size_t length, uint8_t tag[16])
 {
-    uint8_t message[48];
+    uint8_t message[64];
     if (!auth || !auth->key_bound)
         return IGNITION_CODEC_KEY_UNBOUND;
-    memcpy(message, "STIGN2", 6); /* Domain changes with the compact wire contract. */
+    memcpy(message, "STIGN8", 6);
     message[6] = type == IGNITION_REQUEST ? 0 : 1;
     memcpy(message + 7, auth->acquisition_uid, 12);
     memcpy(message + 19, auth->controller_uid, 12);
     memcpy(message + IGNITION_AUTH_CONTEXT_BYTES, prefix, length);
-    IgnitionCodecResult result = Ignition_ComputeCmac(auth->key, message,
-                                                    IGNITION_AUTH_CONTEXT_BYTES + length, tag);
+    IgnitionCodecResult result =
+        Ignition_ComputeCmac(auth->key, message, IGNITION_AUTH_CONTEXT_BYTES + length, tag);
     Ignition_ClearMemory(message, sizeof message);
     return result;
 }
 IgnitionCodecResult Ignition_Encode(const IgnitionAuth *auth, const IgnitionPacket *packet,
-                                  uint8_t out[35], size_t *length)
+                                    uint8_t out[IGNITION_MAX_BYTES], size_t *length)
 {
     if (!out || !length || !Ignition_FieldsValid(packet))
         return IGNITION_CODEC_INVALID;
     *length = 0;
-    size_t prefix = packet->type == IGNITION_REQUEST ? IGNITION_PREFIX_REQUEST : IGNITION_PREFIX_REPLY;
-    out[0] = packet->type;
-    st_put32(out + 1, packet->epoch);
-    st_put16(out + 5, packet->id);
-    memcpy(out + 7, packet->data, prefix - 7u);
+    size_t prefix =
+        packet->type == IGNITION_REQUEST ? IGNITION_PREFIX_REQUEST : IGNITION_PREFIX_REPLY;
+    st2_packet frame = {.type = packet->type, .epoch = packet->epoch, .id = packet->id};
+    memcpy(frame.data, packet->data, packet->type == IGNITION_REQUEST ? 8u : 10u);
+    if (!st2_encode(&frame, out))
+        return IGNITION_CODEC_FORMAT;
     IgnitionCodecResult result = Ignition_MakeTag(auth, packet->type, out, prefix, out + prefix);
     if (result != IGNITION_CODEC_OK)
         return result;
@@ -130,14 +132,16 @@ IgnitionCodecResult Ignition_Encode(const IgnitionAuth *auth, const IgnitionPack
     return IGNITION_CODEC_OK;
 }
 IgnitionCodecResult Ignition_Decode(const IgnitionAuth *auth, uint8_t expected_type,
-                                  const uint8_t *wire, size_t length, IgnitionPacket *packet)
+                                    const uint8_t *wire, size_t length, IgnitionPacket *packet)
 {
     if (!auth || !wire || !packet ||
         (expected_type != IGNITION_REQUEST && expected_type != IGNITION_REPLY))
         return IGNITION_CODEC_INVALID;
-    size_t prefix = expected_type == IGNITION_REQUEST ? IGNITION_PREFIX_REQUEST : IGNITION_PREFIX_REPLY;
-    if (length != prefix + 18u || wire[0] != expected_type ||
-        st_get16(wire + length - 2u) != st_crc16(wire, length - 2u))
+    size_t prefix =
+        expected_type == IGNITION_REQUEST ? IGNITION_PREFIX_REQUEST : IGNITION_PREFIX_REPLY;
+    st2_packet frame;
+    if (length != prefix + 18u || !st2_decode(&frame, wire, length) ||
+        frame.type != expected_type || frame.pair_id != ST_PROJECT_PAIR_ID)
         return IGNITION_CODEC_FORMAT;
     uint8_t tag[16], difference = 0;
     IgnitionCodecResult result = Ignition_MakeTag(auth, expected_type, wire, prefix, tag);
@@ -148,9 +152,8 @@ IgnitionCodecResult Ignition_Decode(const IgnitionAuth *auth, uint8_t expected_t
     Ignition_ClearMemory(tag, sizeof tag);
     if (difference)
         return IGNITION_CODEC_AUTH;
-    *packet = (IgnitionPacket){.type = expected_type, .epoch = st_get32(wire + 1),
-                               .id = st_get16(wire + 5)};
-    memcpy(packet->data, wire + 7, prefix - 7u);
+    *packet = (IgnitionPacket){.type = expected_type, .epoch = frame.epoch, .id = frame.id};
+    memcpy(packet->data, frame.data, expected_type == IGNITION_REQUEST ? 8u : 10u);
     return Ignition_FieldsValid(packet) ? IGNITION_CODEC_OK : IGNITION_CODEC_FORMAT;
 }
 static bool Ignition_IsUidValid(const uint8_t uid[12])
@@ -163,8 +166,7 @@ static bool Ignition_IsUidValid(const uint8_t uid[12])
     }
     return zero != 12 && ff != 12;
 }
-static IgnitionKeyResult Ignition_SetKey(IgnitionAuth *auth, uint32_t epoch,
-                                        const uint8_t key[16])
+static IgnitionKeyResult Ignition_SetKey(IgnitionAuth *auth, uint32_t epoch, const uint8_t key[16])
 {
     if (!auth)
         return IGNITION_KEY_INVALID;
@@ -220,7 +222,8 @@ IgnitionSessionResult IgnitionServer_SetSession(IgnitionServer *server, uint32_t
     {
         IgnitionOutputResult stopped = server->output.stop(server->output.ctx);
         server->state = stopped == IGNITION_OUTPUT_OK ? IGNITION_SAFE : IGNITION_FAULT;
-        server->reason = stopped == IGNITION_OUTPUT_OK ? IGNITION_REASON_NONE : IGNITION_REASON_OUTPUT;
+        server->reason =
+            stopped == IGNITION_OUTPUT_OK ? IGNITION_REASON_NONE : IGNITION_REASON_OUTPUT;
         server->arm_id = 0;
     }
     if (server->epoch)
@@ -237,15 +240,16 @@ IgnitionSessionResult IgnitionServer_SetSession(IgnitionServer *server, uint32_t
     server->epoch = epoch;
     return IGNITION_SESSION_OK;
 }
-static size_t IgnitionServer_MakeReply(IgnitionServer *server, uint16_t id, uint8_t kind,
-                                       uint8_t result, uint8_t out[35])
+static size_t IgnitionServer_MakeReply(IgnitionServer *server, uint32_t id, uint8_t kind,
+                                       uint8_t result, uint8_t out[IGNITION_MAX_BYTES])
 {
     IgnitionPacket reply = {.type = IGNITION_REPLY, .epoch = server->epoch, .id = id};
     reply.data[0] = kind;
     reply.data[1] = result;
     reply.data[2] = server->output_bound ? server->state : IGNITION_DISABLED;
-    reply.data[3] = result == IGNITION_RESULT_UNKNOWN ? IGNITION_REASON_HISTORY
-                       : (server->output_bound ? server->reason : IGNITION_REASON_UNBOUND);
+    reply.data[3] = result == IGNITION_RESULT_UNKNOWN
+                        ? IGNITION_REASON_HISTORY
+                        : (server->output_bound ? server->reason : IGNITION_REASON_UNBOUND);
     if (server->output_bound)
     {
         st_put32(reply.data + 4, server->arm_id);
@@ -267,8 +271,8 @@ bool IgnitionServer_IsBusy(const IgnitionServer *server)
 }
 IgnitionOutputResult IgnitionServer_BindOutput(IgnitionServer *server, IgnitionOutputPort port)
 {
-    if (!server || server->epoch || !port.now_ms || !port.allowed || !port.start ||
-        !port.stop || !port.running)
+    if (!server || server->epoch || !port.now_ms || !port.allowed || !port.start || !port.stop ||
+        !port.running)
         return IGNITION_OUTPUT_INVALID;
     IgnitionOutputResult result = port.stop(port.ctx);
     if (result != IGNITION_OUTPUT_OK || port.running(port.ctx))
@@ -300,14 +304,17 @@ void IgnitionServer_Service(IgnitionServer *server)
         {
             IgnitionOutputResult result = server->output.stop(server->output.ctx);
             server->state = result == IGNITION_OUTPUT_OK ? IGNITION_LOCKOUT : IGNITION_FAULT;
-            server->reason = result != IGNITION_OUTPUT_OK ? IGNITION_REASON_OUTPUT
-                                   : (local_fault ? IGNITION_REASON_LOCAL : IGNITION_REASON_NONE);
+            server->reason = result != IGNITION_OUTPUT_OK
+                                 ? IGNITION_REASON_OUTPUT
+                                 : (local_fault ? IGNITION_REASON_LOCAL : IGNITION_REASON_NONE);
             server->arm_id = 0;
             IgnitionCommandCache *fire = &server->commands[IGNITION_FIRE - 1u];
             if (fire->valid)
                 (void)IgnitionServer_MakeReply(server, fire->id, IGNITION_COMMAND_REPLY,
-                     result == IGNITION_OUTPUT_OK && !local_fault ? IGNITION_OUTPUT_ENDED
-                                                                 : IGNITION_FAILED, fire->reply);
+                                               result == IGNITION_OUTPUT_OK && !local_fault
+                                                   ? IGNITION_OUTPUT_ENDED
+                                                   : IGNITION_FAILED,
+                                               fire->reply);
         }
     }
 }
@@ -322,7 +329,8 @@ static uint8_t IgnitionServer_Execute(IgnitionServer *server, const IgnitionPack
         IgnitionOutputResult result = server->output.stop(server->output.ctx);
         server->arm_id = 0;
         server->state = result == IGNITION_OUTPUT_OK ? IGNITION_SAFE : IGNITION_FAULT;
-        server->reason = result == IGNITION_OUTPUT_OK ? IGNITION_REASON_NONE : IGNITION_REASON_OUTPUT;
+        server->reason =
+            result == IGNITION_OUTPUT_OK ? IGNITION_REASON_NONE : IGNITION_REASON_OUTPUT;
         return result == IGNITION_OUTPUT_OK ? IGNITION_DISARMED : IGNITION_FAILED;
     }
     if (st_get16(request->data + 6) != IGNITION_SIGNAL_PROFILE)
@@ -345,7 +353,8 @@ static uint8_t IgnitionServer_Execute(IgnitionServer *server, const IgnitionPack
         server->state = IGNITION_LOCKOUT;
         if (server->output.start(server->output.ctx) == IGNITION_OUTPUT_OK)
         {
-            server->deadline_ms = server->output.now_ms(server->output.ctx) + IGNITION_PULSE_MS + 1u;
+            server->deadline_ms =
+                server->output.now_ms(server->output.ctx) + IGNITION_PULSE_MS + 1u;
             server->state = IGNITION_FIRING;
             return IGNITION_FIRE_ACCEPTED;
         }
@@ -359,11 +368,12 @@ static uint8_t IgnitionServer_Execute(IgnitionServer *server, const IgnitionPack
     return IGNITION_REJECTED;
 }
 size_t IgnitionServer_Receive(IgnitionServer *server, const uint8_t *wire, size_t length,
-                              uint8_t out[35])
+                              uint8_t out[IGNITION_MAX_BYTES])
 {
     IgnitionPacket request;
     if (!server || !out || !server->epoch ||
-        Ignition_Decode(&server->auth, IGNITION_REQUEST, wire, length, &request) != IGNITION_CODEC_OK ||
+        Ignition_Decode(&server->auth, IGNITION_REQUEST, wire, length, &request) !=
+            IGNITION_CODEC_OK ||
         request.epoch != server->epoch)
         return 0;
     IgnitionServer_Service(server);
@@ -375,18 +385,18 @@ size_t IgnitionServer_Receive(IgnitionServer *server, const uint8_t *wire, size_
                 return IgnitionServer_MakeReply(server, request.id, IGNITION_QUERY_REPLY,
                                                 IGNITION_CONFLICT, out);
             server->query_next = 1;
-            memcpy(out, server->query_reply[0], 35);
-            return 35;
+            memcpy(out, server->query_reply[0], IGNITION_REPLY_BYTES);
+            return IGNITION_REPLY_BYTES;
         }
         if (request.id <= server->last_query)
             return 0;
-        uint16_t target = (uint16_t)st_get32(request.data + 2);
-        uint8_t result = target ? (target > server->last_command ? IGNITION_NOT_SEEN
-                                                                : IGNITION_RESULT_UNKNOWN)
-                                : IGNITION_SNAPSHOT;
+        uint32_t target = st_get32(request.data + 2);
+        uint8_t result =
+            target ? (target > server->last_command ? IGNITION_NOT_SEEN : IGNITION_RESULT_UNKNOWN)
+                   : IGNITION_SNAPSHOT;
         for (unsigned i = 0; i < 3; i++)
             if (target && server->commands[i].valid && server->commands[i].id == target)
-                result = server->commands[i].reply[8];
+                result = server->commands[i].reply[17];
         server->last_query = request.id;
         memcpy(server->query_request, request.data, 8);
         server->query_cached = true;
@@ -396,8 +406,8 @@ size_t IgnitionServer_Receive(IgnitionServer *server, const uint8_t *wire, size_
                                        server->query_reply[0]);
         if (server->query_count == 2)
         {
-            IgnitionPacket detail = {.type = IGNITION_REPLY, .epoch = server->epoch,
-                                       .id = request.id};
+            IgnitionPacket detail = {
+                .type = IGNITION_REPLY, .epoch = server->epoch, .id = request.id};
             detail.data[0] = IGNITION_DETAIL_REPLY;
             /* Only software facts are known. No guessed voltage/profile/output feedback. */
             st_put16(detail.data + 1, IGNITION_SOFTWARE_KNOWN);
@@ -413,8 +423,8 @@ size_t IgnitionServer_Receive(IgnitionServer *server, const uint8_t *wire, size_
             size_t encoded = 0;
             (void)Ignition_Encode(&server->auth, &detail, server->query_reply[1], &encoded);
         }
-        memcpy(out, server->query_reply[0], 35);
-        return 35;
+        memcpy(out, server->query_reply[0], IGNITION_REPLY_BYTES);
+        return IGNITION_REPLY_BYTES;
     }
     IgnitionCommandCache *cache = &server->commands[request.data[0] - 1u];
     for (unsigned i = 0; i < 3; i++)
@@ -423,12 +433,12 @@ size_t IgnitionServer_Receive(IgnitionServer *server, const uint8_t *wire, size_
             if (cache != &server->commands[i] || memcmp(cache->request, request.data, 8))
                 return IgnitionServer_MakeReply(server, request.id, IGNITION_COMMAND_REPLY,
                                                 IGNITION_CONFLICT, out);
-            memcpy(out, cache->reply, 35);
-            return 35;
+            memcpy(out, cache->reply, IGNITION_REPLY_BYTES);
+            return IGNITION_REPLY_BYTES;
         }
     if (request.id <= server->last_command)
-        return IgnitionServer_MakeReply(server, request.id, IGNITION_COMMAND_REPLY,
-                                        IGNITION_OLD_ID, out);
+        return IgnitionServer_MakeReply(server, request.id, IGNITION_COMMAND_REPLY, IGNITION_OLD_ID,
+                                        out);
     server->last_command = request.id;
     if (request.data[0] == IGNITION_DISARM)
         server->query_next = server->query_count; /* Cancel unsent optional detail. */
@@ -436,17 +446,17 @@ size_t IgnitionServer_Receive(IgnitionServer *server, const uint8_t *wire, size_
     cache->valid = true;
     memcpy(cache->request, request.data, 8);
     uint8_t result = IgnitionServer_Execute(server, &request);
-    size_t encoded = IgnitionServer_MakeReply(server, request.id, IGNITION_COMMAND_REPLY,
-                                              result, cache->reply);
+    size_t encoded =
+        IgnitionServer_MakeReply(server, request.id, IGNITION_COMMAND_REPLY, result, cache->reply);
     memcpy(out, cache->reply, encoded);
     return encoded;
 }
-size_t IgnitionServer_Poll(IgnitionServer *server, uint8_t out[35])
+size_t IgnitionServer_Poll(IgnitionServer *server, uint8_t out[IGNITION_MAX_BYTES])
 {
     if (!server || !out || !server->epoch || server->query_next >= server->query_count)
         return 0;
-    memcpy(out, server->query_reply[server->query_next++], 35);
-    return 35;
+    memcpy(out, server->query_reply[server->query_next++], IGNITION_REPLY_BYTES);
+    return IGNITION_REPLY_BYTES;
 }
 void IgnitionClient_Init(IgnitionClient *client, const uint8_t acquisition[12],
                          const uint8_t controller[12], uint32_t rto, uint32_t operation,
@@ -491,18 +501,19 @@ IgnitionSessionResult IgnitionClient_SetSession(IgnitionClient *client, uint32_t
     if (epoch <= client->retired_epoch)
         return IGNITION_SESSION_RETIRED;
     client->epoch = epoch;
-    client->next_command = client->next_query = 1;
+    client->next_command = 1;
     client->profile_id = 0;
     client->request_result = IGNITION_REQUEST_OK;
     return IGNITION_SESSION_OK;
 }
 static IgnitionRequestResult IgnitionClient_Begin(IgnitionClient *client, uint8_t action,
-                                                uint8_t mode, uint32_t arm, uint16_t profile,
-                                                uint32_t now)
+                                                  uint8_t mode, uint32_t arm, uint16_t profile,
+                                                  uint32_t now)
 {
     if (!client || !client->ack_rto_ms || client->ack_rto_ms > IGNITION_MAX_RTO_MS ||
-        client->operation_ms < client->ack_rto_ms || client->operation_ms > IGNITION_MAX_OPERATION_MS ||
-        !client->max_attempts || client->max_attempts > IGNITION_MAX_ATTEMPTS)
+        client->operation_ms < client->ack_rto_ms ||
+        client->operation_ms > IGNITION_MAX_OPERATION_MS || !client->max_attempts ||
+        client->max_attempts > IGNITION_MAX_ATTEMPTS)
         return IGNITION_REQUEST_INVALID;
     if (!client->auth.key_bound)
         return client->request_result = IGNITION_REQUEST_KEY_UNBOUND;
@@ -510,7 +521,8 @@ static IgnitionRequestResult IgnitionClient_Begin(IgnitionClient *client, uint8_
         return client->request_result = IGNITION_REQUEST_LINK_DOWN;
     if (client->pending && action != IGNITION_DISARM)
         return client->request_result = IGNITION_REQUEST_BUSY;
-    uint16_t *next = action == IGNITION_QUERY ? &client->next_query : &client->next_command;
+    uint32_t *next =
+        client->transaction_source ? client->transaction_source : &client->next_command;
     if (!*next)
         return client->request_result = IGNITION_REQUEST_EXHAUSTED;
     IgnitionPacket request = {.type = IGNITION_REQUEST, .epoch = client->epoch, .id = *next};
@@ -518,11 +530,11 @@ static IgnitionRequestResult IgnitionClient_Begin(IgnitionClient *client, uint8_
     request.data[1] = mode;
     st_put32(request.data + 2, arm);
     st_put16(request.data + 6, profile);
-    uint8_t wire[35];
+    uint8_t wire[IGNITION_MAX_BYTES];
     size_t length = 0;
     if (Ignition_Encode(&client->auth, &request, wire, &length) != IGNITION_CODEC_OK)
         return client->request_result = IGNITION_REQUEST_INVALID;
-    *next = *next == UINT16_MAX ? 0 : (uint16_t)(*next + 1u);
+    *next = *next == UINT32_MAX ? 0 : *next + 1u;
     memcpy(client->request, wire, length);
     client->started_ms = now;
     client->attempts = client->seen = 0;
@@ -533,13 +545,13 @@ static IgnitionRequestResult IgnitionClient_Begin(IgnitionClient *client, uint8_
         client->have_grant = false;
     return client->request_result = IGNITION_REQUEST_OK;
 }
-IgnitionRequestResult IgnitionClient_Query(IgnitionClient *client, bool details,
-                                          uint16_t target, uint32_t now)
+IgnitionRequestResult IgnitionClient_Query(IgnitionClient *client, bool details, uint32_t target,
+                                           uint32_t now)
 {
     return IgnitionClient_Begin(client, IGNITION_QUERY, details ? 1 : 0, target, 0, now);
 }
 IgnitionRequestResult IgnitionClient_RequestArm(IgnitionClient *client, uint8_t mode,
-                                               uint16_t profile, uint32_t now)
+                                                uint16_t profile, uint32_t now)
 {
     if (!profile)
         return client ? (client->request_result = IGNITION_REQUEST_NO_PROFILE)
@@ -552,7 +564,7 @@ IgnitionRequestResult IgnitionClient_RequestFire(IgnitionClient *client, uint32_
         return client ? (client->request_result = IGNITION_REQUEST_NOT_ARMED)
                       : IGNITION_REQUEST_INVALID;
     IgnitionRequestResult result = IgnitionClient_Begin(client, IGNITION_FIRE, client->mode,
-                                                       client->arm_id, client->profile_id, now);
+                                                        client->arm_id, client->profile_id, now);
     if (result == IGNITION_REQUEST_OK)
         client->have_grant = false;
     return result;
@@ -566,21 +578,22 @@ bool IgnitionClient_RequestMatches(const IgnitionClient *client, const uint8_t *
     return client && wire && client->pending && length == IGNITION_REQUEST_BYTES &&
            !memcmp(client->request, wire, length);
 }
-bool IgnitionClient_TxDue(IgnitionClient *client, uint32_t now, uint8_t out[35], size_t *length)
+bool IgnitionClient_TxDue(IgnitionClient *client, uint32_t now, uint8_t out[IGNITION_MAX_BYTES],
+                          size_t *length)
 {
     if (!client || !out || !length)
         return false;
     *length = 0;
     if (!client->pending)
         return false;
-    bool fire = client->request[7] == IGNITION_FIRE;
+    bool fire = client->request[IGNITION_ACTION_OFFSET] == IGNITION_FIRE;
     uint32_t window = client->ack_rto_ms + client->jitter_ms;
-    if (client->request[7] == IGNITION_QUERY && client->request[8])
+    if (client->request[IGNITION_ACTION_OFFSET] == IGNITION_QUERY &&
+        client->request[IGNITION_MODE_OFFSET])
         window += client->ack_rto_ms; /* Two 35B replies, bounded by configured single-reply RTO. */
     if ((fire && (int32_t)(now - client->grant_deadline_ms) >= 0) ||
         (uint32_t)(now - client->started_ms) > client->operation_ms ||
-        (!client->waiting_tx && client->sent &&
-         (uint32_t)(now - client->last_done_ms) >= window &&
+        (!client->waiting_tx && client->sent && (uint32_t)(now - client->last_done_ms) >= window &&
          (fire || client->attempts >= client->max_attempts)))
     {
         client->pending = false;
@@ -589,15 +602,15 @@ bool IgnitionClient_TxDue(IgnitionClient *client, uint32_t now, uint8_t out[35],
         client->have_grant = false;
         return false;
     }
-    if (client->waiting_tx || (client->sent &&
-        (fire || (uint32_t)(now - client->last_done_ms) < window)))
+    if (client->waiting_tx ||
+        (client->sent && (fire || (uint32_t)(now - client->last_done_ms) < window)))
         return false;
     memcpy(out, client->request, IGNITION_REQUEST_BYTES);
     *length = IGNITION_REQUEST_BYTES;
     return true;
 }
 void IgnitionClient_TxAccepted(IgnitionClient *client, const uint8_t *wire, size_t length,
-                              uint32_t now)
+                               uint32_t now)
 {
     if (!IgnitionClient_RequestMatches(client, wire, length))
         return;
@@ -606,33 +619,34 @@ void IgnitionClient_TxAccepted(IgnitionClient *client, const uint8_t *wire, size
     client->attempts++;
     client->waiting_tx = client->sent = true;
 }
-void IgnitionClient_TxDone(IgnitionClient *client, const uint8_t *wire, size_t length,
-                         uint32_t now, uint32_t jitter, bool timed_out)
+void IgnitionClient_TxDone(IgnitionClient *client, const uint8_t *wire, size_t length, uint32_t now,
+                           uint32_t jitter, bool timed_out)
 {
     if (!IgnitionClient_RequestMatches(client, wire, length) || !client->waiting_tx)
         return;
     client->waiting_tx = false;
     client->last_done_ms = now;
     client->jitter_ms = jitter > IGNITION_MAX_JITTER_MS ? IGNITION_MAX_JITTER_MS : jitter;
-    if (timed_out && client->request[7] == IGNITION_FIRE)
+    if (timed_out && client->request[IGNITION_ACTION_OFFSET] == IGNITION_FIRE)
     {
         client->pending = false;
         client->operation = IGNITION_OPERATION_UNKNOWN;
     }
 }
-void IgnitionClient_Receive(IgnitionClient *client, const uint8_t *wire, size_t length, uint32_t now)
+void IgnitionClient_Receive(IgnitionClient *client, const uint8_t *wire, size_t length,
+                            uint32_t now)
 {
     IgnitionPacket reply;
     if (!client || !client->pending || !client->sent ||
         (uint32_t)(now - client->started_ms) > client->operation_ms ||
         Ignition_Decode(&client->auth, IGNITION_REPLY, wire, length, &reply) != IGNITION_CODEC_OK ||
-        reply.epoch != client->epoch || reply.id != st_get16(client->request + 5))
+        reply.epoch != client->epoch || reply.id != st_get32(client->request + IGNITION_ID_OFFSET))
         return;
-    bool query = client->request[7] == IGNITION_QUERY;
+    bool query = client->request[IGNITION_ACTION_OFFSET] == IGNITION_QUERY;
     uint8_t kind = reply.data[0];
     if ((!query && kind != IGNITION_COMMAND_REPLY) ||
         (query && kind != IGNITION_QUERY_REPLY && kind != IGNITION_DETAIL_REPLY) ||
-        (kind == IGNITION_DETAIL_REPLY && !client->request[8]))
+        (kind == IGNITION_DETAIL_REPLY && !client->request[IGNITION_MODE_OFFSET]))
         return;
     unsigned index = kind == IGNITION_DETAIL_REPLY ? 1u : 0u;
     uint8_t bit = (uint8_t)(1u << index);
@@ -644,7 +658,7 @@ void IgnitionClient_Receive(IgnitionClient *client, const uint8_t *wire, size_t 
     }
     memcpy(client->replies[index], reply.data, 10);
     client->seen |= bit;
-    uint8_t required = query && client->request[8] ? 3 : 1;
+    uint8_t required = query && client->request[IGNITION_MODE_OFFSET] ? 3 : 1;
     if (client->seen != required)
         return;
     const uint8_t *main = client->replies[0];
@@ -661,19 +675,21 @@ void IgnitionClient_Receive(IgnitionClient *client, const uint8_t *wire, size_t 
         client->profile_id = st_get16(client->details + 6);
     }
     client->have_grant = false;
-    if (!query && client->request[7] == IGNITION_ARM && client->result == IGNITION_ARM_GRANTED &&
-        client->state == IGNITION_ARMED && client->arm_id)
+    if (!query && client->request[IGNITION_ACTION_OFFSET] == IGNITION_ARM &&
+        client->result == IGNITION_ARM_GRANTED && client->state == IGNITION_ARMED && client->arm_id)
     {
         uint16_t remaining = st_get16(main + 8);
         client->grant_deadline_ms = client->first_tx_ms + remaining;
-        client->have_grant = remaining && remaining != UINT16_MAX &&
-                            (int32_t)(now - client->grant_deadline_ms) < 0;
-        client->mode = client->request[8];
-        client->profile_id = st_get16(client->request + 13);
+        client->have_grant =
+            remaining && remaining != UINT16_MAX && (int32_t)(now - client->grant_deadline_ms) < 0;
+        client->mode = client->request[IGNITION_MODE_OFFSET];
+        client->profile_id = st_get16(client->request + IGNITION_PROFILE_OFFSET);
     }
     client->pending = client->waiting_tx = false;
     client->request_result = IGNITION_REQUEST_OK;
-    client->operation = !query && (client->result == IGNITION_REJECTED ||
-                         client->result == IGNITION_FAILED || client->result >= IGNITION_OLD_ID)
-                            ? IGNITION_OPERATION_REJECTED : IGNITION_OPERATION_COMPLETE;
+    client->operation =
+        !query && (client->result == IGNITION_REJECTED || client->result == IGNITION_FAILED ||
+                   client->result >= IGNITION_OLD_ID)
+            ? IGNITION_OPERATION_REJECTED
+            : IGNITION_OPERATION_COMPLETE;
 }

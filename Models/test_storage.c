@@ -470,7 +470,7 @@ static void nv_powercuts(void)
     b.unverified = false;
     nv_bind(&s, &b, ST_NV_CONTROLLER);
     C(st_nv_provision(&s));
-    b.slots[0][35] ^= 1;
+    b.slots[0][ST2_MAX] ^= 1;
     C(st_nv_open(&s) == ST_NV_DAMAGED && !st_nv_provision(&s));
     b.fail_read = true;
     C(st_nv_open(&s) == ST_NV_IO_ERROR);
@@ -615,10 +615,10 @@ static void cal_wire_action(st2_server *server, uint16_t id, st_cal_action actio
         st_put64(p.data + 2, 100000);
         st_put32(p.data + 10, ST_CAL_G0_UM_S2);
     }
-    uint8_t in[35], out[35];
+    uint8_t in[ST2_MAX], out[ST2_MAX];
     size_t n = st2_encode(&p, in);
-    C(n == 23);
-    C(st2_server_receive(server, in, n, (st2_measurement){0}, now, out) == 26);
+    C(n == 32);
+    C(st2_server_receive(server, in, n, (st2_measurement){0}, now, out) == 35);
 }
 static void cal_dma_window(st_cal_system *system, uint64_t *now, int32_t raw, uint32_t seq)
 {

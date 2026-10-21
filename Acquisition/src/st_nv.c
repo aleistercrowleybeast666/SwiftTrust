@@ -222,5 +222,6 @@ bool st_nv_client_init(st2_client *client, st_nv_store *s, st2_timing timing)
     if (s->identity.role != ST_NV_CONTROLLER || st_nv_open(s) != ST_NV_VALID)
         return false;
     st2_client_init(client, st_nv_link_port(s), timing, s->identity.own_uid, s->identity.peer_uid);
+    client->counter = s->values.counter;
     return true;
 }

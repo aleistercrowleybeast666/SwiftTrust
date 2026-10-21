@@ -17,3 +17,4 @@ PA13,24,SYS_SWDIO,SWDIO,debug,reserved_debug
 PA14-BOOT0,25,SYS_SWCLK,SWCLK,debug,reserved_debug
 PA9,19,USART1_TX,DEBUG_UART_TX,debug serial,3v3_logic_candidate_not_bound
 PA10,21,USART1_RX,DEBUG_UART_RX,debug serial,3v3_logic_candidate_not_bound
+PB0,15,GPIO_Output,LINK_LED,link indication,idle_low_candidate

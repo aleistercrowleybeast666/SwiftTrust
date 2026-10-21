@@ -4,6 +4,8 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <stdatomic.h>
+#include "../../Common/Inc/st_project_config.h"
+#include "../../Common/Inc/st_task.h"
 
 uint16_t st_crc16(const uint8_t *p, size_t n);
 uint32_t st_crc32(const uint8_t *p, size_t n);
@@ -114,6 +116,10 @@ typedef struct
     int64_t nano_newtons_per_count, nano_volts_per_count_ch1;
     uint8_t gain_ch0, gain_ch1, wire_count;
     bool clock_verified, calibration_valid, simulated;
+    int32_t calibration_zero_raw, session_zero_raw;
+    uint32_t zero_samples;
+    uint64_t zero_time_us;
+    bool session_zero_valid;
 } st_log_config;
 typedef enum
 {

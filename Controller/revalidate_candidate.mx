@@ -13,6 +13,10 @@ set pin PA10 USART1_RX
 lock pin PA10 true
 set gpio parameters PA10 GPIO_Label CAND_DEBUG_UART_RX
 set mode USART1 Asynchronous
+set pin PB0 GPIO_Output
+lock pin PB0 true
+set gpio parameters PB0 GPIO_Label CAND_LINK_LED
+set gpio parameters PB0 PinState GPIO_PIN_RESET
 isPluginError "Pinout & Configuration"
 get pinout
 config save ${PROJECT_ROOT}\Controller\SwiftThrust_Controller_Candidate\SwiftThrust_Controller_Candidate.ioc

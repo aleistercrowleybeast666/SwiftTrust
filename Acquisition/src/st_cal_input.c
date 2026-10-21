@@ -34,11 +34,16 @@ static bool collecting(const st_cal_service *s)
 }
 void st_cal_input_step(st_cal_input *q, st_cal_service *s)
 {
-    bool run = collecting(s);
+    bool observe = q->observer_active && q->observer_active(q->observer_ctx);
+    bool run = collecting(s) || observe;
     atomic_store_explicit(&q->enabled, run, memory_order_release);
     uint32_t errors = atomic_load_explicit(&q->errors, memory_order_acquire);
     if (run && errors != q->seen_errors)
+    {
         st_cal_service_source_error(s);
+        if (observe && q->observer_error)
+            q->observer_error(q->observer_ctx);
+    }
     q->seen_errors = errors;
     /* Bounded even when the producer keeps receiving DRDY. Old in-flight frames
      * from before a window are discarded by edge timestamp, never re-timestamped. */
@@ -52,6 +57,10 @@ void st_cal_input_step(st_cal_input *q, st_cal_service *s)
         atomic_store_explicit(&q->tail, t + 1, memory_order_release);
         if (collecting(s) && c.time_us >= s->workflow.collect_us)
             (void)st_cal_service_feed(s, &c);
+        if (observe && q->observer_feed)
+            q->observer_feed(q->observer_ctx, &c);
     }
-    atomic_store_explicit(&q->enabled, collecting(s), memory_order_release);
+    atomic_store_explicit(
+        &q->enabled, collecting(s) || (q->observer_active && q->observer_active(q->observer_ctx)),
+        memory_order_release);
 }

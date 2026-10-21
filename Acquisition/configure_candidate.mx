@@ -128,11 +128,15 @@ set mode TIM2 "PWM Generation1 CH1"
 set mode TIM2 Internal
 set mode TIM2 OPM_bit
 set ip parameters TIM2 Prescaler 15
-set ip parameters TIM2 Period 5000000
+set ip parameters TIM2 Period 1000000
 set ip parameters TIM2 OCMode_PWM TIM_OCMODE_PWM2
 set ip parameters TIM2 Pulse 1
 set ip parameters TIM2 TIM_OnePulse_Mode TIM_OPMODE_SINGLE
 set ip parameters ADC1 SamplingTime-0#ChannelRegularConversion ADC_SAMPLETIME_480CYCLES
+set pin PB0 GPIO_Output
+lock pin PB0 true
+set gpio parameters PB0 GPIO_Label CAND_LINK_LED
+set gpio parameters PB0 PinState GPIO_PIN_RESET
 isPluginError "Pinout & Configuration"
 get pinout
 config save ${PROJECT_ROOT}\Acquisition\SwiftThrust_Acquisition_Candidate.ioc

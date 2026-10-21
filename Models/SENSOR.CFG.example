@@ -11,3 +11,5 @@ RATED_FORCE_MN=0
 EXCITATION_UV=2500000
 MAX_SPAN_COUNTS=0
 MIN_DELTA_COUNTS=0
+# Optional boot default. Runtime menu changes apply until reboot; no calibration rewrite.
+AUTO_ZERO=0

@@ -32,26 +32,133 @@ static const struct
               {'t', {0x04, 0x3f, 0x44, 0x40, 0x20}}, {'=', {0x14, 0x14, 0x14, 0x14, 0x14}},
               {':', {0x00, 0x00, 0x24, 0x00, 0x00}}, {'?', {0x02, 0x01, 0x51, 0x09, 0x06}},
               {' ', {0x00, 0x00, 0x00, 0x00, 0x00}}};
-void st_ui_raster(const st_ui_model *m, uint8_t frame[1024])
+#if ST_UI_CHINESE
+#include "st_font_subset.inc"
+#endif
+static bool Ui_ReadCodepoint(const char **cursor, uint32_t *value)
+{
+    const unsigned char *s = (const unsigned char *)*cursor;
+    if (!*s)
+        return false;
+    unsigned count = *s < 0x80                  ? 1
+                     : *s >= 0xC2 && *s <= 0xDF ? 2
+                     : *s >= 0xE0 && *s <= 0xEF ? 3
+                     : *s >= 0xF0 && *s <= 0xF4 ? 4
+                                                : 0;
+    if (!count)
+    {
+        *value = UINT32_MAX;
+        (*cursor)++;
+        return true;
+    }
+    uint32_t code = count == 1 ? *s : (uint32_t)(*s & ((1u << (7u - count)) - 1u));
+    for (unsigned i = 1; i < count; i++)
+    {
+        if (!s[i] || (s[i] & 0xC0u) != 0x80u)
+        {
+            *value = UINT32_MAX;
+            (*cursor)++;
+            return true;
+        }
+        code = (code << 6) | (s[i] & 0x3Fu);
+    }
+    if ((count == 2 && code < 0x80) || (count == 3 && code < 0x800) ||
+        (count == 4 && code < 0x10000) || (code >= 0xD800 && code <= 0xDFFF) || code > 0x10FFFF)
+    {
+        *value = UINT32_MAX;
+        (*cursor)++;
+        return true;
+    }
+    *value = code;
+    *cursor += count;
+    return true;
+}
+static const uint8_t *Ui_FindGlyph(uint32_t code, unsigned *width)
+{
+    *width = 6;
+    if (code < 128)
+    {
+        for (unsigned i = 0; i < sizeof glyphs / sizeof glyphs[0]; i++)
+            if ((uint32_t)(unsigned char)glyphs[i].code == code)
+                return glyphs[i].columns;
+        return NULL;
+    }
+#if ST_UI_CHINESE
+    *width = 12;
+    for (unsigned i = 0; i < sizeof cjk_glyphs / sizeof cjk_glyphs[0]; i++)
+        if (cjk_glyphs[i].code == code)
+            return cjk_glyphs[i].columns;
+#endif
+    return NULL;
+}
+UiTextResult Ui_ValidateText(const char *text, unsigned *pixels)
+{
+    if (!text || !pixels)
+        return UI_TEXT_INVALID;
+    *pixels = 0;
+    uint32_t code;
+    while (Ui_ReadCodepoint(&text, &code))
+    {
+        if (code == UINT32_MAX)
+            return UI_TEXT_INVALID;
+        unsigned width;
+        const uint8_t *glyph = Ui_FindGlyph(code, &width);
+        if (!glyph)
+            return UI_TEXT_MISSING_GLYPH;
+        *pixels += width;
+    }
+    return *pixels > ST_OLED_WIDTH ? UI_TEXT_TOO_WIDE : UI_TEXT_OK;
+}
+static void Ui_SetPixel(uint8_t frame[1024], unsigned x, unsigned y)
+{
+    if (x < ST_OLED_WIDTH && y < ST_OLED_HEIGHT)
+        frame[(y / 8u) * ST_OLED_WIDTH + x] |= (uint8_t)(1u << (y % 8u));
+}
+void st_ui_raster(const st_ui_model *model, uint8_t frame[1024])
 {
     memset(frame, 0, 1024);
-    for (unsigned row = 0; row < 8; row++)
-        for (unsigned col = 0; col < 21 && m->rows[row][col]; col++)
-        {
-            char c = m->rows[row][col];
-            const uint8_t *g = NULL;
-            for (unsigned i = 0; i < sizeof(glyphs) / sizeof(glyphs[0]); i++)
-                if (glyphs[i].code == c)
-                {
-                    g = glyphs[i].columns;
-                    break;
-                }
-            if (g)
-                memcpy(frame + row * 128 + col * 6, g, 5);
-        }
-    if (m->inverse && m->inverse_row < 8 && m->inverse_column < 21)
+    for (unsigned row = 0; row < ST_OLED_ROWS; row++)
     {
-        for (unsigned i = 0; i < 6; i++)
-            frame[(unsigned)m->inverse_row * 128 + (unsigned)m->inverse_column * 6 + i] ^= 0xffu;
+        const char *text = model->rows[row];
+        unsigned x = 0;
+        uint32_t code;
+        while (Ui_ReadCodepoint(&text, &code))
+        {
+            unsigned width;
+            const uint8_t *glyph = Ui_FindGlyph(code, &width);
+            if (!glyph)
+            {
+                code = '?';
+                glyph = Ui_FindGlyph(code, &width);
+            }
+            if (x + width > ST_OLED_WIDTH)
+                break;
+            if (glyph)
+            {
+                for (unsigned column = 0; column < (code < 128 ? 5u : 12u); column++)
+                    for (unsigned y = 0; y < (code < 128 ? 12u : 14u); y++)
+                    {
+                        bool on = code < 128 ? ((glyph[column] >> (y * 7u / 12u)) & 1u) != 0
+                                             : (((unsigned)glyph[column * 2u] |
+                                                 ((unsigned)glyph[column * 2u + 1u] << 8)) &
+                                                (1u << y)) != 0;
+                        if (on)
+                            Ui_SetPixel(frame, x + column,
+                                        row * ST_OLED_ROW_HEIGHT + (code < 128 ? 2u : 1u) + y);
+                    }
+            }
+            x += width;
+        }
+    }
+    if (model->inverse && model->inverse_row < ST_OLED_ROWS)
+    {
+        unsigned start = model->inverse_digit ? (unsigned)model->inverse_column * 6u : 0;
+        unsigned end = model->inverse_digit ? start + 6u : ST_OLED_WIDTH;
+        if (end > ST_OLED_WIDTH)
+            end = ST_OLED_WIDTH;
+        for (unsigned x = start; x < end; x++)
+            for (unsigned y = 0; y < ST_OLED_ROW_HEIGHT; y++)
+                frame[((unsigned)model->inverse_row * 2u + y / 8u) * ST_OLED_WIDTH + x] ^=
+                    (uint8_t)(1u << (y % 8u));
     }
 }

@@ -1,0 +1,79 @@
+log4j user configuration file not found: C:\Users\chdxm/.stm32cubemx/log4j2.xml
+Configure log4j with default settings from jar:file:/C:/Program%20Files/STMicroelectronics/STM32Cube/STM32CubeMX/STM32CubeMX.exe!/log4j/log4j2.stm32cubemx.xml
+config load D:\stm32_project\SwiftThrust\Acquisition\SwiftThrust_Acquisition_Candidate\SwiftThrust_Acquisition_Candidate.ioc
+2026-10-22 01:38:22,200 [ERROR] Engine:466 - C:\Users\chdxm\.stm32cubemx\thirdparties\pdsc\STMicroelectronics.X-CUBE-SMBUS.2.1.1.pdsc: PDSC version is not supported
+2026-10-22 01:38:22,733 [ERROR] Engine:466 - C:\Users\chdxm\.stm32cubemx\thirdparties\pdsc\STMicroelectronics.X-CUBE-WBA.1.1.0.pdsc: PDSC version is not supported
+1 : Invalid condition id : UX_CORESTACK_Condition cause : null
+1 : Invalid condition id : UX_CORESTACK_Condition cause : null
+1 : Invalid condition id : UX_CORESTACK_Condition cause : null
+1 : Invalid condition id : UX_CORESTACK_Condition cause : null
+1 : Invalid condition id : UX_CORESTACK_Condition cause : null
+2026-10-22 01:38:24,082 [ERROR] Engine:466 - C:\Users\chdxm\.stm32cubemx\thirdparties\pdsc\STMicroelectronics.FP-SNS-STAIOTCFT.2.0.0.pdsc: PDSC version is not supported
+2026-10-22 01:38:24,408 [ERROR] Engine:466 - C:\Users\chdxm\.stm32cubemx\thirdparties\pdsc\STMicroelectronics.X-CUBE-ST67W61.1.3.0.pdsc: PDSC version is not supported
+2026-10-22 01:38:24,752 [ERROR] Engine:466 - C:\Users\chdxm\.stm32cubemx\thirdparties\pdsc\STMicroelectronics.X-CUBE-BLEMGR.4.2.0.pdsc: PDSC version is not supported
+OK
+get version
+6.15.0
+OK
+set pin PA0-WKUP TIM2_CH1
+OK
+lock pin PA0-WKUP true
+OK
+set gpio parameters PA0-WKUP GPIO_Label CAND_IGNITION_SIGNAL
+OK
+set gpio parameters PA0-WKUP GPIO_PuPd GPIO_PULLDOWN
+OK
+set mode TIM2 "PWM Generation1 CH1"
+OK
+set mode TIM2 Internal
+OK
+set mode TIM2 OPM_bit
+OK
+set ip parameters TIM2 Prescaler 15
+OK
+set ip parameters TIM2 Period 1000000
+OK
+set ip parameters TIM2 OCMode_PWM TIM_OCMODE_PWM2
+OK
+set ip parameters TIM2 Pulse 1
+OK
+set ip parameters TIM2 TIM_OnePulse_Mode TIM_OPMODE_SINGLE
+OK
+get mode active TIM2
+Mode: active | TIM2 | Internal | Clock Source   :Internal Clock
+Mode: active | TIM2 | PWM Generation1 CH1 | Channel1:PWM Generation CH1
+Mode: active | TIM2 | OPM_bit | One Pulse Mode:Set
+OK
+get ip parameters TIM2 Prescaler
+TIM2: Prescaler="15"
+OK
+get ip parameters TIM2 Period
+TIM2: Period="1000000"
+OK
+get ip parameters TIM2 OCMode_PWM
+TIM2: OCMode_PWM="TIM_OCMODE_PWM2"
+OK
+get ip parameters TIM2 Pulse
+TIM2: Pulse="1"
+OK
+get ip parameters TIM2 TIM_OnePulse_Mode
+TIM2: TIM_OnePulse_Mode="TIM_OPMODE_SINGLE"
+OK
+set ip parameters ADC1 SamplingTime-0#ChannelRegularConversion ADC_SAMPLETIME_480CYCLES
+OK
+set pin PB0 GPIO_Output
+OK
+lock pin PB0 true
+OK
+set gpio parameters PB0 GPIO_Label CAND_LINK_LED
+OK
+set gpio parameters PB0 PinState GPIO_PIN_RESET
+OK
+isPluginError "Pinout & Configuration"
+Pinout & Configuration Error: false
+OK
+config save D:\stm32_project\SwiftThrust\Acquisition\SwiftThrust_Acquisition_Candidate\SwiftThrust_Acquisition_Candidate.ioc
+OK
+exit
+Bye bye
+CUBEMX_PROCESS_EXIT=0

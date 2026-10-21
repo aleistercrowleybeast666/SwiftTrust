@@ -66,9 +66,8 @@ static bool snapshot(void *ctx, st_cal_view *v)
     /* A routine read-only refresh does not freeze digit editing. A command's
      * uncertain outcome can never be hidden by an older cached SAVED screen. */
     v->pending = pending && !background;
-    bool fresh = st2_client_fresh(c, now) &&
-                 (uint32_t)(now - c->cal_received_ms) <=
-                     3u * c->timing.heartbeat_ms + c->timing.max_airtime_ms + 1000u;
+    bool fresh =
+        st2_client_fresh(c, now) && (uint32_t)(now - c->cal_received_ms) <= ST_LINK_LOST_MS;
     if (!v->pending && (!fresh || (!valid && !background)))
     {
         v->state = ST_CAL_FAILED;

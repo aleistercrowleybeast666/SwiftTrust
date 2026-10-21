@@ -53,7 +53,7 @@ static void oled_test(void){sh_bus b={0};st_oled o;st_i2c_port p={&b,sh_submit,s
  st_oled_init_profile(&o,p,(st_oled_config){ST_OLED_SSD1306,0x3d,2},0);C(o.failed);
  G("SH1106 0x3C / eight page addresses / two-column offset / all 1024 bytes / SSD1306 profile separation");
 }
-typedef struct{uint8_t regs[65536],payload[49];uint16_t irq;uint8_t length;unsigned reset_count,commands;bool ready,fail,patch_seen;uint8_t last_write[49],last_length;} rf_bus;
+typedef struct{uint8_t regs[65536],payload[ST2_MAX];uint16_t irq;uint8_t length;unsigned reset_count,commands;bool ready,fail,patch_seen;uint8_t last_write[ST2_MAX],last_length;} rf_bus;
 static bool rf_ready(void *ctx){return ((rf_bus*)ctx)->ready;}
 static bool rf_reset(void *ctx){rf_bus *b=ctx;b->reset_count++;b->ready=true;return true;}
 static bool rf_command(void *ctx,const uint8_t *cmd,uint16_t cn,const uint8_t *tx,uint8_t *rx,uint16_t n){rf_bus *b=ctx;b->commands++;if(b->fail)return false;C(cn>0);
@@ -72,7 +72,7 @@ static void radio_test(void){static rf_bus b;memset(&b,0,sizeof(b));st_radio r;
  for(unsigned i=0;i<20&&r.phase<13&&!r.failed;i++)st_radio_tick(&r,i);
  C(!r.failed&&r.phase==13&&b.reset_count==1&&b.patch_seen);
  C((b.regs[SX128X_REG_LNA_REGIME]&0xC0u)==0xC0u);
- st2_packet packet={.type=ST2_START,.epoch=123,.id=7};uint8_t bytes[49],received[49];size_t n=st2_encode(&packet,bytes),rn=0;
+ st2_packet packet={.type=ST2_START,.epoch=123,.id=7};uint8_t bytes[ST2_MAX],received[ST2_MAX];size_t n=st2_encode(&packet,bytes),rn=0;
  C(st_radio_send(&r,bytes,n));st_radio_tick(&r,20);C(r.tx_active&&!r.tx_pending&&b.last_length==n&&!memcmp(bytes,b.last_write,n));
  b.irq=SX128X_IRQ_TX_DONE;st_radio_irq_isr(&r);st_radio_tick(&r,30);C(!r.tx_active&&r.tx_done==1);
  memcpy(b.payload,bytes,n);b.length=(uint8_t)n;b.irq=SX128X_IRQ_RX_DONE;st_radio_irq_isr(&r);st_radio_tick(&r,40);
@@ -81,7 +81,7 @@ static void radio_test(void){static rf_bus b;memset(&b,0,sizeof(b));st_radio r;
  C(st_radio_send(&r,bytes,n));st_radio_tick(&r,60);st_radio_tick(&r,700);C(!r.tx_active&&r.tx_timeouts==1);
  b.ready=false;st_radio_tick(&r,800);st_radio_tick(&r,901);C(r.failed);
  c.verified=false;st_radio_init(&r,(st_radio_port){&b,rf_command,rf_reset,rf_ready},c);C(r.failed);
- G("official SX128x LoRa init and SF erratum / reset despite BUSY / variable-length TX-RX / IRQ-CRC / timeout / BUSY latch / unverified profile (v2 short framing)");
+ G("official SX128x LoRa init and SF erratum / reset despite BUSY / variable-length TX-RX / IRQ-CRC / timeout / BUSY latch / unverified profile (R8 framing)");
 }
 typedef struct{bool active;const uint8_t *p;uint8_t copy[64];size_t n;unsigned bytes;bool busy;} debug_bus;
 static st_async_result debug_submit(void *ctx,const uint8_t *p,size_t n){debug_bus *b=ctx;if(b->busy)return ST_IO_WAIT;C(!b->active&&n<=64);b->active=true;b->p=p;b->n=n;memcpy(b->copy,p,n);return ST_IO_DONE;}

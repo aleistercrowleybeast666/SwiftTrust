@@ -31,32 +31,33 @@ def png_preview(frames,target):
     target.write_bytes(image)
 
 def main():
+    language='en' if '--english' in sys.argv else 'zh'
     reports=[datetime.datetime.now(datetime.timezone.utc).isoformat(), 'Host-only synthetic regression. No MCU/RF/SD/OLED hardware accessed.']
     with tempfile.TemporaryDirectory(prefix='swiftthrust-host-') as temporary:
         t=Path(temporary);exe=t/'tests.exe';fixture=t/'synthetic.stlog';frames=t/'ui.raw';calframes=t/'calibration.raw'
-        sources=sorted((ROOT/'Acquisition/src').glob('*.c'))+sorted((ROOT/'Controller/src').glob('*.c'))+[ROOT/'Models/test_core.c',ROOT/'Models/test_lowlevel.c',ROOT/'Models/test_r2.c',ROOT/'Models/test_stop.c',ROOT/'Models/test_storage.c',ROOT/'Models/test_calibration.c',ROOT/'Acquisition/ports/st_diskio.c',ROOT/'Acquisition/ports/st_fatfs_worker.c',ROOT/'Acquisition/ports/st_cal_fatfs.c',ROOT/'Acquisition/ports/st_cal_system.c',ROOT/'Models/test_cal_integration.c',ROOT/'Acquisition/vendor/tiny_aes/aes.c',ROOT/'Models/test_ignition.c',ROOT/'Models/test_battery.c']
+        sources=sorted((ROOT/'Acquisition/src').glob('*.c'))+sorted((ROOT/'Controller/src').glob('*.c'))+[ROOT/'Common/Src/st_task.c',ROOT/'Models/test_core.c',ROOT/'Models/test_lowlevel.c',ROOT/'Models/test_r2.c',ROOT/'Models/test_stop.c',ROOT/'Models/test_storage.c',ROOT/'Models/test_calibration.c',ROOT/'Acquisition/ports/st_diskio.c',ROOT/'Acquisition/ports/st_fatfs_worker.c',ROOT/'Acquisition/ports/st_cal_fatfs.c',ROOT/'Acquisition/ports/st_cal_system.c',ROOT/'Models/test_cal_integration.c',ROOT/'Acquisition/vendor/tiny_aes/aes.c',ROOT/'Models/test_ignition.c',ROOT/'Models/test_battery.c']
         sdk=sdk_root()
         fatfs=sdk/'fatfs/src/ff.c';fobj=t/'fatfs.o'
-        frun=subprocess.run([str(GCC),'-std=c11','-O2','-Wall','-Wextra','-Werror','-I',str(ROOT/'Acquisition/ports/fatfs_config'),'-I',str(fatfs.parent),'-c',str(fatfs),'-o',str(fobj)],capture_output=True,text=True,timeout=60)
+        frun=subprocess.run([str(GCC),'-std=c11','-O2','-Wall','-Wextra','-Werror','-I',str(ROOT/'Acquisition/ports/fatfs_config'),'-I',str(fatfs.parent),'-c',str(fatfs),'-o',str(fobj)],capture_output=True,text=True,encoding='utf-8',errors='replace',timeout=60)
         if frun.returncode:print(frun.stdout+frun.stderr);return frun.returncode
         vendor=ROOT/'Acquisition/vendor/semtech_sx128x/sx128x.c';vobj=t/'vendor.o'
-        vrun=subprocess.run([str(GCC),'-std=c11','-O2','-Wall','-Wextra','-Werror','-I',str(vendor.parent),'-c',str(vendor),'-o',str(vobj)],capture_output=True,text=True,timeout=60)
+        vrun=subprocess.run([str(GCC),'-std=c11','-O2','-Wall','-Wextra','-Werror','-I',str(vendor.parent),'-c',str(vendor),'-o',str(vobj)],capture_output=True,text=True,encoding='utf-8',errors='replace',timeout=60)
         if vrun.returncode:print(vrun.stdout+vrun.stderr);return vrun.returncode
         reports.append('Official vendor source compiled separately with -Wall -Wextra -Werror; project code retains conversion/shadow checks; vendor remains unmodified.')
         sources.append(vendor) # included in source hashes, linked via its separate object
-        cmd=[str(GCC),'-std=c11','-O2','-Wall','-Wextra','-Werror','-Wpedantic','-Wconversion','-Wshadow',
+        cmd=[str(GCC),'-DST_UI_CHINESE='+('0' if language=='en' else '1'),'-finput-charset=UTF-8','-fexec-charset=UTF-8','-std=c11','-O2','-Wall','-Wextra','-Werror','-Wpedantic','-Wconversion','-Wshadow',
              '-I',str(ROOT/'Acquisition/vendor/semtech_sx128x'),'-I',str(ROOT/'Acquisition/include'),'-I',str(ROOT/'Controller/include'),'-I',str(ROOT/'Acquisition/ports'),'-I',str(ROOT/'Acquisition/ports/fatfs_config'),'-isystem',str(fatfs.parent),*[str(p) for p in sources if p!=vendor],str(vobj),str(fobj),'-o',str(exe)]
-        built=subprocess.run(cmd,capture_output=True,text=True,timeout=60)
+        built=subprocess.run(cmd,capture_output=True,text=True,encoding='utf-8',errors='replace',timeout=60)
         reports+=['Compiler: '+subprocess.check_output([str(GCC),'--version'],text=True).splitlines()[0],
                   'Flags: -std=c11 -O2 -Wall -Wextra -Werror -Wpedantic -Wconversion -Wshadow',built.stdout,built.stderr]
         if built.returncode:
             print('\n'.join(reports));return built.returncode
         ignframes=t/'ignition.raw'
-        run=subprocess.run([str(exe),str(fixture),str(frames),str(calframes),str(ignframes)],capture_output=True,text=True,timeout=60)
+        run=subprocess.run([str(exe),str(fixture),str(frames),str(calframes),str(ignframes)],capture_output=True,text=True,encoding='utf-8',errors='replace',timeout=60)
         reports += [run.stdout,run.stderr]
         if run.returncode:
             print('\n'.join(reports));return run.returncode
-        png_preview(ignframes.read_bytes(),ROOT/'Models/ignition_ui_preview.png')
+        png_preview(ignframes.read_bytes(),ROOT/('Models/ignition_ui_preview'+('_en' if language=='en' else '')+'.png'))
         rows,report=read_log(fixture)
         assert len(rows)==1500 and report['clean_close'] and report['simulated'] and not report['calibrated']
         assert all(r['force_N']=='' and r['ch1_V']=='' for r in rows)
@@ -77,18 +78,25 @@ def main():
         struct.pack_into('<q',calibrated,40,1000000);struct.pack_into('<I',calibrated,508,zlib.crc32(calibrated[:508]))
         fixture.write_bytes(calibrated);values,rep=read_log(fixture)
         assert rep['calibrated'] and values[0]['force_N']=='0.156'
+        assert rep['session_zero'] is None # pre-R8 header remains readable
+        calibrated[60:64]=b'SZR1';struct.pack_into('<i',calibrated,36,150)
+        struct.pack_into('<iiIQ',calibrated,64,100,150,512,1000000)
+        struct.pack_into('<I',calibrated,508,zlib.crc32(calibrated[:508]))
+        fixture.write_bytes(calibrated);values,rep=read_log(fixture)
+        assert values[0]['force_N']=='0.106' and rep['session_zero']=={
+            'calibration_zero_raw':100,'session_zero_raw':150,'samples':512,'time_us':1000000}
         calibrated[512+22]=1;struct.pack_into('<I',calibrated,512+28,zlib.crc32(calibrated[512:512+28]))
         fixture.write_bytes(calibrated);values,_=read_log(fixture);assert values[0]['force_N']==''
-        reports+=['PASS Python exporter: clean/uncalibrated/calibrated/invalid-ADC/truncated-tail/record-CRC/header-CRC/exclusive-output',
-                  'Preview panels: HOME, CAPTURE ONLY, IGNITION ONLY, COMBINED, both ignition confirmations, STATUS, unavailable STOP (synthetic values).']
-        png_preview(frames.read_bytes(),ROOT/'Models/ui_host_preview.png')
-        png_preview(calframes.read_bytes(),ROOT/'Models/calibration_ui_preview.png')
+        reports+=['PASS Python exporter: clean/uncalibrated/calibrated/SZR1-and-old-header-compatibility/invalid-ADC/truncated-tail/record-CRC/header-CRC/exclusive-output',
+                  'R8 previews: four fixed rows, home, three modes, default BACK confirmation, sensor settings, scrollable status, calibration and eight output task states (synthetic values).']
+        png_preview(frames.read_bytes(),ROOT/('Models/ui_host_preview'+('_en' if language=='en' else '')+'.png'))
+        png_preview(calframes.read_bytes(),ROOT/('Models/calibration_ui_preview'+('_en' if language=='en' else '')+'.png'))
         reports.append('FatFs R0.12c external SDK SHA256: '+hashlib.sha256(fatfs.read_bytes()).hexdigest())
         reports.append('Source SHA256:')
-        for p in sources+sorted((ROOT/'Acquisition/include').glob('*.h'))+sorted((ROOT/'Controller/include').glob('*.h'))+sorted((ROOT/'Acquisition/ports').rglob('*.h'))+sorted((ROOT/'Controller/ports').rglob('*.h')):
+        for p in sources+sorted((ROOT/'Common/Inc').glob('*.h'))+sorted((ROOT/'Acquisition/include').glob('*.h'))+sorted((ROOT/'Controller/include').glob('*.h'))+sorted((ROOT/'Acquisition/ports').rglob('*.h'))+sorted((ROOT/'Controller/ports').rglob('*.h')):
             reports.append(hashlib.sha256(p.read_bytes()).hexdigest()+' '+p.relative_to(ROOT).as_posix())
     output='\n'.join(x for x in reports if x.strip())+'\n'
-    (ROOT/'Models/firmware_host_validation.log').write_text(output,encoding='utf-8')
+    (ROOT/('Models/firmware_host_validation'+('_en' if language=='en' else '')+'.log')).write_text(output,encoding='utf-8')
     print(output)
     return 0
 

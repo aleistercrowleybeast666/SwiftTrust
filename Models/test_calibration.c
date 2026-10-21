@@ -274,6 +274,9 @@ static void frame(FILE *out, st_ui *u, st2_client *client)
 {
     st_ui_model model;
     st_ui2_render(u, client, (st_voltage_view){.kind = ST_V_MEASURED, .mv = 4100}, 10, &model);
+    C(model.inverse_row<ST_OLED_ROWS);
+    for(unsigned row=0;row<ST_OLED_ROWS;row++)
+    { unsigned width;C(Ui_ValidateText(model.rows[row],&width)==UI_TEXT_OK); }
     uint8_t pixels[1024];
     st_ui_raster(&model, pixels);
     C(fwrite(pixels, 1, 1024, out) == 1024);
@@ -307,9 +310,10 @@ static void ui_workflow(const char *images)
                          .received_ms = 0,
                          .flags = 64,
                          .timing = {10000, 2200, 2500, 100000, 4}};
-    rotate(&ui, &client, 2);
     press(&ui, &client);
     C(ui.page == ST_UI_CAPTURE);
+    rotate(&ui, &client, 3);
+    press(&ui, &client);
     rotate(&ui, &client, 2);
     press(&ui, &client);
     C(ui.page == ST_UI_CALIBRATION && cal.page == ST_CAL_UI_INTRO && cal.selection == 1);
@@ -360,21 +364,22 @@ static void ui_workflow(const char *images)
     st_ui_model inverse, normal;
     uint8_t a[1024], n[1024];
     st_ui2_render(&ui, &client, (st_voltage_view){0}, 10, &inverse);
-    C(inverse.inverse && inverse.inverse_row == 3 && inverse.inverse_column == 9);
+    C(inverse.inverse && inverse.inverse_row == 1 && inverse.inverse_column == 9);
     normal = inverse;
     normal.inverse = false;
     st_ui_raster(&inverse, a);
     st_ui_raster(&normal, n);
     for (unsigned i = 0; i < 1024; i++)
     {
-        unsigned begin = 3u * 128u + 9u * 6u;
-        C(a[i] == (uint8_t)(n[i] ^ ((i >= begin && i < begin + 6u) ? 255u : 0u)));
+        unsigned column = i % 128u, page = i / 128u;
+        bool selected = column >= 9u * 6u && column < 10u * 6u && page >= 2u && page < 4u;
+        C(a[i] == (uint8_t)(n[i] ^ (selected ? 255u : 0u)));
     }
     rotate(&ui, &client, 1);
     press(&ui, &client);
     C(cal.page == ST_CAL_UI_REFERENCE && cal.selection == 1);
     st_cal_ui_render(&cal, &panel);
-    C(strstr(panel.rows[1], "1.234 kg") && strstr(panel.rows[2], "9.80665"));
+    C(strstr(panel.rows[1], "1.234 kg") && strstr(panel.rows[3], "9.80665"));
     frame(out, &ui, &client);
     {
         st_ui_model units_model;
@@ -408,7 +413,7 @@ static void ui_workflow(const char *images)
     C(cal.page == ST_CAL_UI_RESULT && active.revision == 2 && ctx.calls == 1 &&
       cal.view.state == ST_CAL_COMMITTED);
     press(&ui, &client);
-    C(ui.page == ST_UI_CAPTURE && ui.selection == 2 && !client.pending);
+    C(ui.page == ST_UI_SETTINGS && ui.selection == 0 && !client.pending);
     G("cal encoder-only preset/custom workflow / safe-default confirmations / full value and unit "
       "/ select-versus-edit / monochrome inverse digit / no RF transaction / save only after "
       "reviewed candidate");
@@ -444,10 +449,10 @@ static void editor_boundaries(void)
     rotate(&ui, &client, -3);
     press(&ui, &client);
     C(cal.page == ST_CAL_UI_EDITOR && cal.draft.unit == ST_CAL_GRAMS);
-    rotate(&ui, &client, 9);
+    rotate(&ui, &client, -1);
     press(&ui, &client);
     C(cal.page == ST_CAL_UI_EDITOR && cal.local_error == ST_CAL_REFERENCE && ctx.calls == 0);
-    rotate(&ui, &client, -9);
+    rotate(&ui, &client, 2);
     press(&ui, &client);
     rotate(&ui, &client, -1);
     C(cal.edit_value == 900000000);
@@ -465,8 +470,7 @@ static void editor_boundaries(void)
     C(cal.page == ST_CAL_UI_REFERENCE && cal.view.error == ST_CAL_REFERENCE);
     rotate(&ui, &client, 1);
     press(&ui, &client);
-    C(cal.page == ST_CAL_UI_EDITOR && cal.selection == 9);
-    rotate(&ui, &client, 1);
+    C(cal.page == ST_CAL_UI_EDITOR && cal.selection == 10);
     press(&ui, &client);
     C(cal.page == ST_CAL_UI_UNITS);
     rotate(&ui, &client, -2);
@@ -474,14 +478,13 @@ static void editor_boundaries(void)
     C(cal.page == ST_CAL_UI_EDITOR && cal.draft.unit == ST_CAL_KILOGRAMS && cal.edit_value == 0 &&
       cal.unit_reset);
     st_cal_ui_render(&cal, &panel);
-    C(strstr(panel.rows[5], "VALUE CLEAR"));
-    rotate(&ui, &client, 10);
+    C(strstr(panel.rows[3], Ui_Text("数值已清零", "VALUE CLEARED")));
     press(&ui, &client);
     C(cal.page == ST_CAL_UI_UNITS);
     press(&ui, &client);
     C(cal.page == ST_CAL_UI_LOAD_KIND);
     press(&ui, &client);
-    C(ui.page == ST_UI_CAPTURE);
+    C(ui.page == ST_UI_SETTINGS);
     C(!memcmp(&active, &old, sizeof(old)) && ctx.calls == 0);
     ctx.idle = false;
     ui.page = ST_UI_CALIBRATION;

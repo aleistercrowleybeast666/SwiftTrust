@@ -1,224 +1,8 @@
 #include "st_link2.h"
 #include <string.h>
-/* Wire contract: byte0 is TYPE only (no version bits). All multibyte fields
- * use LE helpers; CRC is always the final two bytes. Handshake and short packets
- * intentionally have different layouts; check their exact length before reads. */
-static size_t wire_length(const st2_packet *p)
-{
-    switch (p->type)
-    {
-    case ST2_STATUS:
-        return 12;
-    case ST2_START:
-    case ST2_STOP:
-    case ST2_CAL_QUERY:
-        return 9;
-    case ST2_CAL_COMMAND:
-        return 23;
-    case ST2_IGN_REQUEST:
-    case ST2_DISCOVER:
-    case ST2_ADVERTISE:
-        return 33;
-    case ST2_IGN_REPLY:
-        return 35;
-    case ST2_CAL_REPLY:
-        return p->count == 16 ? 26 : 0;
-    case ST2_ACK:
-    case ST2_DETAILS_QUERY:
-        return 10;
-    case ST2_DETAILS_REPLY:
-        return p->count <= 16 ? 11u + p->count : 0;
-    case ST2_HELLO:
-        return 35;
-    case ST2_HELLO_REPLY:
-        return 27;
-    case ST2_COMMIT:
-        return 15;
-    default:
-        return 0;
-    }
-}
-static bool fields_valid(const st2_packet *p)
-{
-    if (p->type == ST2_DISCOVER || p->type == ST2_ADVERTISE)
-        return p->id != 0;
-    if (p->type == ST2_HELLO)
-        return p->counter != 0;
-    if (!p->epoch)
-        return false;
-    if (p->type == ST2_HELLO_REPLY || p->type == ST2_COMMIT)
-        return p->counter != 0;
-    if (!p->id)
-        return false;
-    /* Transport validation only. Identity/CMAC and all action semantics are
-     * checked again by the ignition endpoint before any state is changed. */
-    if (p->type == ST2_IGN_REQUEST || p->type == ST2_IGN_REPLY)
-        return true;
-    if (p->type == ST2_STATUS)
-        return (p->flags & 7u) <= ST_FAULT && (!(p->flags & 32u) || p->mv != 65535);
-    if (p->type == ST2_ACK)
-        return (p->flags & 7u) <= ST2_FAILED && ((p->flags >> 3) & 7u) <= ST_FAULT;
-    if (p->type == ST2_CAL_COMMAND)
-    {
-        if (p->data[0] > 6)
-            return false;
-        if (p->data[0] != 2)
-        {
-            for (unsigned i = 1; i < 14; i++)
-                if (p->data[i])
-                    return false;
-        }
-        else if (p->data[1] > 2)
-            return false;
-    }
-    if (p->type == ST2_CAL_REPLY)
-        return p->count == 16 && p->fragment >= 0x30 && p->fragment <= 0x33;
-    if (p->type == ST2_DETAILS_REPLY)
-        return p->count <= 16 && (p->fragment & 15u) <= (p->fragment >> 4);
-    return true;
-}
-size_t st2_encode(const st2_packet *p, uint8_t out[ST2_MAX])
-{
-    size_t n = wire_length(p);
-    if (!n || !fields_valid(p))
-        return 0;
-    memset(out, 0, n);
-    out[0] = p->type;
-    if (p->type == ST2_DISCOVER || p->type == ST2_ADVERTISE)
-    {
-        st_put16(out + 1, p->id);
-        memcpy(out + 3, p->uid, 12);
-        memcpy(out + 15, p->tag, 16);
-    }
-    else if (p->type == ST2_HELLO)
-    {
-        memcpy(out + 1, p->peer, 12);
-        memcpy(out + 13, p->uid, 12);
-        st_put64(out + 25, p->counter);
-    }
-    else if (p->type == ST2_HELLO_REPLY)
-    {
-        memcpy(out + 1, p->uid, 12);
-        st_put64(out + 13, p->counter);
-        st_put32(out + 21, p->epoch);
-    }
-    else
-    {
-        st_put32(out + 1, p->epoch);
-        if (p->type == ST2_COMMIT)
-            st_put64(out + 5, p->counter);
-        else
-        {
-            st_put16(out + 5, p->id);
-            if (p->type == ST2_STATUS)
-            {
-                out[7] = p->flags;
-                st_put16(out + 8, p->mv);
-            }
-            if (p->type == ST2_ACK)
-                out[7] = p->flags;
-            if (p->type == ST2_CAL_COMMAND)
-                memcpy(out + 7, p->data, 14);
-            if (p->type == ST2_CAL_REPLY)
-            {
-                out[7] = p->fragment;
-                memcpy(out + 8, p->data, 16);
-            }
-            if (p->type == ST2_IGN_REQUEST || p->type == ST2_IGN_REPLY)
-            {
-                size_t prefix = p->type == ST2_IGN_REQUEST ? 15u : 17u;
-                memcpy(out + 7, p->data, prefix - 7u);
-                memcpy(out + prefix, p->tag, 16);
-            }
-            if (p->type == ST2_DETAILS_QUERY || p->type == ST2_DETAILS_REPLY)
-                out[7] = p->section;
-            if (p->type == ST2_DETAILS_REPLY)
-            {
-                out[8] = p->fragment;
-                memcpy(out + 9, p->data, p->count);
-            }
-        }
-    }
-    st_put16(out + n - 2, st_crc16(out, n - 2));
-    return n;
-}
-bool st2_decode(st2_packet *p, const uint8_t *in, size_t n)
-{
-    if (!p || !in || n < 9 || n > ST2_MAX || st_get16(in + n - 2) != st_crc16(in, n - 2))
-        return false;
-    memset(p, 0, sizeof(*p));
-    p->type = in[0];
-    /* Validate the type's exact length BEFORE accessing variable fields. */
-    if (p->type == ST2_DETAILS_REPLY)
-    {
-        if (n < 11 || n > 27)
-            return false;
-        p->count = (uint8_t)(n - 11);
-    }
-    if (p->type == ST2_CAL_REPLY)
-        p->count = 16;
-    if (wire_length(p) != n)
-        return false;
-    if (p->type == ST2_DISCOVER || p->type == ST2_ADVERTISE)
-    {
-        p->id = st_get16(in + 1);
-        memcpy(p->uid, in + 3, 12);
-        memcpy(p->tag, in + 15, 16);
-    }
-    else if (p->type == ST2_HELLO)
-    {
-        memcpy(p->peer, in + 1, 12);
-        memcpy(p->uid, in + 13, 12);
-        p->counter = st_get64(in + 25);
-    }
-    else if (p->type == ST2_HELLO_REPLY)
-    {
-        memcpy(p->uid, in + 1, 12);
-        p->counter = st_get64(in + 13);
-        p->epoch = st_get32(in + 21);
-    }
-    else
-    {
-        p->epoch = st_get32(in + 1);
-        if (p->type == ST2_COMMIT)
-            p->counter = st_get64(in + 5);
-        else
-        {
-            p->id = st_get16(in + 5);
-            if (p->type == ST2_STATUS)
-            {
-                p->flags = in[7];
-                p->mv = st_get16(in + 8);
-            }
-            if (p->type == ST2_ACK)
-                p->flags = in[7];
-            if (p->type == ST2_CAL_COMMAND)
-                memcpy(p->data, in + 7, 14);
-            if (p->type == ST2_CAL_REPLY)
-            {
-                p->fragment = in[7];
-                memcpy(p->data, in + 8, 16);
-            }
-            if (p->type == ST2_IGN_REQUEST || p->type == ST2_IGN_REPLY)
-            {
-                size_t prefix = p->type == ST2_IGN_REQUEST ? 15u : 17u;
-                memcpy(p->data, in + 7, prefix - 7u);
-                memcpy(p->tag, in + prefix, 16);
-            }
-            if (p->type == ST2_DETAILS_QUERY || p->type == ST2_DETAILS_REPLY)
-                p->section = in[7];
-            if (p->type == ST2_DETAILS_REPLY)
-            {
-                p->fragment = in[8];
-                memcpy(p->data, in + 9, p->count);
-            }
-        }
-    }
-    return fields_valid(p);
-}
 bool st2_timing_valid(st2_timing t)
 {
-    return t.heartbeat_ms >= 5000 && t.heartbeat_ms <= 30000 && t.max_airtime_ms >= 1 &&
+    return t.heartbeat_ms >= 1000 && t.heartbeat_ms <= 30000 && t.max_airtime_ms >= 1 &&
            t.max_airtime_ms <= 10000 && t.ack_rto_ms > t.max_airtime_ms && t.ack_rto_ms <= 60000 &&
            t.operation_ms >= t.ack_rto_ms && t.operation_ms <= 600000 && t.attempts >= 1 &&
            t.attempts <= 10;
@@ -226,7 +10,8 @@ bool st2_timing_valid(st2_timing t)
 void st2_server_init(st2_server *s, st_logger *l, st2_nv_port nv, st2_timing t,
                      const uint8_t uid[12], const uint8_t peer[12], uint64_t counter)
 {
-    *s = (st2_server){.logger = l, .nv = nv, .timing = t, .last_counter = counter};
+    *s = (st2_server){
+        .logger = l, .nv = nv, .timing = t, .last_counter = counter, .pair_id = ST_PROJECT_PAIR_ID};
     memcpy(s->uid, uid, 12);
     memcpy(s->peer, peer, 12);
 }
@@ -248,7 +33,7 @@ static size_t cal_reply(st2_server *s, uint8_t *out)
     unsigned i = s->cal_next++;
     st2_packet p = {.type = ST2_CAL_REPLY,
                     .epoch = s->epoch,
-                    .id = s->last_command,
+                    .id = s->cal_id,
                     .fragment = (uint8_t)(0x30u | i),
                     .count = 16};
     memcpy(p.data, s->cal_view + i * 16, 16);
@@ -271,9 +56,48 @@ static uint8_t ack_flags(st2_server *s, st2_measurement m, uint8_t result)
  * acceptance exactly once on an observed terminal state; retries only read it. */
 static void finish_command(st2_server *s, st2_measurement m)
 {
+    if (s->start_deferred)
+    {
+        bool ready =
+            s->calibration.prepare_start && s->calibration.prepare_start(s->calibration.ctx);
+        if (ready)
+        {
+            s->start_deferred = false;
+            if (!st_logger_start(s->logger, s->now_us))
+                s->task.state = ST_TASK_FAILED;
+        }
+        else if ((s->calibration.start_failed && s->calibration.start_failed(s->calibration.ctx)) ||
+                 !s->calibration.start_waiting || !s->calibration.start_waiting(s->calibration.ctx))
+        {
+            s->start_deferred = false;
+            s->task.state = ST_TASK_FAILED;
+        }
+        if (s->start_deferred)
+            return;
+    }
+    if (Task_IsRecordingMode(s->task.mode) && s->task.state == ST_TASK_RUNNING &&
+        (s->logger->state == ST_FAULT || s->logger->state == ST_IDLE))
+        s->task.state = ST_TASK_FAILED;
+    if (s->task.mode == ST_TASK_OUTPUT && s->ignition && s->task.state == ST_TASK_RUNNING)
+    {
+        if (s->ignition->state == IGNITION_LOCKOUT)
+            Task_CompleteOutput(&s->task, true);
+        else if (s->ignition->state == IGNITION_FAULT)
+            Task_CompleteOutput(&s->task, false);
+    }
+    if (s->task.mode == ST_TASK_OUTPUT && s->ignition && s->task.state == ST_TASK_STARTING &&
+        s->ignition->state == IGNITION_SAFE)
+        s->task.state = ST_TASK_STOPPED;
     if (!s->have_command || s->last_result != ST2_ACCEPTED)
         return;
     uint8_t result = s->logger->state == ST_FAULT ? ST2_FAILED : ST2_ACCEPTED;
+    if (s->last_type == ST2_SENSOR_COMMAND)
+    {
+        uint8_t view[12] = {0};
+        if (s->calibration.sensor_snapshot &&
+            s->calibration.sensor_snapshot(s->calibration.ctx, view))
+            result = view[0] == 1 ? ST2_ACCEPTED : view[0] == 2 ? ST2_COMPLETED : ST2_FAILED;
+    }
     /* A source fault or explicit reconnect can cancel START before capture.
      * Once the logger drains to IDLE, fail that START instead of leaving it
      * ACCEPTED forever and rejecting every subsequent explicit command. */
@@ -287,23 +111,52 @@ static void finish_command(st2_server *s, st2_measurement m)
         s->last_result = result;
         s->terminal_pending = true;
         s->last_flags = ack_flags(s, m, result);
+        if (s->last_type == ST2_START)
+            Task_CompleteStart(&s->task, s->last_command, result == ST2_COMPLETED);
+        if (s->last_type == ST2_STOP)
+            Task_CompleteStop(&s->task, s->last_command, result == ST2_COMPLETED);
+        for (unsigned i = 0; i < 8; i++)
+            if (s->history[i].id == s->last_command)
+            {
+                st2_packet cached = {.type = ST2_ACK,
+                                     .pair_id = s->pair_id,
+                                     .epoch = s->epoch,
+                                     .id = s->last_command,
+                                     .flags = s->last_flags,
+                                     .task_state = (uint8_t)s->task.state,
+                                     .mode = (uint8_t)s->task.mode};
+                s->history[i].reply_n = (uint8_t)st2_encode(&cached, s->history[i].reply);
+            }
     }
 }
-static size_t send_ack(st2_server *s, uint16_t id, uint8_t flags, uint8_t *out)
+static size_t send_ack(st2_server *s, uint32_t id, uint8_t flags, uint8_t *out)
 {
-    st2_packet p = {.type = ST2_ACK, .epoch = s->epoch, .id = id, .flags = flags};
+    st2_packet p = {.type = ST2_ACK,
+                    .epoch = s->epoch,
+                    .id = id,
+                    .flags = flags,
+                    .pair_id = s->pair_id,
+                    .task_state = (uint8_t)s->task.state,
+                    .mode = (uint8_t)s->task.mode};
     return st2_encode(&p, out);
 }
 static size_t send_status(st2_server *s, st2_measurement m, uint32_t now, uint8_t *out)
 {
-    if (s->status_sequence == 65535)
+    if (s->status_sequence == UINT32_MAX)
     {
         s->active = false;
         return 0;
     } /* renew, never wrap */
     uint8_t f = status_flags(s, m);
-    st2_packet p = {
-        .type = ST2_STATUS, .epoch = s->epoch, .id = ++s->status_sequence, .flags = f, .mv = m.mv};
+    st2_packet p = {.type = ST2_STATUS,
+                    .epoch = s->epoch,
+                    .id = ++s->status_sequence,
+                    .flags = f,
+                    .mv = m.mv,
+                    .pair_id = s->pair_id,
+                    .task_state = (uint8_t)s->task.state,
+                    .mode = (uint8_t)s->task.mode,
+                    .errors = (uint8_t)(s->quality_sticky ? 1u : 0u)};
     s->have_status = true;
     s->previous_flags = f;
     s->previous_mv = m.mv;
@@ -339,8 +192,8 @@ static size_t detail_reply(st2_server *s, uint8_t *out)
     memcpy(p.data, s->snapshot + index * 16, p.count);
     return st2_encode(&p, out);
 }
-size_t st2_server_receive(st2_server *s, const uint8_t *in, size_t n, st2_measurement m,
-                          uint64_t now, uint8_t out[ST2_MAX])
+static size_t receive_operation(st2_server *s, const uint8_t *in, size_t n, st2_measurement m,
+                                uint64_t now, uint8_t out[ST2_MAX])
 {
     st2_packet p;
     if (!s->logger || !st2_timing_valid(s->timing) || m.tf > 3 || !st2_decode(&p, in, n))
@@ -349,18 +202,36 @@ size_t st2_server_receive(st2_server *s, const uint8_t *in, size_t n, st2_measur
     {
         if (memcmp(p.uid, s->peer, 12) || memcmp(p.peer, s->uid, 12))
             return 0;
+        /* A live acquisition session is resumed without Flash IO, logger STOP,
+         * calibration reset, sequence reset or a fresh execution authorization. */
+        if (s->active)
+        {
+            st2_packet resume = {.type = ST2_HELLO_REPLY,
+                                 .epoch = s->epoch,
+                                 .counter = p.counter,
+                                 .pair_id = s->pair_id,
+                                 .flags = 2};
+            memcpy(resume.uid, s->uid, 12);
+            st_put32(resume.data, s->highest_id);
+            return st2_encode(&resume, out);
+        }
+        if (p.counter <= s->last_counter && !(s->offered && p.counter == s->last_counter))
+        {
+            st2_packet offer = {
+                .type = ST2_HELLO_REPLY, .counter = p.counter, .pair_id = s->pair_id, .flags = 1};
+            memcpy(offer.uid, s->uid, 12);
+            return st2_encode(&offer, out);
+        }
         if (!(s->offered && p.counter == s->last_counter))
         {
             uint32_t epoch = 0;
             if (p.counter <= s->last_counter)
                 return 0;
-            if (s->ignition)
-                (void)IgnitionServer_SetSession(s->ignition, 0, false);
-            s->active = false;
-            if (!s->nv.reserve_epoch ||
+            if (s->logger->state != ST_IDLE || !s->nv.reserve_epoch ||
                 !s->nv.reserve_epoch(s->nv.ctx, p.counter, &epoch) || !epoch)
                 return 0;
-            cal_reset(s);
+            if (s->last_counter)
+                s->task.state = ST_TASK_UNKNOWN;
             s->last_counter = p.counter;
             s->epoch = epoch;
             s->offered = true;
@@ -372,16 +243,23 @@ size_t st2_server_receive(st2_server *s, const uint8_t *in, size_t n, st2_measur
             s->have_status = false;
             s->status_sequence = 0;
             s->detail_cached = false;
+            s->highest_id = 0;
+            s->history_next = 0;
+            memset(s->history, 0, sizeof s->history);
         }
-        st2_packet reply = {.type = ST2_HELLO_REPLY, .epoch = s->epoch, .counter = p.counter};
+        st2_packet reply = {.type = ST2_HELLO_REPLY,
+                            .epoch = s->epoch,
+                            .counter = p.counter,
+                            .pair_id = s->pair_id};
+        st_put32(reply.data, s->highest_id);
         memcpy(reply.uid, s->uid, 12);
         return st2_encode(&reply, out);
     }
-    if (!s->offered || p.epoch != s->epoch)
+    if (!s->offered || p.epoch != s->epoch || p.pair_id != s->pair_id)
         return 0;
     if (p.type == ST2_COMMIT)
     {
-        if (p.counter != s->last_counter)
+        if (!s->active && p.counter != s->last_counter)
             return 0;
         s->active = true;
         if (s->ignition)
@@ -398,6 +276,40 @@ size_t st2_server_receive(st2_server *s, const uint8_t *in, size_t n, st2_measur
         return IgnitionServer_Receive(s->ignition, in, n, out);
     }
     finish_command(s, m);
+    if (p.type == ST2_TASK_QUERY)
+    {
+        st2_packet snapshot = {
+            .type = ST2_TASK_REPLY, .epoch = s->epoch, .pair_id = s->pair_id, .id = p.id};
+        snapshot.data[0] = (uint8_t)s->task.state;
+        snapshot.data[1] = (uint8_t)s->task.mode;
+        snapshot.data[2] = s->ignition ? s->ignition->state : IGNITION_DISABLED;
+        snapshot.data[3] = s->output_started ? 1 : 0;
+        st_put32(snapshot.data + 4, s->task.start_id);
+        st_put32(snapshot.data + 8, s->task.stop_id);
+        return st2_encode(&snapshot, out);
+    }
+    if (p.type == ST2_SENSOR_QUERY)
+    {
+        st2_packet view = {
+            .type = ST2_SENSOR_REPLY, .epoch = s->epoch, .pair_id = s->pair_id, .id = p.id};
+        if (!s->calibration.sensor_snapshot ||
+            !s->calibration.sensor_snapshot(s->calibration.ctx, view.data))
+            return 0;
+        return st2_encode(&view, out);
+    }
+    if (p.type == ST2_SENSOR_COMMAND)
+    {
+        if (p.data[0] < 7 || p.data[0] > 8 || p.data[1] > 1 || s->logger->state != ST_IDLE ||
+            IgnitionServer_IsBusy(s->ignition) || !s->calibration.request)
+            return send_ack(s, p.id, ack_flags(s, m, ST2_STATE_REJECT), out);
+        bool accepted = s->calibration.request(s->calibration.ctx, p.data);
+        s->last_command = p.id;
+        s->last_type = p.type;
+        s->have_command = true;
+        s->last_result = accepted ? (p.data[0] == 7 ? ST2_ACCEPTED : ST2_COMPLETED) : ST2_FAILED;
+        s->last_flags = ack_flags(s, m, s->last_result);
+        return send_ack(s, p.id, s->last_flags, out);
+    }
     if (p.type == ST2_DETAILS_QUERY)
     {
         if (p.section != 1 || (s->detail_cached && p.id < s->detail_id))
@@ -440,6 +352,7 @@ size_t st2_server_receive(st2_server *s, const uint8_t *in, size_t n, st2_measur
         s->cal_owned = true;
         s->have_command = true;
         s->last_command = p.id;
+        s->cal_id = p.id;
         s->last_type = p.type;
         s->last_result = ST2_COMPLETED;
         s->last_flags = ack_flags(s, m, ST2_COMPLETED);
@@ -468,14 +381,56 @@ size_t st2_server_receive(st2_server *s, const uint8_t *in, size_t n, st2_measur
         result = ST2_STATE_REJECT;
     else
     {
-        bool accepted =
-            p.type == ST2_START
-                ? (!IgnitionServer_IsBusy(s->ignition) &&
-                   (!s->calibration.locked || !s->calibration.locked(s->calibration.ctx)) &&
-                   (!s->calibration.prepare_start ||
-                    s->calibration.prepare_start(s->calibration.ctx)) &&
-                   st_logger_start(s->logger, now))
-                : st_logger_stop(s->logger);
+        bool accepted = false;
+        if (p.type == ST2_START)
+        {
+            StTaskMode mode = p.mode ? (StTaskMode)p.mode : ST_TASK_CAPTURE;
+            if (!IgnitionServer_IsBusy(s->ignition) && Task_IsRecordingMode(mode) &&
+                (!s->calibration.locked || !s->calibration.locked(s->calibration.ctx)) &&
+                Task_Begin(&s->task, mode, p.id) == ST_TASK_OK)
+            {
+                if (s->calibration.begin_start)
+                    s->calibration.begin_start(s->calibration.ctx);
+                bool ready = !s->calibration.prepare_start ||
+                             s->calibration.prepare_start(s->calibration.ctx);
+                s->start_deferred = !ready && s->calibration.start_waiting &&
+                                    s->calibration.start_waiting(s->calibration.ctx);
+                accepted = s->start_deferred || (ready && st_logger_start(s->logger, now));
+                if (!accepted)
+                    s->task.state = ST_TASK_FAILED;
+                else
+                    s->output_started = false;
+            }
+        }
+        else
+        {
+            s->start_deferred = false;
+            if (s->have_command && s->last_type == ST2_START && s->last_result == ST2_ACCEPTED)
+                for (unsigned i = 0; i < 8; i++)
+                    if (s->history[i].id == s->last_command)
+                    {
+                        st2_packet canceled = {.type = ST2_ACK,
+                                               .epoch = s->epoch,
+                                               .pair_id = s->pair_id,
+                                               .id = s->last_command,
+                                               .flags = ack_flags(s, m, ST2_FAILED)};
+                        s->history[i].reply_n = (uint8_t)st2_encode(&canceled, s->history[i].reply);
+                    }
+            if (s->calibration.reset)
+                s->calibration.reset(s->calibration.ctx);
+            if (s->ignition && s->ignition->output_bound)
+            {
+                (void)s->ignition->output.stop(s->ignition->output.ctx);
+                IgnitionServer_Service(s->ignition);
+                s->ignition->arm_id = 0;
+                s->ignition->state = IGNITION_SAFE;
+                s->ignition->deadline_ms = 0;
+            }
+            accepted = st_logger_stop(s->logger);
+            Task_RequestStop(&s->task, p.id);
+            if (!accepted)
+                s->task.state = ST_TASK_FAILED;
+        }
         result = accepted ? ST2_ACCEPTED : ST2_STATE_REJECT;
         s->have_command = true;
         s->last_command = p.id;
@@ -488,8 +443,119 @@ size_t st2_server_receive(st2_server *s, const uint8_t *in, size_t n, st2_measur
     }
     return send_ack(s, p.id, ack_flags(s, m, result), out);
 }
+size_t st2_server_receive(st2_server *s, const uint8_t *in, size_t n, st2_measurement m,
+                          uint64_t now, uint8_t out[ST2_MAX])
+{
+    st2_packet request;
+    if (!s || !st2_decode(&request, in, n) || request.pair_id != s->pair_id)
+        return 0;
+    s->now_us = now;
+    bool operation = request.type != ST2_HELLO && request.type != ST2_COMMIT;
+    if (!operation)
+        return receive_operation(s, in, n, m, now, out);
+    if (!s->active || request.epoch != s->epoch)
+        return 0;
+    finish_command(s, m);
+    if (request.type == ST2_STATUS_ACK)
+    {
+        if (request.id == s->status_sequence && request.id > s->peer_status_sequence)
+        {
+            s->peer_status_sequence = request.id;
+            s->peer_received_ms = (uint32_t)(now / 1000);
+            s->have_peer_status = true;
+        }
+        return 0;
+    }
+    if (request.type == ST2_IGN_REQUEST)
+    {
+        IgnitionPacket verified;
+        if (!s->ignition || Ignition_Decode(&s->ignition->auth, IGNITION_REQUEST, in, n,
+                                            &verified) != IGNITION_CODEC_OK)
+            return 0;
+    }
+    for (unsigned i = 0; i < 8; i++)
+        if (s->history[i].id == request.id)
+        {
+            StTransactionCache *cached = &s->history[i];
+            if (cached->request_n != n || memcmp(cached->request, in, n))
+                return send_ack(s, request.id, ack_flags(s, m, ST2_CONFLICT), out);
+            if (request.type == ST2_IGN_REQUEST && request.data[0] != IGNITION_QUERY)
+            {
+                size_t updated = IgnitionServer_Receive(s->ignition, in, n, out);
+                if (updated)
+                {
+                    memcpy(cached->reply, out, updated);
+                    cached->reply_n = (uint8_t)updated;
+                }
+            }
+            if (request.type == ST2_CAL_COMMAND || request.type == ST2_CAL_QUERY)
+            {
+                memcpy(s->cal_view, cached->view, 64);
+                s->cal_id = request.id;
+                s->cal_next = 1;
+                s->cal_cached = true;
+            }
+            if (request.type == ST2_DETAILS_QUERY)
+            {
+                memcpy(s->snapshot, cached->view, 23);
+                s->detail_id = request.id;
+                s->detail_next = 1;
+                s->detail_cached = true;
+            }
+            if (request.type == ST2_IGN_REQUEST && request.data[0] == IGNITION_QUERY &&
+                request.data[1])
+            {
+                memcpy(s->ignition->query_reply[1], cached->view, IGNITION_REPLY_BYTES);
+                s->ignition->query_count = 2;
+                s->ignition->query_next = 1;
+            }
+            memcpy(out, cached->reply, cached->reply_n);
+            return cached->reply_n;
+        }
+    if (request.id <= s->highest_id)
+        return send_ack(s, request.id, ack_flags(s, m, ST2_OLD), out);
+    if (request.type == ST2_IGN_REQUEST && request.data[0] != IGNITION_QUERY)
+        s->ignition->last_command = s->highest_id;
+    size_t size = receive_operation(s, in, n, m, now, out);
+    if (!size)
+        return 0;
+    s->highest_id = request.id;
+    StTransactionCache *cached = &s->history[s->history_next++ % 8u];
+    *cached =
+        (StTransactionCache){.id = request.id, .request_n = (uint8_t)n, .reply_n = (uint8_t)size};
+    memcpy(cached->request, in, n);
+    memcpy(cached->reply, out, size);
+    if (request.type == ST2_CAL_COMMAND || request.type == ST2_CAL_QUERY)
+        memcpy(cached->view, s->cal_view, 64);
+    if (request.type == ST2_DETAILS_QUERY)
+        memcpy(cached->view, s->snapshot, 23);
+    if (request.type == ST2_IGN_REQUEST)
+    {
+        if (request.data[0] == IGNITION_QUERY && request.data[1])
+            memcpy(cached->view, s->ignition->query_reply[1], IGNITION_REPLY_BYTES);
+        IgnitionPacket reply;
+        if (Ignition_Decode(&s->ignition->auth, IGNITION_REPLY, out, size, &reply) ==
+            IGNITION_CODEC_OK)
+        {
+            if (request.data[0] == IGNITION_ARM && request.data[1] == 1 &&
+                reply.data[1] == IGNITION_ARM_GRANTED)
+                s->task = (StTask){ST_TASK_OUTPUT, ST_TASK_STARTING, request.id, 0};
+            if (request.data[0] == IGNITION_FIRE && request.data[1] == 1 &&
+                reply.data[1] == IGNITION_FIRE_ACCEPTED)
+            {
+                s->task.state = ST_TASK_RUNNING;
+                s->output_started = true;
+            }
+            if (request.data[0] == IGNITION_DISARM && s->task.mode == ST_TASK_OUTPUT &&
+                reply.data[1] == IGNITION_DISARMED && s->task.state != ST_TASK_COMPLETED)
+                s->task.state = ST_TASK_STOPPED;
+        }
+    }
+    return size;
+}
 size_t st2_server_poll(st2_server *s, st2_measurement m, uint64_t now, uint8_t out[ST2_MAX])
 {
+    s->now_us = now;
     if (!s->active || m.tf > 3)
         return 0;
     finish_command(s, m);
@@ -527,27 +593,28 @@ size_t st2_server_poll(st2_server *s, st2_measurement m, uint64_t now, uint8_t o
 void st2_client_init(st2_client *c, st2_nv_port nv, st2_timing t, const uint8_t uid[12],
                      const uint8_t peer[12])
 {
-    *c = (st2_client){.nv = nv, .timing = t};
+    *c = (st2_client){.nv = nv, .timing = t, .pair_id = ST_PROJECT_PAIR_ID};
     memcpy(c->uid, uid, 12);
     memcpy(c->peer, peer, 12);
 }
 bool st2_client_connect(st2_client *c, uint32_t now)
 {
-    uint64_t counter = 0;
-    if (!st2_timing_valid(c->timing) || !c->nv.reserve_counter ||
-        !c->nv.reserve_counter(c->nv.ctx, &counter) || counter <= c->counter)
+    uint64_t counter = c->counter;
+    if (!st2_timing_valid(c->timing) || c->pending)
         return false;
     if (c->pending)
         c->transaction = ST_TX_REBOOT;
     c->counter = counter;
-    c->stop = ST2_STOP_NONE; /* Explicit successful reconnect cancels local intent. */
+    /* Keep task and unresolved STOP intent across a transport reconnect. */
     c->link = ST2_LINK_HELLO;
-    c->epoch = 0;
     c->have_status = false;
     c->cal_have_view = false;
     c->cal_seen = 0;
+    c->details.complete = false;
+    c->sensor_have_view = false;
     c->pending = false;
-    c->request = (st2_packet){.type = ST2_HELLO, .counter = counter};
+    c->request = (st2_packet){
+        .type = ST2_HELLO, .counter = counter, .epoch = c->epoch, .pair_id = c->pair_id};
     memcpy(c->request.uid, c->uid, 12);
     memcpy(c->request.peer, c->peer, 12);
     c->attempts = 0;
@@ -559,19 +626,55 @@ bool st2_client_connect(st2_client *c, uint32_t now)
 bool st2_client_fresh(const st2_client *c, uint32_t now)
 {
     return c->link == ST2_LINK_UP && c->have_status &&
-           (uint32_t)(now - c->received_ms) <=
-               3u * c->timing.heartbeat_ms + c->timing.max_airtime_ms + 1000u;
+           (uint32_t)(now - c->received_ms) <= ST_LINK_LOST_MS - 1u;
 }
 bool st2_client_receive(st2_client *c, const uint8_t *in, size_t n, uint32_t now)
 {
     st2_packet p;
-    if (!st2_decode(&p, in, n))
+    if (!st2_decode(&p, in, n) || p.pair_id != c->pair_id)
         return false;
     if (p.type == ST2_HELLO_REPLY && c->link == ST2_LINK_HELLO && p.counter == c->counter &&
         !memcmp(p.uid, c->peer, 12))
     {
+        if (!p.epoch && p.flags == 1)
+        {
+            uint64_t next = 0;
+            if (!c->nv.reserve_counter || !c->nv.reserve_counter(c->nv.ctx, &next) ||
+                next <= c->counter)
+            {
+                c->link = ST2_LINK_DOWN;
+                return false;
+            }
+            c->counter = next;
+            c->request.counter = next;
+            c->have_sent = false;
+            c->waiting_tx_done = false;
+            c->attempts = 0;
+            c->started_ms = now;
+            return true;
+        }
+        if (!p.epoch)
+            return false;
+        if (c->epoch && p.epoch < c->epoch)
+            return false;
+        c->resumed = p.flags == 2;
+        if (c->epoch != p.epoch)
+        {
+            c->status_sequence = 0;
+            c->task.state = ST_TASK_UNKNOWN;
+        }
+        uint32_t floor = st_get32(p.data);
+        if (floor == UINT32_MAX)
+        {
+            c->link = ST2_LINK_DOWN;
+            return false;
+        }
+        if (c->next_command <= floor)
+            c->next_command = floor + 1u;
+        c->need_recovery = true;
         c->epoch = p.epoch;
-        c->request = (st2_packet){.type = ST2_COMMIT, .epoch = p.epoch, .counter = c->counter};
+        c->request = (st2_packet){
+            .type = ST2_COMMIT, .epoch = p.epoch, .counter = c->counter, .pair_id = c->pair_id};
         c->link = ST2_LINK_COMMIT;
         c->attempts = 0;
         c->have_sent = false;
@@ -583,7 +686,7 @@ bool st2_client_receive(st2_client *c, const uint8_t *in, size_t n, uint32_t now
         return false;
     if (p.type == ST2_STATUS && (c->link == ST2_LINK_COMMIT || c->link == ST2_LINK_UP))
     {
-        if (c->have_status && p.id <= c->status_sequence)
+        if (p.id <= c->status_sequence)
             return false;
         bool first = c->link == ST2_LINK_COMMIT;
         c->link = ST2_LINK_UP;
@@ -592,9 +695,15 @@ bool st2_client_receive(st2_client *c, const uint8_t *in, size_t n, uint32_t now
         c->status_sequence = p.id;
         c->flags = p.flags;
         c->mv = p.mv;
+        c->remote_task = p.task_state;
+        c->remote_mode = p.mode;
+        c->errors = p.errors;
+        if (p.task_state == ST_TASK_FAILED && c->task.state == ST_TASK_RUNNING)
+            c->task.state = ST_TASK_FAILED;
         if (first)
         {
-            c->next_command = 1;
+            if (!c->next_command)
+                c->next_command = 1;
             c->waiting_tx_done = false;
         }
         return true; /* status NEVER completes a transaction */
@@ -617,11 +726,57 @@ bool st2_client_receive(st2_client *c, const uint8_t *in, size_t n, uint32_t now
         }
         return true;
     }
+    if (p.type == ST2_TASK_REPLY && c->pending && c->request.type == ST2_TASK_QUERY &&
+        p.id == c->request.id)
+    {
+        if (p.data[0] > ST_TASK_UNKNOWN || p.data[1] > ST_TASK_OUTPUT)
+            return false;
+        c->task = (StTask){p.data[1] ? (StTaskMode)p.data[1] : ST_TASK_CAPTURE,
+                           (StTaskState)p.data[0], st_get32(p.data + 4), st_get32(p.data + 8)};
+        c->output_started = p.data[3] != 0;
+        c->pending = false;
+        c->transaction = ST_TX_COMPLETE;
+        c->need_recovery = false;
+        return true;
+    }
+    if (p.type == ST2_DETAILS_REPLY && c->pending && c->request.type == ST2_DETAILS_QUERY &&
+        p.id == c->request.id)
+    {
+        if (!st2_details_receive(&c->details, in, n))
+            return false;
+        if (c->details.complete)
+        {
+            c->pending = false;
+            c->transaction = ST_TX_COMPLETE;
+            c->details_received_ms = now;
+        }
+        return true;
+    }
+    if (p.type == ST2_SENSOR_REPLY && c->pending && c->request.type == ST2_SENSOR_QUERY &&
+        p.id == c->request.id)
+    {
+        memcpy(c->sensor_view, p.data, 12);
+        c->sensor_have_view = true;
+        c->pending = false;
+        c->transaction = ST_TX_COMPLETE;
+        return true;
+    }
     if (p.type == ST2_ACK && c->link == ST2_LINK_UP && c->pending && p.id == c->request.id)
     {
         uint8_t result = p.flags & 7u;
+        if (c->request.type == ST2_TASK_QUERY && (result == ST2_OLD || result == ST2_CONFLICT))
+        {
+            c->pending = false;
+            c->link = ST2_LINK_DOWN;
+            c->transaction = ST_TX_REJECTED;
+            return true; /* Re-handshake for a fresh high-water mark, never count through old IDs.
+                          */
+        }
         if (c->request.type == ST2_STOP && result == ST2_COMPLETED &&
-            ((p.flags >> 3) & 7u) != ST_IDLE)
+            (((p.flags >> 3) & 7u) != ST_IDLE || ((p.flags >> 6) & 3u) == ST2_TF_OPEN))
+            return false;
+        if (c->request.type == ST2_START && result == ST2_COMPLETED &&
+            (((p.flags >> 3) & 7u) != ST_CAPTURING || ((p.flags >> 6) & 3u) != ST2_TF_OPEN))
             return false;
         if (result == ST2_ACCEPTED)
         {
@@ -633,7 +788,12 @@ bool st2_client_receive(st2_client *c, const uint8_t *in, size_t n, uint32_t now
             c->pending = false;
             c->transaction = result == ST2_COMPLETED ? ST_TX_COMPLETE : ST_TX_REJECTED;
             if (c->request.type == ST2_STOP)
+            {
                 c->stop = result == ST2_COMPLETED ? ST2_STOP_NONE : ST2_STOP_UNCONFIRMED;
+                Task_CompleteStop(&c->task, p.id, result == ST2_COMPLETED);
+            }
+            if (c->request.type == ST2_START)
+                Task_CompleteStart(&c->task, p.id, result == ST2_COMPLETED);
         }
         return true; /* ACK does not refresh telemetry age */
     }
@@ -641,8 +801,12 @@ bool st2_client_receive(st2_client *c, const uint8_t *in, size_t n, uint32_t now
 }
 static void begin_command(st2_client *c, uint8_t type, uint32_t now)
 {
-    c->request = (st2_packet){.type = type, .epoch = c->epoch, .id = c->next_command};
-    c->next_command = c->next_command == 65535 ? 0 : (uint16_t)(c->next_command + 1);
+    c->request = (st2_packet){.type = type,
+                              .epoch = c->epoch,
+                              .id = c->next_command,
+                              .pair_id = c->pair_id,
+                              .mode = (uint8_t)c->task.mode};
+    c->next_command = c->next_command == ST_TRANSACTION_LIMIT ? 0 : c->next_command + 1u;
     c->pending = true;
     c->transaction = ST_TX_WAIT_ACK;
     c->attempts = 0;
@@ -654,6 +818,8 @@ static void begin_command(st2_client *c, uint8_t type, uint32_t now)
 }
 bool st2_client_command(st2_client *c, uint8_t type, uint32_t now)
 {
+    if (type == ST2_START && c->need_recovery)
+        return false;
     if (type != ST2_START && type != ST2_STOP)
         return false;
     if (type == ST2_STOP &&
@@ -667,10 +833,18 @@ bool st2_client_command(st2_client *c, uint8_t type, uint32_t now)
          * still waits for fresh state and expires at the bounded deadline. */
         c->stop = ST2_STOP_QUEUED;
         c->stop_requested_ms = now;
+        Task_RequestStop(&c->task, c->next_command);
         return true;
     }
     if (!st2_client_fresh(c, now))
-        return false;
+    {
+        if (type != ST2_STOP || !c->next_command)
+            return false;
+        c->stop = ST2_STOP_QUEUED;
+        c->stop_requested_ms = now;
+        Task_RequestStop(&c->task, c->next_command);
+        return true;
+    }
     if (type == ST2_STOP && c->stop == ST2_STOP_UNCONFIRMED && !c->pending &&
         c->request.type == ST2_STOP)
     {
@@ -693,11 +867,56 @@ bool st2_client_command(st2_client *c, uint8_t type, uint32_t now)
     if ((type == ST2_START && state != ST_IDLE) || (type == ST2_STOP && state > ST_STOPPING))
         return false;
     /* STOP at IDLE is also a command barrier, confirmed by its matching ACK. */
+    if (type == ST2_START)
+    {
+        StTaskMode mode = c->task.mode ? c->task.mode : ST_TASK_CAPTURE;
+        if (!Task_IsRecordingMode(mode) ||
+            Task_Begin(&c->task, mode, c->next_command) != ST_TASK_OK)
+            return false;
+        c->output_started = false;
+    }
+    else
+        Task_RequestStop(&c->task, c->next_command);
     begin_command(c, type, now);
     return true;
 }
+static bool Link_BeginQuery(st2_client *c, uint8_t type, uint32_t now)
+{
+    if (!c || c->pending || !c->next_command || !st2_client_fresh(c, now))
+        return false;
+    begin_command(c, type, now);
+    return true;
+}
+StLinkRequestResult Link_QueryTask(st2_client *c, uint32_t now)
+{
+    return Link_BeginQuery(c, ST2_TASK_QUERY, now) ? ST_LINK_REQUEST_OK : ST_LINK_REQUEST_REJECTED;
+}
+StLinkRequestResult Link_QueryDetails(st2_client *c, uint32_t now)
+{
+    if (!Link_BeginQuery(c, ST2_DETAILS_QUERY, now))
+        return ST_LINK_REQUEST_REJECTED;
+    c->request.section = 1;
+    c->details = (st2_details){.epoch = c->epoch, .id = c->request.id, .section = 1};
+    return ST_LINK_REQUEST_OK;
+}
+StLinkRequestResult Link_RequestSensor(st2_client *c, uint8_t action, bool enabled, uint32_t now)
+{
+    if (action && c && c->need_recovery)
+        return ST_LINK_REQUEST_REJECTED;
+    if (!action)
+        return Link_BeginQuery(c, ST2_SENSOR_QUERY, now) ? ST_LINK_REQUEST_OK
+                                                         : ST_LINK_REQUEST_REJECTED;
+    if (action < 7 || action > 8 || !Link_BeginQuery(c, ST2_SENSOR_COMMAND, now))
+        return ST_LINK_REQUEST_REJECTED;
+    c->request.data[0] = action;
+    c->request.data[1] = enabled ? 1 : 0;
+    c->sensor_have_view = false;
+    return ST_LINK_REQUEST_OK;
+}
 bool st2_client_cal_command(st2_client *c, const uint8_t data[14], uint32_t now)
 {
+    if (data && c->need_recovery)
+        return false;
     /* Read-only polls can be superseded by an explicit user action. A mutation
      * already in flight must complete or hit its bounded timeout first. */
     if (c->pending && c->request.type == ST2_CAL_QUERY && data)
@@ -706,15 +925,17 @@ bool st2_client_cal_command(st2_client *c, const uint8_t data[14], uint32_t now)
         c->timing.operation_ms < c->timing.ack_rto_ms + 4u * c->timing.max_airtime_ms ||
         (data && (c->flags & 7u) != ST_IDLE))
         return false;
-    st2_packet p = {
-        .type = data ? ST2_CAL_COMMAND : ST2_CAL_QUERY, .epoch = c->epoch, .id = c->next_command};
+    st2_packet p = {.type = data ? ST2_CAL_COMMAND : ST2_CAL_QUERY,
+                    .epoch = c->epoch,
+                    .id = c->next_command,
+                    .pair_id = c->pair_id};
     if (data)
         memcpy(p.data, data, 14);
     uint8_t wire[ST2_MAX];
     if (!st2_encode(&p, wire))
         return false;
     c->request = p;
-    c->next_command = c->next_command == 65535 ? 0 : (uint16_t)(c->next_command + 1);
+    c->next_command = c->next_command == ST_TRANSACTION_LIMIT ? 0 : c->next_command + 1u;
     c->pending = true;
     c->transaction = ST_TX_WAIT_ACK;
     c->attempts = 0;
@@ -730,18 +951,20 @@ bool st2_client_cal_command(st2_client *c, const uint8_t data[14], uint32_t now)
  * when an ACCEPTED reply resets the per-round retry budget. */
 bool st2_client_tx_due(st2_client *c, uint32_t now, uint8_t out[ST2_MAX], size_t *n)
 {
-    if (c->stop == ST2_STOP_QUEUED)
+    if (c->stop == ST2_STOP_QUEUED && c->link == ST2_LINK_UP)
     {
         if ((uint32_t)(now - c->stop_requested_ms) > c->timing.operation_ms)
         {
             c->stop = ST2_STOP_UNCONFIRMED;
             c->pending = false;
             c->transaction = ST_TX_TIMEOUT;
+            c->task.state = ST_TASK_UNKNOWN;
             return false;
         }
         if (!st2_client_fresh(c, now) || c->waiting_tx_done)
             return false; /* Do not replay START while stop intent is queued. */
         begin_command(c, ST2_STOP, c->stop_requested_ms);
+        Task_RequestStop(&c->task, c->request.id);
     }
     if (c->link == ST2_LINK_DOWN || (c->link == ST2_LINK_UP && !c->pending))
         return false;
@@ -751,6 +974,8 @@ bool st2_client_tx_due(st2_client *c, uint32_t now, uint8_t out[ST2_MAX], size_t
         {
             c->pending = false;
             c->transaction = ST_TX_TIMEOUT;
+            if (c->request.type == ST2_START || c->request.type == ST2_STOP)
+                c->task.state = ST_TASK_UNKNOWN;
             if (c->request.type == ST2_STOP)
                 c->stop = ST2_STOP_UNCONFIRMED;
         }
@@ -769,6 +994,32 @@ bool st2_client_tx_due(st2_client *c, uint32_t now, uint8_t out[ST2_MAX], size_t
     *n = st2_encode(&c->request, out);
     return *n != 0;
 }
+StLinkHealth Link_GetHealth(bool have, uint32_t received, uint32_t now, bool driver_fault)
+{
+    if (driver_fault)
+        return ST_LINK_DRIVER_FAULT;
+    if (!have)
+        return ST_LINK_WAIT;
+    uint32_t age = now - received;
+    return age >= ST_LINK_LOST_MS   ? ST_LINK_LOST
+           : age >= ST_LINK_SLOW_MS ? ST_LINK_SLOW
+                                    : ST_LINK_OK;
+}
+bool Link_GetLed(StLinkHealth health, uint32_t now)
+{
+    if (health == ST_LINK_OK)
+        return true;
+    if (health == ST_LINK_SLOW)
+        return (now / ST_LINK_LED_SLOW_HALF_MS) % 2u == 0;
+    if (health == ST_LINK_LOST)
+        return (now / ST_LINK_LED_FAST_HALF_MS) % 2u == 0;
+    if (health == ST_LINK_DRIVER_FAULT)
+    {
+        uint32_t phase = now % 1000u;
+        return phase < 100u || (phase >= 200u && phase < 300u);
+    }
+    return false;
+}
 void st2_client_tx_accepted(st2_client *c)
 {
     c->waiting_tx_done = true;
@@ -785,7 +1036,7 @@ void st2_client_tx_done(st2_client *c, uint32_t now, uint32_t jitter)
     }
 }
 
-size_t st2_details_begin(st2_details *d, uint32_t epoch, uint16_t id, uint8_t out[ST2_MAX])
+size_t st2_details_begin(st2_details *d, uint32_t epoch, uint32_t id, uint8_t out[ST2_MAX])
 {
     *d = (st2_details){.epoch = epoch, .id = id, .section = 1};
     st2_packet p = {.type = ST2_DETAILS_QUERY, .epoch = epoch, .id = id, .section = 1};

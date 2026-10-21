@@ -21,7 +21,7 @@ void st_radio_init(st_radio *r, st_radio_port p, st_radio_config c)
     r->packet = (sx128x_pkt_params_lora_t){.preamble_len = {2, 3},
                                            .header_type = SX128X_LORA_RANGING_PKT_EXPLICIT,
                                            .pld_len_in_bytes = ST2_MAX,
-                                           .crc_is_on = true,
+                                           .crc_is_on = ST_RADIO_CRC_ENABLED != 0,
                                            .invert_iq_is_on = false};
     r->failed = !st_radio_config_valid(c) || !p.command || !p.reset || !p.ready;
     if (!r->failed &&
@@ -97,7 +97,7 @@ bool st_radio_cancel_queued(st_radio *r, const uint8_t *p, size_t n)
     r->tx_pending = false;
     return true;
 }
-bool st_radio_receive(st_radio *r, uint8_t out[49], size_t *n)
+bool st_radio_receive(st_radio *r, uint8_t out[ST2_MAX], size_t *n)
 {
     if (!r->rx_ready)
         return false;
@@ -226,7 +226,7 @@ void st_radio_tick(st_radio *r, uint32_t now)
             if (s == SX128X_STATUS_OK && status.pld_len_in_bytes >= 9 &&
                 status.pld_len_in_bytes <= ST2_MAX)
             {
-                uint8_t data[49];
+                uint8_t data[ST2_MAX];
                 s = sx128x_read_buffer(r, status.buffer_start_pointer, data,
                                        status.pld_len_in_bytes);
                 st2_packet packet;

@@ -71,7 +71,7 @@ def main():
     shutil.copy2(elfs[0],dest/(name+'.elf'))
     subprocess.check_call([str(tool/'bin/arm-none-eabi-objcopy.exe'),'-O','ihex',str(elfs[0]),str(dest/(name+'.hex'))])
     reports.append('Sparse HEX + ELF saved in dist/'+board+' (no BIN spanning NV holes).')
-   headers=sorted({p for folder in ['Acquisition/include','Acquisition/ports','Controller/include','Controller/ports',board+'/board'] for p in (ROOT/folder).rglob('*.h')})
+   headers=sorted({p for folder in ['Common/Inc','Acquisition/include','Acquisition/ports','Controller/include','Controller/ports',board+'/board'] for p in (ROOT/folder).rglob('*.h')})
    for source in sources+[str(root/'board/reference_memory.ld'),str(root/'.eide/eide.yml')]+list(map(str,headers)):
     path=(root/source).resolve()
     if path.is_relative_to(ROOT): reports.append('SHA256 '+str(path.relative_to(ROOT)).replace('\\','/')+' '+hashlib.sha256(path.read_bytes()).hexdigest())

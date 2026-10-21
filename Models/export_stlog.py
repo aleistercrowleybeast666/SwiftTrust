@@ -23,6 +23,11 @@ def read_log(path):
     calibrated=bool(flags&1)
     if calibrated and (not u32(28) or not u32(32) or not slope or data[58] not in (4,6)):
         raise ValueError('incomplete calibration metadata')
+    session_zero=None
+    if data[60:64]==b'SZR1':
+        session_zero={'calibration_zero_raw':struct.unpack_from('<i',data,64)[0],
+                      'session_zero_raw':struct.unpack_from('<i',data,68)[0],
+                      'samples':u32(72),'time_us':struct.unpack_from('<Q',data,76)[0]}
     rows=[];footer=None;offset=512;issue=None
     while offset+32<=len(data):
         r=data[offset:offset+32]
@@ -47,7 +52,7 @@ def read_log(path):
     if footer is None and issue is None:
         issue='truncated tail' if offset!=len(data) else 'no end footer (unclean stop)'
     return rows,{'samples':len(rows),'clean_close':footer is not None and issue is None,
-                 'issue':issue,'footer':footer,'calibrated':calibrated,'simulated':bool(flags&2)}
+                 'issue':issue,'footer':footer,'calibrated':calibrated,'simulated':bool(flags&2),'session_zero':session_zero}
 
 def export(source,destination):
     rows,report=read_log(source)

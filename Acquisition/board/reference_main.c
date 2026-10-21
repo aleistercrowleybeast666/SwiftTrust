@@ -1,5 +1,5 @@
 /* Executable REFERENCE board. See Models/REFERENCE_APPLICATION.md before use.
- * PA0 provides an autonomous 5s logic pulse; PA11/PA12 remain untouched. */
+ * R8 output is disabled pending review; PA0 defaults low. PA11/PA12 untouched. */
 #if defined(ST_REFERENCE_APPLICATION)
 #include "stm32f4xx_hal.h"
 #include "stm32f4xx_ll_adc.h"
@@ -58,7 +58,8 @@ static st_voltage supply;
 static st_voltage_view supply_view;
 static BatteryMonitor battery;
 static st_voltage_view battery_view;
-static const st_voltage_policy supply_policy = {{3000, 3100, 3200, 3300}, 20, 1000, true};
+static const st_voltage_policy supply_policy = {ST_VDDA_DISPLAY_LEVELS_MV, ST_VDDA_HYSTERESIS_MV,
+                                                ST_VDDA_FRESH_MS, true};
 static const st_f4_led_port leds = {
     {GPIOB, GPIOB, GPIOB, GPIOB}, {GPIO_PIN_6, GPIO_PIN_7, GPIO_PIN_8, GPIO_PIN_9}, true, true};
 static volatile bool capture_owner;
@@ -259,6 +260,8 @@ static void board_init(void)
     HAL_GPIO_WritePin(GPIOB, GPIO_PIN_6 | GPIO_PIN_7 | GPIO_PIN_8 | GPIO_PIN_9, GPIO_PIN_RESET);
     gpio(GPIOB, GPIO_PIN_6 | GPIO_PIN_7 | GPIO_PIN_8 | GPIO_PIN_9, GPIO_MODE_OUTPUT_PP, GPIO_NOPULL,
          0);
+    HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0, GPIO_PIN_RESET);
+    gpio(GPIOB, GPIO_PIN_0, GPIO_MODE_OUTPUT_PP, GPIO_NOPULL, 0);
     gpio(GPIOC, GPIO_PIN_6, GPIO_MODE_INPUT, GPIO_NOPULL, 0);
     gpio(GPIOB, GPIO_PIN_5, GPIO_MODE_INPUT, GPIO_PULLUP, 0);
     gpio(GPIOC, GPIO_PIN_4, GPIO_MODE_IT_FALLING, GPIO_NOPULL, 0);
@@ -306,9 +309,10 @@ static void yield(void *ctx)
 static bool idle(void *ctx)
 {
     (void)ctx;
-    return supply.valid && supply.mv >= 2700 && supply.mv <= 3600 && supply_view.age_ms <= 1000 &&
-           !IgnitionServer_IsBusy(&ignition) && !IgnitionPulse_IsRunning(NULL) &&
-           logger.state == ST_IDLE && !logger.inflight && !atomic_load(&logger.capture_enabled) &&
+    return supply.valid && supply.mv >= ST_VDDA_MIN_MV && supply.mv <= ST_VDDA_MAX_MV &&
+           supply_view.age_ms <= ST_VDDA_FRESH_MS && !IgnitionServer_IsBusy(&ignition) &&
+           !IgnitionPulse_IsRunning(NULL) && logger.state == ST_IDLE && !logger.inflight &&
+           !atomic_load(&logger.capture_enabled) &&
            (!app_ready || !mounted || st_fatfs_idle(&worker)) &&
            (!app_ready || !cal_port.locked || !cal_port.locked(cal_port.ctx));
 }
@@ -383,8 +387,10 @@ static void voltage_step(uint32_t ms, uint64_t us)
         if (!adc_battery_phase)
             last_adc_ms = ms;
         adc_started_ms = ms;
-        ADC_ChannelConfTypeDef channel = {.Channel = adc_battery_phase ? ADC_CHANNEL_10 : ADC_CHANNEL_VREFINT,
-                                          .Rank = 1, .SamplingTime = ADC_SAMPLETIME_480CYCLES};
+        ADC_ChannelConfTypeDef channel = {.Channel = adc_battery_phase ? ADC_CHANNEL_10
+                                                                       : ADC_CHANNEL_VREFINT,
+                                          .Rank = 1,
+                                          .SamplingTime = ADC_SAMPLETIME_480CYCLES};
         adc_busy = HAL_ADC_ConfigChannel(&vref_adc, &channel) == HAL_OK &&
                    HAL_ADC_Start_IT(&vref_adc) == HAL_OK;
         if (!adc_busy)
@@ -418,7 +424,7 @@ static void fast_service(void)
         if (!decoded.flags)
             last_valid_us = c.time_us;
     }
-    if (capture_owner && us - rate_time_us >= 500000)
+    if (capture_owner && us - rate_time_us >= ST_ADC_RATE_WINDOW_US)
     {
         uint32_t sequence = capture.sequence;
         rate_ok = st_ref_rate_ok(sequence - rate_sequence, us - rate_time_us);
@@ -426,7 +432,7 @@ static void fast_service(void)
         rate_sequence = sequence;
         rate_time_us = us;
     }
-    bool fresh = last_valid_us && us >= last_valid_us && us - last_valid_us <= 10000;
+    bool fresh = last_valid_us && us >= last_valid_us && us - last_valid_us <= ST_ADC_FRESH_US;
     if ((logger.state == ST_STARTING || logger.state == ST_CAPTURING) && (!fresh || !rate_ok))
     {
         if (!source_fault)
@@ -440,7 +446,8 @@ static void fast_service(void)
      * may be no new falling edge. Drain it only while idle, outside a wizard.
      * Such a timestamp is never offered to a recording or calibration sample. */
     if (capture_owner && logger.state == ST_IDLE && !atomic_load(&logger.capture_enabled) &&
-        (!cal_port.locked || !cal_port.locked(cal_port.ctx)))
+        (!cal_port.locked || !cal_port.locked(cal_port.ctx)) &&
+        calibration.endpoint.zero.state != ST_ZERO_COLLECTING)
     {
         uint32_t mask = __get_PRIMASK();
         __disable_irq();
@@ -456,7 +463,8 @@ static void fast_service(void)
 static bool cal_request(void *ctx, const uint8_t p[14])
 {
     (void)ctx;
-    return sensor.configured && cal_port.request && cal_port.request(cal_port.ctx, p);
+    return (sensor.configured || p[0] >= 7) && cal_port.request &&
+           cal_port.request(cal_port.ctx, p);
 }
 static bool cal_snapshot(void *ctx, uint8_t p[64])
 {
@@ -474,12 +482,33 @@ static void cal_reset(void *ctx)
     if (cal_port.reset)
         cal_port.reset(cal_port.ctx);
 }
+static bool Zero_IsWaiting(void *ctx)
+{
+    (void)ctx;
+    return cal_port.start_waiting && cal_port.start_waiting(cal_port.ctx);
+}
+static bool Zero_HasFailed(void *ctx)
+{
+    (void)ctx;
+    return cal_port.start_failed && cal_port.start_failed(cal_port.ctx);
+}
+static bool Zero_ReadSnapshot(void *ctx, uint8_t view[12])
+{
+    (void)ctx;
+    return cal_port.sensor_snapshot && cal_port.sensor_snapshot(cal_port.ctx, view);
+}
+static void Zero_BeginStart(void *ctx)
+{
+    (void)ctx;
+    if (cal_port.begin_start)
+        cal_port.begin_start(cal_port.ctx);
+}
 static bool prepare(void *ctx)
 {
     (void)ctx;
     uint64_t us = st_reference_time_us(NULL);
     if (!mounted || block.fault || !present(NULL) || !ads.ready || !rate_ok || !last_valid_us ||
-        us - last_valid_us > 10000 || !st_fatfs_idle(&worker) || !idle(NULL))
+        us - last_valid_us > ST_ADC_FRESH_US || !st_fatfs_idle(&worker) || !idle(NULL))
         return false;
     if (!st_ref_prepare_start(&logger, cal_port, server.epoch, true, sensor.configured))
         return false;
@@ -491,11 +520,8 @@ static bool reserve_epoch(void *ctx, uint64_t counter, uint32_t *epoch)
     (void)ctx;
     if (logger.state == ST_STARTING || logger.state == ST_CAPTURING || logger.state == ST_STOPPING)
     {
-        (void)st_logger_stop(&logger);
-        return false;
+        return false; /* Never stop recording to make an NV write window. */
     }
-    if (cal_locked(NULL))
-        cal_reset(NULL); /* Explicit paired reconnect cancels a draft. */
     if (!idle(NULL))
         return false;
     st2_nv_port nv = st_nv_link_port(&pairing.store);
@@ -509,14 +535,14 @@ static bool reserve_epoch(void *ctx, uint64_t counter, uint32_t *epoch)
 static bool Ignition_CheckLocal(void *ctx, uint8_t mode)
 {
     (void)ctx;
-    bool voltage_ok = supply.valid && supply.mv >= 2700 && supply.mv <= 3600 &&
-                      supply_view.age_ms <= 1000;
+    bool voltage_ok = supply.valid && supply.mv >= ST_VDDA_MIN_MV && supply.mv <= ST_VDDA_MAX_MV &&
+                      supply_view.age_ms <= ST_VDDA_FRESH_MS;
     if (!voltage_ok || radio.failed || cal_locked(NULL))
         return false;
     if (mode == 1)
         return logger.state == ST_IDLE;
-    return mode == 2 && logger.state == ST_CAPTURING && !source_fault && !ads.failed &&
-           rate_ok && last_valid_us && st_reference_time_us(NULL) - last_valid_us <= 10000 &&
+    return mode == 2 && logger.state == ST_CAPTURING && !source_fault && !ads.failed && rate_ok &&
+           last_valid_us && st_reference_time_us(NULL) - last_valid_us <= ST_ADC_FRESH_US &&
            mounted && present(NULL) && !block.fault && !st_logger_error_count(&logger);
 }
 static void server_init(void)
@@ -524,9 +550,11 @@ static void server_init(void)
     (void)IgnitionPulse_Stop(NULL);
     paired = st_nv_server_init(&server, &pairing.store, &logger, st_ref_link_timing());
     IgnitionServer_Init(&ignition, (const uint8_t *)UID_BASE, pairing.store.identity.peer_uid);
-    if (IgnitionServer_BindOutput(&ignition, (IgnitionOutputPort){NULL, now_ms,
-            Ignition_CheckLocal, IgnitionPulse_Start, IgnitionPulse_Stop,
-            IgnitionPulse_IsRunning}) != IGNITION_OUTPUT_OK)
+    if (ST_OUTPUT_HARDWARE_ENABLED &&
+        IgnitionServer_BindOutput(
+            &ignition, (IgnitionOutputPort){NULL, now_ms, Ignition_CheckLocal, IgnitionPulse_Start,
+                                            IgnitionPulse_Stop, IgnitionPulse_IsRunning}) !=
+            IGNITION_OUTPUT_OK)
         fatal();
     if (paired && IgnitionServer_SetKey(&ignition, st_ref_ignition_key()) != IGNITION_KEY_OK)
         fatal();
@@ -534,8 +562,16 @@ static void server_init(void)
     if (paired)
         server.nv = (st2_nv_port){NULL, reserve_epoch, NULL};
     if (paired)
-        st2_server_attach_calibration(&server, (st2_cal_port){NULL, cal_request, cal_snapshot,
-                                                              cal_locked, prepare, cal_reset});
+        st2_server_attach_calibration(&server, (st2_cal_port){.ctx = NULL,
+                                                              .request = cal_request,
+                                                              .snapshot = cal_snapshot,
+                                                              .locked = cal_locked,
+                                                              .prepare_start = prepare,
+                                                              .reset = cal_reset,
+                                                              .start_waiting = Zero_IsWaiting,
+                                                              .start_failed = Zero_HasFailed,
+                                                              .sensor_snapshot = Zero_ReadSnapshot,
+                                                              .begin_start = Zero_BeginStart});
 }
 static void storage_init(void)
 {
@@ -577,6 +613,8 @@ static void sensor_init(void)
     }
     (void)st_cal_system_init(&calibration, &logger, &worker, NULL, sensor.binding, sensor.policy,
                              NULL, st_reference_time_us);
+    calibration.endpoint.auto_zero =
+        sensor.configured ? sensor.auto_zero : ST_AUTO_ZERO_DEFAULT != 0;
     cal_port = st_cal_endpoint_port(&calibration.endpoint);
 }
 void _init(void)
@@ -601,10 +639,13 @@ int main(void)
     (void)st_journal_open(&journal, st_flash_journal_port(&flash_window));
     (void)st_pairing_open(&pairing, st_journal_storage(&journal), (const uint8_t *)UID_BASE,
                           ST_NV_ACQUISITION);
-    AutoLink_Init(&auto_link, &pairing, st_ref_ignition_key(), 0x5354, NULL, idle);
-    console = (st_console){
-        .pair = &pairing, .emit = emit, .idle = idle, .changed = changed, .status = status,
-        .ignition_key = Ignition_SetConsoleKey};
+    AutoLink_Init(&auto_link, &pairing, st_ref_ignition_key(), ST_PROJECT_PAIR_ID, NULL, idle);
+    console = (st_console){.pair = &pairing,
+                           .emit = emit,
+                           .idle = idle,
+                           .changed = changed,
+                           .status = status,
+                           .ignition_key = Ignition_SetConsoleKey};
     storage_init();
     sensor_init();
     server_init();
@@ -662,7 +703,7 @@ int main(void)
         }
         st_cal_endpoint_step(&calibration.endpoint);
         {
-            bool fresh = last_valid_us && us - last_valid_us <= 10000;
+            bool fresh = last_valid_us && us - last_valid_us <= ST_ADC_FRESH_US;
             st2_measurement measurement = {
                 .tf =
                     block.fault || !present(NULL)
@@ -675,15 +716,19 @@ int main(void)
                 .quality_problem = ads.failed || (rate_checked && !rate_ok) || source_fault ||
                                    st_logger_error_count(&logger) > 0,
                 .mv = battery.voltage.valid && battery.voltage.mv <= 65534
-                    ? (uint16_t)battery.voltage.mv : UINT16_MAX};
+                          ? (uint16_t)battery.voltage.mv
+                          : UINT16_MAX};
             st_link_server_step(&link, &server, measurement, us);
         }
-        if (radio.failed && (logger.state == ST_STARTING || logger.state == ST_CAPTURING))
-        {
-            source_fault = true;
-            (void)st_logger_stop(&logger); /* Clean drain after a latched radio fault. */
-            emit(NULL, "RADIO FAULT; STOPPING; RESET REQUIRED\r\n");
-        }
+        /* RF faults never interrupt local ADC/TF recording. The execution policy
+         * independently removes authorization/cuts the signal on a radio fault. */
+        HAL_GPIO_WritePin(
+            GPIOB, GPIO_PIN_0,
+            Link_GetLed(Link_GetHealth(server.have_peer_status, server.peer_received_ms,
+                                       now_ms(NULL), radio.failed),
+                        now_ms(NULL))
+                ? GPIO_PIN_SET
+                : GPIO_PIN_RESET);
         /* Every sector wait yields to fast_service; neither calibration, radio nor
          * FatFs is re-entered. The ADC ISR remains independent of this volume owner. */
         st_fatfs_worker_step(&worker);

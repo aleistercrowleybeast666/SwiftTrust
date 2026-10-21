@@ -90,7 +90,7 @@
       "exact_vendor_part": null
     },
     "sram_budget_kib": 32,
-    "ui_implementation": "portable_ui_and_raster_host_tested_hal_unbound",
+    "ui_implementation": "R8_four_fixed_rows_Chinese_subset_default_English_macro",
     "debug_uart": {
       "instance": "USART1",
       "tx_candidate": "PA9",
@@ -213,7 +213,7 @@
     "64ksps_requires_TBM_and_hardware_acceptance": true
   },
   "protocol": {
-    "status": "compact_no_wire_version_host_tested_both_arm_linked_nv_board_binding_pending",
+    "status": "R8_common_frame_host_and_ARM_verified_hardware_unverified",
     "commands": [
       "acquisition_start",
       "acquisition_stop",
@@ -223,17 +223,18 @@
     ],
     "ack_means": "accepted_then_completed_or_failed_with_same_transaction_id",
     "raw_sample_stream_over_radio": false,
-    "wire_version_field": false,
-    "document_revision": "R4"
+    "wire_version_field": true,
+    "document_revision": "R8",
+    "document": "LORA_PROTOCOL_R8.md"
   },
   "software": {
     "logger_format": "STLOG001",
     "ring_bytes": 32768,
     "staging_bytes": 8192,
-    "host_test_groups": 43,
-    "host_assertions": 40371,
+    "host_test_groups": 60,
+    "host_assertions": 57547,
     "arm_object_compile": true,
-    "full_firmware_linked": false,
+    "full_firmware_linked": true,
     "hardware_tested": false,
     "component_targets_linked": true,
     "fatfs_worker_diskio_host_integration": true,
@@ -244,8 +245,8 @@
     "calibration_parameter_files_bytes": 2048,
     "calibration_hardware_tested": false,
     "full_host_suite_baseline_commit": "e6589b042d47c73a194eac2f48576cbe5d6be40a",
-    "runtime_targeted_groups": 6,
-    "runtime_targeted_assertions": 313,
+    "runtime_targeted_groups": 12,
+    "runtime_targeted_assertions": 931,
     "radio_application_glue": "bounded_server_client_runtime_host_verified_arm_linked_board_init_unbound",
     "hardware_decision_list": "Models/BOARD_DECISIONS.md"
   },
@@ -268,13 +269,17 @@
       "F411_SDIO_HZ": 48000000,
       "G071_SYSCLK_HZ": 16000000
     },
-    "voltage": "acquisition_PC0_battery_divider_10k_10k_100nF_VREFINT_compensated_controller_SELF_VDDA",
+    "voltage": "acquisition_PC0_battery_controller_MCU_VDDA_explicitly_labelled",
     "battery_reference": {
       "pin": "PC0",
       "adc": "ADC1_IN10",
       "divider_numerator": 2,
       "divider_denominator": 1,
-      "four_three_two_one_boundaries_mv": [3900, 3700, 3500],
+      "four_three_two_one_boundaries_mv": [
+        3900,
+        3700,
+        3500
+      ],
       "last_led_blink_below_mv": 3300,
       "blink_hz": 1,
       "hysteresis_mv": 30,
@@ -283,10 +288,14 @@
     "ignition_reference": {
       "pin": "PA0",
       "timer": "TIM2_CH1_AF1_PWM2_OPM",
-      "pulse_ms": 5000,
+      "pulse_ms": 0,
       "arm_ms": 10000,
       "external_feedback": "UNKNOWN",
-      "hardware_tested": false
+      "hardware_tested": false,
+      "simulation_candidate_ms": 1000,
+      "hardware_enabled": false,
+      "safety_reviewed": false,
+      "duration_source": "ST_OUTPUT_REAL_DURATION_MS"
     },
     "nv": "internal_flash_two_region_journal_idle_only_preserve_on_upgrade",
     "sensor": "SENSOR.CFG_explicit_rating_else_raw_only",
@@ -300,5 +309,6 @@
         "PA12"
       ]
     }
-  }
+  },
+  "runtime_configuration_source": "Common/Inc/st_project_config.h"
 }

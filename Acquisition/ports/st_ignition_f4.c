@@ -30,6 +30,8 @@ bool IgnitionPulse_IsRunning(void *ctx)
 IgnitionOutputResult IgnitionPulse_Start(void *ctx)
 {
     (void)ctx;
+    if (!ST_OUTPUT_HARDWARE_ENABLED || !ST_OUTPUT_SAFETY_REVIEWED)
+        return IGNITION_OUTPUT_INVALID;
     if (!pulse_ready)
         return IGNITION_OUTPUT_INVALID;
     if (IgnitionPulse_IsRunning(NULL))
@@ -52,8 +54,10 @@ IgnitionOutputResult IgnitionPulse_Init(void)
     pulse_ready = false;
     __HAL_RCC_GPIOA_CLK_ENABLE();
     HAL_GPIO_WritePin(IGNITION_PORT, IGNITION_PIN, GPIO_PIN_RESET);
-    GPIO_InitTypeDef gpio = {.Pin = IGNITION_PIN, .Mode = GPIO_MODE_OUTPUT_PP,
-                             .Pull = GPIO_PULLDOWN, .Speed = GPIO_SPEED_FREQ_LOW};
+    GPIO_InitTypeDef gpio = {.Pin = IGNITION_PIN,
+                             .Mode = GPIO_MODE_OUTPUT_PP,
+                             .Pull = GPIO_PULLDOWN,
+                             .Speed = GPIO_SPEED_FREQ_LOW};
     HAL_GPIO_Init(IGNITION_PORT, &gpio);
     __HAL_RCC_TIM2_CLK_ENABLE();
     __HAL_RCC_TIM2_FORCE_RESET();

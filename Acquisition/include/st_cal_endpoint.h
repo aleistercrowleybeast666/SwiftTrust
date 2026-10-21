@@ -2,12 +2,15 @@
 #define ST_CAL_ENDPOINT_H
 #include "st_cal_input.h"
 #include "st_link2.h"
+#include "st_session_zero.h"
 typedef struct
 {
     st_cal_service *service;
     st_logger *logger;
     st_cal_input input;
     bool last_ok;
+    bool auto_zero, start_prepared;
+    StSessionZero zero;
 } st_cal_endpoint;
 void st_cal_endpoint_init(st_cal_endpoint *, st_cal_service *, st_logger *);
 void st_cal_endpoint_step(st_cal_endpoint *);

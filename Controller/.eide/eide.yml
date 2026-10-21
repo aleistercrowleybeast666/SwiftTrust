@@ -163,6 +163,15 @@
       },
       {
         "path": "../Acquisition/src/st_auto_link.c"
+      },
+      {
+        "path": "../Acquisition/src/st_frame.c"
+      },
+      {
+        "path": "../Common/Src/st_task.c"
+      },
+      {
+        "path": "../Acquisition/src/st_session_zero.c"
       }
     ],
     "folders": []
@@ -236,7 +245,7 @@
               "warnings": "all-warnings",
               "one-elf-section-per-function": true,
               "one-elf-section-per-data": true,
-              "C_FLAGS": "-Wall -Wextra -Werror -Wno-error=unused-parameter"
+              "C_FLAGS": "-Wall -Wextra -Werror -Wno-error=unused-parameter -finput-charset=UTF-8 -fexec-charset=UTF-8"
             },
             "asm-compiler": {
               "ASM_FLAGS": ""
@@ -321,7 +330,7 @@
               "warnings": "all-warnings",
               "one-elf-section-per-function": true,
               "one-elf-section-per-data": true,
-              "C_FLAGS": "-Os -Wall -Wextra -Werror -Wno-error=unused-parameter"
+              "C_FLAGS": "-Os -Wall -Wextra -Werror -Wno-error=unused-parameter -finput-charset=UTF-8 -fexec-charset=UTF-8"
             },
             "asm-compiler": {
               "ASM_FLAGS": ""

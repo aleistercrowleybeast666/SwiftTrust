@@ -1,4 +1,5 @@
 #include "st_cal_ui.h"
+#include "st_ui.h"
 #include <stdio.h>
 #include <string.h>
 static const st_cal_reference presets[] = {
@@ -171,7 +172,7 @@ static bool back(st_cal_ui *u)
         return false;
     case ST_CAL_UI_REFERENCE:
         page(u, u->reference_parent,
-             u->reference_parent == ST_CAL_UI_EDITOR ? EDITOR_OK : PRESET_COUNT);
+             u->reference_parent == ST_CAL_UI_EDITOR ? EDITOR_BACK : PRESET_COUNT);
         return false;
     case ST_CAL_UI_LOAD:
         page(u, ST_CAL_UI_LOAD_KIND, 2);
@@ -184,7 +185,7 @@ bool st_cal_ui_handle(st_cal_ui *u, st_cal_ui_event event, bool idle)
 {
     refresh(u);
     if (u->view.pending)
-        return false;
+        return event == ST_CAL_UI_BACK;
     if (event == ST_CAL_UI_BACK)
         return back(u);
     if (event == ST_CAL_UI_NEXT || event == ST_CAL_UI_PREV)
@@ -253,7 +254,7 @@ bool st_cal_ui_handle(st_cal_ui *u, st_cal_ui_event event, bool idle)
                                       .gravity_um_s2 =
                                           u->selection == ST_CAL_NEWTONS ? 0 : ST_CAL_G0_UM_S2};
         u->edit_value = 0;
-        page(u, ST_CAL_UI_EDITOR, 0);
+        page(u, ST_CAL_UI_EDITOR, EDITOR_BACK);
         return false; /* Explicit clear; never reinterpret a numeric value in a new unit. */
     case ST_CAL_UI_EDITOR:
         if (u->editing)
@@ -310,130 +311,126 @@ bool st_cal_ui_handle(st_cal_ui *u, st_cal_ui_event event, bool idle)
         return false;
     }
 }
-void st_cal_ui_render(st_cal_ui *u, st_cal_panel *p)
+void st_cal_ui_render(st_cal_ui *u, st_cal_panel *panel)
 {
     refresh(u);
-    memset(p, 0, sizeof(*p));
-    const char *title = "CALIBRATION";
+    memset(panel, 0, sizeof *panel);
+    const char *back_label = Ui_Text("返回", "BACK");
+    (void)snprintf(panel->rows[0], ST_UI_ROW_BYTES, "%s", back_label);
+    panel->inverse = true;
+    panel->inverse_row = 0;
+    const char *error = Ui_Text("参数或采样异常", "CHECK CONFIG / DATA");
+    if (u->local_error || u->view.error)
+        (void)snprintf(panel->rows[3], ST_UI_ROW_BYTES, "%s",
+                       ST_UI_CHINESE ? error
+                                     : error_name(u->local_error ? u->local_error : u->view.error));
     switch (u->page)
     {
     case ST_CAL_UI_INTRO:
-        (void)snprintf(p->rows[1], 22, "ZERO + KNOWN LOAD");
-        (void)snprintf(p->rows[2], 22, "%s",
-                       u->view.simulated ? "SIMULATED PROFILE" : "CONFIG BOUND PROFILE");
-        (void)snprintf(p->rows[3], 22, "%c BEGIN", u->selection == 0 ? '>' : ' ');
-        (void)snprintf(p->rows[4], 22, "%c BACK", u->selection == 1 ? '>' : ' ');
+        (void)snprintf(panel->rows[1], ST_UI_ROW_BYTES, "%s",
+                       Ui_Text("单传感器完整标定", "ONE SENSOR CAL"));
+        (void)snprintf(panel->rows[2], ST_UI_ROW_BYTES, "%s",
+                       Ui_Text("开始新标定", "BEGIN CALIBRATION"));
+        panel->inverse_row = u->selection == 1 ? 0 : 2;
         break;
     case ST_CAL_UI_ZERO:
-        title = "REMOVE ALL LOAD";
-        (void)snprintf(p->rows[2], 22, "%c CAPTURE ZERO", u->selection == 0 ? '>' : ' ');
-        (void)snprintf(p->rows[4], 22, "%c BACK", u->selection == 1 ? '>' : ' ');
+        (void)snprintf(panel->rows[1], ST_UI_ROW_BYTES, "%s",
+                       Ui_Text("请先移除全部载荷", "REMOVE ALL LOAD"));
+        (void)snprintf(panel->rows[2], ST_UI_ROW_BYTES, "%s",
+                       Ui_Text("采集标定零点", "CAPTURE ZERO"));
+        panel->inverse_row = u->selection == 1 ? 0 : 2;
         break;
     case ST_CAL_UI_WAIT_ZERO:
     case ST_CAL_UI_WAIT_LOAD:
-        title = u->page == ST_CAL_UI_WAIT_ZERO ? "ZERO SAMPLES" : "LOADED SAMPLES";
-        (void)snprintf(p->rows[1], 22, "%lu / %lu", (unsigned long)u->view.samples,
+        (void)snprintf(panel->rows[1], ST_UI_ROW_BYTES, "%s",
+                       Ui_Text("等待稳定采样", "WAIT STABLE SAMPLES"));
+        (void)snprintf(panel->rows[2], ST_UI_ROW_BYTES, "%lu/%lu", (unsigned long)u->view.samples,
                        (unsigned long)u->view.required);
-        (void)snprintf(p->rows[4], 22, "> CANCEL");
         break;
     case ST_CAL_UI_LOAD_KIND:
-        title = "REFERENCE INPUT";
-        (void)snprintf(p->rows[1], 22, "VERIFY ACTUAL LOAD");
-        (void)snprintf(p->rows[2], 22, "%c PRESET MASS", u->selection == 0 ? '>' : ' ');
-        (void)snprintf(p->rows[3], 22, "%c CUSTOM g/kg/N", u->selection == 1 ? '>' : ' ');
-        (void)snprintf(p->rows[4], 22, "%c BACK", u->selection == 2 ? '>' : ' ');
+        (void)snprintf(panel->rows[1], ST_UI_ROW_BYTES, "%s", Ui_Text("预设质量", "PRESET MASS"));
+        (void)snprintf(panel->rows[2], ST_UI_ROW_BYTES, "%s",
+                       Ui_Text("自定义参考值", "CUSTOM REFERENCE"));
+        panel->inverse_row = u->selection == 2 ? 0 : (uint8_t)(u->selection + 1u);
         break;
     case ST_CAL_UI_PRESETS:
     {
-        title = "MASS PRESETS";
-        unsigned top = u->selection < 3 ? 0 : u->selection - 2;
-        for (unsigned row = 0; row < 3 && top + row <= PRESET_COUNT; row++)
+        unsigned selected = u->selection == PRESET_COUNT ? 0 : u->selection + 1u;
+        unsigned top = selected < ST_OLED_ROWS ? 0 : selected - ST_OLED_ROWS + 1u;
+        memset(panel->rows, 0, sizeof panel->rows);
+        for (unsigned row = 0; row < ST_OLED_ROWS && top + row <= PRESET_COUNT; row++)
         {
             unsigned item = top + row;
-            char value[18];
-            if (item == PRESET_COUNT)
-                (void)snprintf(value, sizeof(value), "BACK");
+            if (!item)
+                (void)snprintf(panel->rows[row], ST_UI_ROW_BYTES, "%s", back_label);
             else
-                value_text(value, sizeof(value), presets[item], false);
-            (void)snprintf(p->rows[row + 1], 22, "%c %s", u->selection == item ? '>' : ' ', value);
+                value_text(panel->rows[row], ST_UI_ROW_BYTES, presets[item - 1u], false);
         }
-        (void)snprintf(p->rows[4], 22, "VERIFY ACTUAL MASS");
+        panel->inverse_row = (uint8_t)(selected - top);
         break;
     }
     case ST_CAL_UI_UNITS:
-        title = "SELECT INPUT UNIT";
-        for (unsigned i = 0; i < 3; i++)
-            (void)snprintf(p->rows[i + 1], 22, "%c %s", u->selection == i ? '>' : ' ',
-                           unit_name((st_cal_unit)i));
-        (void)snprintf(p->rows[4], 22, "%c BACK", u->selection == 3 ? '>' : ' ');
+        (void)snprintf(panel->rows[1], ST_UI_ROW_BYTES, "g");
+        (void)snprintf(panel->rows[2], ST_UI_ROW_BYTES, "kg");
+        (void)snprintf(panel->rows[3], ST_UI_ROW_BYTES, "N");
+        panel->inverse_row = u->selection == 3 ? 0 : (uint8_t)(u->selection + 1u);
         break;
     case ST_CAL_UI_EDITOR:
-        title = "CUSTOM VALUE";
-        {
-            st_cal_reference ref = u->draft;
-            ref.milli_units = u->edit_value;
-            value_text(p->rows[1], 22, ref, true);
-        }
-        (void)snprintf(p->rows[2], 22, "%s", u->editing ? "EDIT DIGIT" : "SELECT DIGIT");
-        (void)snprintf(p->rows[3], 22, "%c CONFIRM", u->selection == EDITOR_OK ? '>' : ' ');
-        (void)snprintf(p->rows[4], 22, "%c BACK", u->selection == EDITOR_BACK ? '>' : ' ');
+    {
+        st_cal_reference reference = u->draft;
+        reference.milli_units = u->edit_value;
+        value_text(panel->rows[1], ST_UI_ROW_BYTES, reference, true);
+        (void)snprintf(panel->rows[2], ST_UI_ROW_BYTES, "%s",
+                       Ui_Text("确认参考值", "CONFIRM VALUE"));
+        (void)snprintf(panel->rows[3], ST_UI_ROW_BYTES, "%s",
+                       u->unit_reset ? Ui_Text("单位变化数值已清零", "UNIT: VALUE CLEARED")
+                                     : Ui_Text("旋转选位按下编辑", "SELECT / EDIT DIGIT"));
+        panel->inverse_row = u->selection == EDITOR_BACK ? 0 : u->selection == EDITOR_OK ? 2 : 1;
         if (u->selection < DIGITS)
         {
-            p->inverse = true;
-            p->inverse_row = 1;
-            p->inverse_column = (uint8_t)(u->selection + (u->selection >= 6 ? 1u : 0u));
+            panel->inverse_digit = true;
+            panel->inverse_column = (uint8_t)(u->selection + (u->selection >= 6 ? 1u : 0u));
         }
-        if (u->unit_reset)
-            (void)snprintf(p->rows[5], 22, "UNIT SET:VALUE CLEAR");
         break;
+    }
     case ST_CAL_UI_REFERENCE:
-        title = "CONFIRM REFERENCE";
-        value_text(p->rows[1], 22, u->draft, false);
-        (void)snprintf(p->rows[2], 22, "%s",
-                       u->draft.unit == ST_CAL_NEWTONS ? "DIRECT FORCE" : "g=9.80665 m/s2");
-        (void)snprintf(p->rows[3], 22, "%c USE VALUE", u->selection == 0 ? '>' : ' ');
-        (void)snprintf(p->rows[4], 22, "%c BACK", u->selection == 1 ? '>' : ' ');
+        value_text(panel->rows[1], ST_UI_ROW_BYTES, u->draft, false);
+        (void)snprintf(panel->rows[2], ST_UI_ROW_BYTES, "%s",
+                       Ui_Text("使用此参考值", "USE REFERENCE"));
+        (void)snprintf(panel->rows[3], ST_UI_ROW_BYTES, "%s",
+                       u->draft.unit == ST_CAL_NEWTONS ? "N" : "g=9.80665 m/s2");
+        panel->inverse_row = u->selection == 1 ? 0 : 2;
         break;
     case ST_CAL_UI_LOAD:
-        title = "APPLY KNOWN LOAD";
-        value_text(p->rows[1], 22, u->view.reference, false);
-        (void)snprintf(p->rows[3], 22, "%c CAPTURE LOAD", u->selection == 0 ? '>' : ' ');
-        (void)snprintf(p->rows[4], 22, "%c BACK", u->selection == 1 ? '>' : ' ');
+        value_text(panel->rows[1], ST_UI_ROW_BYTES, u->view.reference, false);
+        (void)snprintf(panel->rows[2], ST_UI_ROW_BYTES, "%s",
+                       Ui_Text("采集已知载荷", "CAPTURE KNOWN LOAD"));
+        panel->inverse_row = u->selection == 1 ? 0 : 2;
         break;
     case ST_CAL_UI_REVIEW:
-        title = "REVIEW CALIBRATION";
-        (void)snprintf(p->rows[1], 22, "ZERO %ld", (long)u->view.zero_raw);
-        coefficient_text(p->rows[2], u->view.slope_nn);
-        (void)snprintf(p->rows[3], 22, "nN/count");
-        (void)snprintf(p->rows[4], 22, "%c %s", u->selection == 0 ? '>' : ' ',
-                       u->view.storage_bound ? "SAVE NEW" : "SAVE UNBOUND");
-        (void)snprintf(p->rows[5], 22, "%c BACK", u->selection == 1 ? '>' : ' ');
+        (void)snprintf(panel->rows[1], ST_UI_ROW_BYTES, "%s %ld", Ui_Text("零点", "ZERO"),
+                       (long)u->view.zero_raw);
+        coefficient_text(panel->rows[2], u->view.slope_nn);
+        (void)snprintf(panel->rows[3], ST_UI_ROW_BYTES, "%s",
+                       Ui_Text("保存新标定", "SAVE NEW CALIBRATION"));
+        panel->inverse_row = u->selection == 1 ? 0 : 3;
         break;
     case ST_CAL_UI_RESULT:
-        title = u->view.uncertain
-                    ? "RESULT UNKNOWN"
-                    : (u->view.state == ST_CAL_COMMITTED
-                           ? "CALIBRATION SAVED"
-                           : (u->view.state == ST_CAL_CANCELLED ? "CALIBRATION CANCELLED"
-                                                                : "CALIBRATION FAILED"));
-        (void)snprintf(p->rows[1], 22, "%s",
-                       u->view.uncertain                   ? "CHECK LINK STATUS"
-                       : u->view.state == ST_CAL_COMMITTED ? "NEW PROFILE ACCEPTED"
-                                                           : "OLD PROFILE RETAINED");
-        (void)snprintf(p->rows[4], 22, "> BACK");
+        (void)snprintf(
+            panel->rows[1], ST_UI_ROW_BYTES, "%s",
+            u->view.uncertain                   ? Ui_Text("结果未确认", "RESULT UNKNOWN")
+            : u->view.state == ST_CAL_COMMITTED ? Ui_Text("标定已保存", "CALIBRATION SAVED")
+            : u->view.state == ST_CAL_CANCELLED ? Ui_Text("标定已取消", "CALIBRATION CANCELED")
+                                                : Ui_Text("标定失败", "CALIBRATION FAILED"));
+        (void)snprintf(panel->rows[2], ST_UI_ROW_BYTES, "%s",
+                       Ui_Text("原始数据始终保留", "RAW DATA RETAINED"));
         break;
     }
     if (u->view.pending)
     {
-        title = "WAIT RESPONSE";
-        (void)snprintf(p->rows[1], 22, "RESULT NOT CONFIRMED");
+        (void)snprintf(panel->rows[1], ST_UI_ROW_BYTES, "%s",
+                       Ui_Text("等待匹配结果", "WAIT MATCHED RESULT"));
+        panel->inverse_row = 0;
+        panel->inverse_digit = false;
     }
-    (void)snprintf(p->rows[0], 22, "%s", title);
-    if (u->local_error || u->view.error)
-        (void)snprintf(p->rows[5], 22, "%s",
-                       error_name(u->local_error ? u->local_error : u->view.error));
-    else if (u->page == ST_CAL_UI_INTRO && u->view.configured && !u->view.storage_bound)
-        (void)snprintf(p->rows[5], 22, "SAVE UNBOUND");
-    else if (u->page == ST_CAL_UI_INTRO && !u->view.configured)
-        (void)snprintf(p->rows[5], 22, "SERVICE UNBOUND");
 }

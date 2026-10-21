@@ -1,148 +1,428 @@
-#include "st_link2.h"
+/* R8 replaces obsolete R2 wire/UI assumptions; low-level suites remain separate. */
 #include "st_ui.h"
+#include "st_session_zero.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-static unsigned checks,groups;
-#define C(x) do{checks++;if(!(x)){fprintf(stderr,"R2 failed line %d: %s\n",__LINE__,#x);exit(1);}}while(0)
-#define G(s) do{groups++;puts("PASS " s);}while(0)
-typedef struct {uint64_t counter,last;uint32_t epoch;unsigned writes;bool fail;} nv;
-static bool counter(void *ctx,uint64_t *out){nv *v=ctx;if(v->fail||v->counter==UINT64_MAX)return false;*out=++v->counter;v->writes++;return true;}
-static bool epoch(void *ctx,uint64_t n,uint32_t *out){nv *v=ctx;if(v->fail||n<=v->last||v->epoch==UINT32_MAX)return false;v->last=n;*out=++v->epoch;v->writes++;return true;}
-static const uint8_t a[12]={1,2,3,4,5,6,7,8,9,10,11,12},b[12]={13,14,15,16,17,18,19,20,21,22,23,24};
-static st2_timing timing(void){return (st2_timing){10000,2200,2500,100000,4};}
-static st2_measurement measured(void){return (st2_measurement){ST2_TF_READY,true,true,false,7400};}
-static size_t pack(st2_packet p,uint8_t out[35]){size_t n=st2_encode(&p,out);C(n>0);return n;}
-static void codec(void){
- const uint8_t types[]={ST2_STATUS,ST2_START,ST2_STOP,ST2_ACK,ST2_DETAILS_QUERY,ST2_DETAILS_REPLY,ST2_HELLO,ST2_HELLO_REPLY,ST2_COMMIT};
- const size_t lengths[]={12,9,9,10,10,27,35,27,15};uint8_t out[35],bad[35];
- for(unsigned i=0;i<9;i++){
-  st2_packet p={.type=types[i],.epoch=0x12345678,.id=345,.mv=7400,.counter=UINT64_C(123456789012),.count=16,.section=1,.fragment=0x21};
-  if(p.type==ST2_STATUS)p.flags=0xf2;
-  if(p.type==ST2_ACK)p.flags=(uint8_t)(ST2_COMPLETED|(ST_CAPTURING<<3)|(ST2_TF_OPEN<<6));
-  memcpy(p.uid,a,12);memcpy(p.peer,b,12);memset(p.data,0xa5,16);size_t n=pack(p,out);C(n==lengths[i]);C(out[0]>=1&&out[0]<=9);
-  st2_packet q;C(st2_decode(&q,out,n));C(q.type==p.type);
-  for(size_t k=0;k<n;k++){memcpy(bad,out,n);bad[k]^=1;C(!st2_decode(&q,bad,n));}
-  for(size_t k=0;k<9;k++)C(!st2_decode(&q,out,k));
- }
- st2_packet p={.type=ST2_STATUS,.epoch=1,.id=1,.flags=32,.mv=65535};C(!st2_encode(&p,out));
- p.mv=0;C(st2_encode(&p,out)==12);st2_packet q;C(st2_decode(&q,out,12)&&q.mv==0);
- out[0]=0xf1;st_put16(out+10,st_crc16(out,10));C(!st2_decode(&q,out,12));
- p.flags=7;C(!st2_encode(&p,out));p.type=ST2_DETAILS_REPLY;p.count=17;C(!st2_encode(&p,out));
- G("R2 exact lengths / every byte corruption / short frames / unknown voltage versus measured zero / reserved values");
+static unsigned checks, groups;
+#define C(x)                                                                                       \
+    do                                                                                             \
+    {                                                                                              \
+        checks++;                                                                                  \
+        if (!(x))                                                                                  \
+        {                                                                                          \
+            fprintf(stderr, "R8 line%d: %s\n", __LINE__, #x);                                      \
+            exit(1);                                                                               \
+        }                                                                                          \
+    } while (0)
+#define G(x)                                                                                       \
+    do                                                                                             \
+    {                                                                                              \
+        groups++;                                                                                  \
+        puts("PASS " x);                                                                           \
+    } while (0)
+typedef struct
+{
+    uint64_t counter, last;
+    uint32_t epoch;
+    unsigned writes;
+} Nv;
+static bool Counter(void *ctx, uint64_t *out)
+{
+    Nv *v = ctx;
+    if (v->counter == UINT64_MAX)
+        return false;
+    *out = ++v->counter;
+    v->writes++;
+    return true;
 }
-static void connect(st2_client *c,st2_server *s,uint32_t now){
- uint8_t x[35],y[35];size_t n,m;C(st2_client_connect(c,now));C(st2_client_tx_due(c,now,x,&n)&&n==35);
- st2_client_tx_accepted(c);st2_client_tx_done(c,now+10,0);m=st2_server_receive(s,x,n,measured(),(uint64_t)now*1000,y);C(m==27);
- unsigned writes=((nv*)s->nv.ctx)->writes;uint32_t e=s->epoch;
- C(st2_server_receive(s,x,n,measured(),(uint64_t)now*1000,y)==27&&s->epoch==e&&((nv*)s->nv.ctx)->writes==writes);
- C(st2_client_receive(c,y,m,now+20));C(st2_client_tx_due(c,now+20,x,&n)&&n==15);
- st2_client_tx_accepted(c);st2_client_tx_done(c,now+30,0);m=st2_server_receive(s,x,n,measured(),(uint64_t)now*1000,y);C(m==12);
- C(st2_client_receive(c,y,m,now+40)&&c->link==ST2_LINK_UP&&st2_client_fresh(c,now+40));
+static bool Epoch(void *ctx, uint64_t n, uint32_t *out)
+{
+    Nv *v = ctx;
+    if (n <= v->last || v->epoch == UINT32_MAX)
+        return false;
+    v->last = n;
+    *out = ++v->epoch;
+    v->writes++;
+    return true;
 }
-static void sessions(void){nv cn={0},sn={0};st_logger l;st_logger_init(&l,(st_log_config){0},(st_file_port){0});
- st2_client c;st2_server s;st2_client_init(&c,(st2_nv_port){&cn,NULL,counter},timing(),b,a);
- st2_server_init(&s,&l,(st2_nv_port){&sn,epoch,NULL},timing(),a,b,0);connect(&c,&s,0);C(sn.writes==1&&cn.writes==1);
- uint8_t old[35],out[35];size_t n=pack((st2_packet){.type=ST2_START,.epoch=s.epoch,.id=1},old);
- st2_server reboot;st2_server_init(&reboot,&l,(st2_nv_port){&sn,epoch,NULL},timing(),a,b,sn.last);
- C(!st2_server_receive(&reboot,old,n,measured(),500000,out));
- st2_packet hello={.type=ST2_HELLO,.counter=1};memcpy(hello.uid,b,12);memcpy(hello.peer,a,12);n=pack(hello,old);
- C(!st2_server_receive(&reboot,old,n,measured(),500000,out));
- connect(&c,&reboot,1000);C(c.epoch==2);sn.fail=true;hello.counter=3;n=pack(hello,old);C(!st2_server_receive(&reboot,old,n,measured(),500000,out));
- cn.fail=true;C(!st2_client_connect(&c,2000));cn.fail=false;cn.counter=UINT64_MAX;C(!st2_client_connect(&c,2000));
- st2_client_init(&c,(st2_nv_port){0},timing(),b,a);C(!st2_client_connect(&c,2000));
- G("R2 paired UID handshake / durable reservation once / boot rejects old counter and epoch / renewal / persistence failure and exhaustion");
+static const uint8_t acq[12] = {1, 2, 3}, ctrl[12] = {4, 5, 6};
+static st2_timing Timing(void)
+{
+    return (st2_timing){2000, 150, 500, 120000, 4};
 }
-static void transactions(void){nv cn={0},sn={0};st_logger l;st_logger_init(&l,(st_log_config){0},(st_file_port){0});
- st2_client c;st2_server s;st2_client_init(&c,(st2_nv_port){&cn,NULL,counter},timing(),b,a);
- st2_server_init(&s,&l,(st2_nv_port){&sn,epoch,NULL},timing(),a,b,0);connect(&c,&s,0);
- /* Exercise transaction transport with real stop state machine, not a fake start backend. */
- l.state=ST_CAPTURING;c.flags=ST_CAPTURING;uint8_t cmd[35],ack[35],tmp[35];size_t n,m;
- C(st2_client_command(&c,ST2_STOP,100));C(st2_client_tx_due(&c,100,cmd,&n)&&n==9);
- st2_client_tx_accepted(&c);C(!st2_client_tx_due(&c,10000,tmp,&m));st2_client_tx_done(&c,200,250);
- m=st2_server_receive(&s,cmd,n,measured(),200000,ack);C(m==10&&l.state==ST_STOPPING);
- C(st2_client_receive(&c,ack,m,210)&&c.pending&&c.transaction==ST_TX_WAIT_STATE);
- C(!st2_client_tx_due(&c,2949,tmp,&m));C(st2_client_tx_due(&c,2950,tmp,&m)&&m==n&&!memcmp(cmd,tmp,n));
- l.state=ST_IDLE; /* model asynchronous storage completion; logger independently regression-tested */
- m=st2_server_poll(&s,measured(),3000000,ack);C(m==10);st2_packet p;C(st2_decode(&p,ack,m)&&(p.flags&7u)==ST2_COMPLETED);
- /* Drop terminal ACK; state status cannot complete the matching transaction. */
- st2_measurement stale=measured();stale.adc_fresh=false;
- m=st2_server_poll(&s,stale,3001000,ack);C(m==12);C(st2_client_receive(&c,ack,m,3001)&&c.pending);
- m=st2_server_receive(&s,cmd,n,measured(),3002000,ack);C(m==10);C(st2_client_receive(&c,ack,m,3002)&&!c.pending&&c.transaction==ST_TX_COMPLETE);
- st2_packet conflict={.type=ST2_START,.epoch=s.epoch,.id=1};m=pack(conflict,tmp);m=st2_server_receive(&s,tmp,m,measured(),4000000,ack);C(st2_decode(&p,ack,m)&&(p.flags&7u)==ST2_CONFLICT);
- conflict.type=ST2_STOP;conflict.id=2;l.state=ST_CAPTURING;m=pack(conflict,tmp);C(st2_server_receive(&s,tmp,m,measured(),4001000,ack)==10);
- l.state=ST_FAULT;m=st2_server_poll(&s,measured(),4002000,ack);C(st2_decode(&p,ack,m)&&(p.flags&7u)==ST2_FAILED);
- c.flags=ST_IDLE;c.next_command=65535;C(st2_client_command(&c,ST2_START,5000)&&!c.next_command);
- c.pending=false;C(!st2_client_command(&c,ST2_START,5000));
- G("R2 stop idempotence / terminal ACK loss and retry / status never completes command / conflicting ID / async failure / no transaction wrap / TX_DONE retry anchor");
+static st2_measurement Measured(void)
+{
+    return (st2_measurement){ST2_TF_READY, true, true, false, 4100};
 }
-static void scheduling(void){nv cn={0},sn={0};st_logger l;st_logger_init(&l,(st_log_config){0},(st_file_port){0});
- st2_client c;st2_server s;st2_client_init(&c,(st2_nv_port){&cn,NULL,counter},timing(),b,a);st2_server_init(&s,&l,(st2_nv_port){&sn,epoch,NULL},timing(),a,b,0);connect(&c,&s,0);
- uint8_t out[35];st2_measurement m=measured();C(!st2_server_poll(&s,m,9999000,out));C(st2_server_poll(&s,m,10000000,out)==12);
- C(st2_client_receive(&c,out,12,10010));C(!st2_client_receive(&c,out,12,10011));C(c.received_ms==10010);
- C(st2_client_fresh(&c,43210));C(!st2_client_fresh(&c,43211));
- m.voltage_fresh=false;C(st2_server_poll(&s,m,10001000,out)==12);m.quality_problem=true;C(st2_server_poll(&s,m,10002000,out)==12);
- m.quality_problem=false;C(!st2_server_poll(&s,m,10003000,out));C(s.quality_sticky);
- s.status_sequence=65535;C(!st2_server_poll(&s,m,20002000,out)&&!s.active);
- st2_client_init(&c,(st2_nv_port){&cn,NULL,counter},timing(),b,a);C(st2_client_connect(&c,UINT32_MAX-100));
- size_t n;C(st2_client_tx_due(&c,20,out,&n));C(!st2_client_tx_due(&c,100001,out,&n)&&c.link==ST2_LINK_DOWN);
- G("R2 10s heartbeat / freshness event / sticky quality / stale or duplicate status rejected / time wrap / status sequence exhaustion / bounded handshake timeout");
+static size_t Pack(st2_packet p, uint8_t *out)
+{
+    size_t n = st2_encode(&p, out);
+    C(n);
+    return n;
 }
-
-static void details_ui(void){nv cn={0},sn={0};st_logger l;st_logger_init(&l,(st_log_config){0},(st_file_port){0});
- st2_client c;st2_server s;st2_client_init(&c,(st2_nv_port){&cn,NULL,counter},timing(),b,a);st2_server_init(&s,&l,(st2_nv_port){&sn,epoch,NULL},timing(),a,b,0);connect(&c,&s,0);
- uint8_t query[35],first[35],second[35],repeat[35];st2_details d;size_t n=st2_details_begin(&d,c.epoch,17,query);C(n==10);
- l.have_sample=true;l.last_sequence=123;l.last_time_us=1000000;size_t f=st2_server_receive(&s,query,n,measured(),2000000,first);C(f==27);
- l.last_sequence=999;size_t g=st2_server_poll(&s,measured(),2001000,second);C(g==18);
- C(st2_details_receive(&d,second,g)&&!d.complete);C(st2_details_receive(&d,first,f)&&d.complete);
- C(st_get32(d.data+4)==123&&st_get16(d.data+20)==1000);C(st2_details_receive(&d,first,f));
- C(st2_server_receive(&s,query,n,measured(),9000000,repeat)==f&&!memcmp(first,repeat,f));
- st2_packet p;C(st2_decode(&p,first,f));p.data[0]^=1;f=pack(p,repeat);C(!st2_details_receive(&d,repeat,f));
- p.id=18;f=pack(p,repeat);C(!st2_details_receive(&d,repeat,f));
- st_ui u;st_ui_init(&u);u.selection=2;C(!st_ui2_handle(&u,ST_UI_PRESS,&c,100));C(u.page==ST_UI_CAPTURE);
- C(!st_ui2_handle(&u,ST_UI_PRESS,&c,100)&&u.page==ST_UI_CONFIRM&&u.selection==1);
- C(!st_ui2_handle(&u,ST_UI_PREV,&c,100));C(st_ui2_handle(&u,ST_UI_PRESS,&c,100)&&c.request.type==ST2_START);
- st_ui_model model;u.page=ST_UI_STATUS;st_ui2_render(&u,&c,(st_voltage_view){0},100,&model);
- C(strstr(model.rows[4],"READY/CLOSED")&&strstr(model.rows[5],"FRESH")&&strstr(model.rows[6],"BACK"));
- c.pending=false;
- u.page=ST_UI_STATUS;u.selection=0;
- C(!st_ui2_handle(&u,ST_UI_NEXT,&c,100)&&u.selection==1);
- st_ui2_render(&u,&c,(st_voltage_view){0},100,&model);C(strstr(model.rows[7],"> CONNECT"));
- C(!st_ui2_handle(&u,ST_UI_PRESS,&c,100)&&c.link==ST2_LINK_HELLO&&c.request.type==ST2_HELLO&&!c.pending);
- for(unsigned item=0;item<4;item++){
-  st_ui_init(&u);u.selection=item;C(!st_ui2_handle(&u,ST_UI_PRESS,&c,100));
-  st_ui_page expected[]={ST_UI_STATUS,ST_UI_IGNITION_ONLY,ST_UI_CAPTURE,ST_UI_COMBINED};C(u.page==expected[item]);
-  if(item==1||item==3){
-   /* A live client makes accidental acquisition dispatch observable. */
-   c.link=ST2_LINK_UP;c.have_status=true;c.received_ms=100;c.next_command=41;
-   c.flags=(uint8_t)((item==1?ST_IDLE:ST_CAPTURING)|(ST2_TF_OPEN<<3));
-   uint8_t client_before[sizeof(c)];memcpy(client_before,&c,sizeof(c));
-   st_ui_page confirmation=item==1?ST_UI_IGNITION_CONFIRM:ST_UI_COMBINED_CONFIRM;
-   st_ui2_render(&u,&c,(st_voltage_view){0},100,&model);
-   C(strstr(model.rows[3],"> START N/A")&&strstr(model.rows[4],"STOP N/A")&&strstr(model.rows[6],"BACK"));
-   C(strstr(model.rows[7],"IGNITION UNAVAILABLE"));
-   for(unsigned j=0;j<12;j++)C(!st_ui2_handle(&u,ST_UI_NEXT,&c,100)&&!c.pending);
-   C(u.selection==0);
-   C(!st_ui2_handle(&u,ST_UI_PRESS,&c,100)&&u.page==confirmation&&u.selection==1);
-   st_ui2_render(&u,&c,(st_voltage_view){0},100,&model);C(strstr(model.rows[4],"> BACK"));
-   C(!st_ui2_handle(&u,ST_UI_PRESS,&c,100)&&u.page==expected[item]&&u.selection==0);
-   C(!st_ui2_handle(&u,ST_UI_PRESS,&c,100)&&u.page==confirmation);
-   C(!st_ui2_handle(&u,ST_UI_BACK,&c,100)&&u.page==expected[item]&&u.selection==0);
-   C(!st_ui2_handle(&u,ST_UI_PRESS,&c,100)&&u.page==confirmation);
-   C(!st_ui2_handle(&u,ST_UI_PREV,&c,100)&&u.selection==0);
-   C(!st_ui2_handle(&u,ST_UI_PRESS,&c,100)&&u.page==expected[item]&&u.unavailable);
-   st_ui2_render(&u,&c,(st_voltage_view){0},100,&model);C(strstr(model.rows[7],"NOT IMPLEMENTED"));
-   C(!st_ui2_handle(&u,ST_UI_NEXT,&c,100)&&u.selection==1);
-   C(!st_ui2_handle(&u,ST_UI_PRESS,&c,100)&&u.page==expected[item]&&u.unavailable);
-   C(!st_ui2_handle(&u,ST_UI_NEXT,&c,100)&&u.selection==2);
-   st_ui2_render(&u,&c,(st_voltage_view){0},100,&model);C(strstr(model.rows[6],"> BACK"));
-   C(!st_ui2_handle(&u,ST_UI_PRESS,&c,100)&&u.page==ST_UI_HOME&&u.selection==item&&!c.pending);
-   C(!st_ui2_handle(&u,ST_UI_PRESS,&c,100)&&u.page==expected[item]);
-   C(!st_ui2_handle(&u,ST_UI_BACK,&c,100)&&u.page==ST_UI_HOME&&u.selection==item);
-   C(!memcmp(client_before,&c,sizeof(c)));
-  }else C(!st_ui2_handle(&u,ST_UI_BACK,&c,100)&&u.page==ST_UI_HOME&&u.selection==item);
- }
-
- G("R2 diagnostic snapshot / request isolation / mode START-STOP-BACK / safe confirmation parents / unavailable ignition leaves live RF client unchanged");
+static void Connect(st2_client *c, st2_server *s, uint32_t now)
+{
+    uint8_t x[ST2_MAX], y[ST2_MAX];
+    size_t n, m;
+    C(st2_client_connect(c, now));
+    for (unsigned i = 0; i < 6 && c->link != ST2_LINK_UP; i++)
+    {
+        C(st2_client_tx_due(c, now, x, &n));
+        st2_client_tx_accepted(c);
+        st2_client_tx_done(c, now, 0);
+        m = st2_server_receive(s, x, n, Measured(), (uint64_t)now * 1000, y);
+        C(m);
+        C(st2_client_receive(c, y, m, now));
+    }
+    C(c->link == ST2_LINK_UP);
+    C(Link_QueryTask(c, now));
+    n = st2_encode(&c->request, x);
+    m = st2_server_receive(s, x, n, Measured(), (uint64_t)now * 1000, y);
+    C(m);
+    C(st2_client_receive(c, y, m, now) && !c->need_recovery);
 }
-unsigned st_test_r2(unsigned *out){codec();sessions();transactions();scheduling();details_ui();*out+=groups;return checks;}
+static void Codec(void)
+{
+    const uint8_t types[] = {
+        ST2_HELLO,      ST2_HELLO_REPLY, ST2_COMMIT,         ST2_STATUS,        ST2_START,
+        ST2_STOP,       ST2_ACK,         ST2_DETAILS_QUERY,  ST2_DETAILS_REPLY, ST2_CAL_COMMAND,
+        ST2_CAL_QUERY,  ST2_CAL_REPLY,   ST2_SENSOR_COMMAND, ST2_SENSOR_QUERY,  ST2_SENSOR_REPLY,
+        ST2_TASK_QUERY, ST2_TASK_REPLY,  ST2_STATUS_ACK};
+    const size_t sizes[] = {50, 43, 26, 24, 19, 19, 21, 18, 35, 32, 18, 35, 20, 18, 30, 18, 30, 18};
+    uint8_t x[ST2_MAX], y[ST2_MAX];
+    unsigned kinds = 0;
+    for (unsigned i = 0; i < sizeof types; i++)
+    {
+        st2_packet p = {.type = types[i],
+                        .epoch = 0x12345678,
+                        .id = UINT32_C(70000),
+                        .counter = 1,
+                        .mv = 4100,
+                        .count = 16,
+                        .fragment = 0x30,
+                        .mode = ST_TASK_CAPTURE,
+                        .section = 1};
+        memcpy(p.uid, acq, 12);
+        memcpy(p.peer, ctrl, 12);
+        if (p.type == ST2_DETAILS_REPLY)
+            p.fragment = 0x10;
+        if (p.type == ST2_HELLO || p.type == ST2_HELLO_REPLY || p.type == ST2_COMMIT)
+            p.id = 0;
+        size_t n = Pack(p, x);
+        C(n == sizes[i] && x[0] == 0xD8 && x[1] == 8);
+        kinds |= 1u << x[2];
+        st2_packet q;
+        C(st2_decode(&q, x, n) && q.id == p.id && q.epoch == p.epoch && q.type == p.type);
+        for (size_t k = 0; k < n; k++)
+        {
+            memcpy(y, x, n);
+            y[k] ^= 1;
+            C(!st2_decode(&q, y, n));
+        }
+        for (size_t k = 0; k < n; k++)
+            C(!st2_decode(&q, x, k));
+        memcpy(y, x, n);
+        y[1] = 7;
+        st_put16(y + n - 2, st_crc16(y, n - 2));
+        C(!st2_decode(&q, y, n));
+    }
+    C(kinds == 0xFE);
+    for (unsigned old = 1; old <= 16; old++)
+    {
+        memset(x, 0, sizeof x);
+        x[0] = (uint8_t)old;
+        st_put16(x + 33, st_crc16(x, 33));
+        st2_packet p;
+        C(!st2_decode(&p, x, 35));
+    }
+    C(!st2_encode(&(st2_packet){.type = ST2_START, .epoch = 1, .id = 0}, x));
+    G("R8 seven logical types / exact lengths / 32-bit IDs / every byte corruption and truncation "
+      "/ explicit R7 rejection");
+}
+static void Sessions(void)
+{
+    Nv cn = {0}, sn = {0};
+    st_logger l;
+    st_logger_init(&l, (st_log_config){0}, (st_file_port){0});
+    st2_client c;
+    st2_server s;
+    st2_client_init(&c, (st2_nv_port){&cn, NULL, Counter}, Timing(), ctrl, acq);
+    st2_server_init(&s, &l, (st2_nv_port){&sn, Epoch, NULL}, Timing(), acq, ctrl, 0);
+    Connect(&c, &s, 0);
+    C(sn.writes == 1 && cn.writes == 1 && c.task.state == ST_TASK_IDLE);
+    uint32_t session = s.epoch;
+    unsigned writes = sn.writes + cn.writes;
+    /* Recovery has no logger side effects and writes no Flash even while capturing. */
+    l.state = ST_CAPTURING;
+    l.generation = 123;
+    s.task = (StTask){ST_TASK_CAPTURE, ST_TASK_RUNNING, 77, 0};
+    c.pending = false;
+    Connect(&c, &s, 8000);
+    C(c.resumed && s.epoch == session && l.state == ST_CAPTURING && l.generation == 123);
+    c.have_status = false;
+    c.link = ST2_LINK_COMMIT;
+    uint8_t stale[64];
+    size_t stale_n =
+        Pack((st2_packet){.type = ST2_STATUS, .epoch = c.epoch, .id = c.status_sequence}, stale);
+    C(!st2_client_receive(&c, stale, stale_n, 8001) && !c.have_status);
+    c.link = ST2_LINK_UP;
+    c.have_status = true;
+    C(sn.writes + cn.writes == writes && c.task.state == ST_TASK_RUNNING && c.task.start_id == 77);
+    /* A rebooted controller with counter zero can resume the acquisition's session. */
+    st2_client reboot;
+    st2_client_init(&reboot, (st2_nv_port){&cn, NULL, Counter}, Timing(), ctrl, acq);
+    Connect(&reboot, &s, 9000);
+    C(reboot.resumed && reboot.task.state == ST_TASK_RUNNING);
+    uint8_t x[64], y[64];
+    st2_packet hello = {.type = ST2_HELLO, .counter = 999, .pair_id = ST_PROJECT_PAIR_ID + 1};
+    memcpy(hello.uid, ctrl, 12);
+    memcpy(hello.peer, acq, 12);
+    size_t n = Pack(hello, x);
+    C(!st2_server_receive(&s, x, n, Measured(), 0, y) && l.state == ST_CAPTURING);
+    hello.pair_id = ST_PROJECT_PAIR_ID;
+    hello.uid[0] ^= 1;
+    n = Pack(hello, x);
+    C(!st2_server_receive(&s, x, n, Measured(), 0, y));
+    /* Acquisition reboot creates a different session, keeps UNKNOWN and never STARTs. */
+    l.state = ST_IDLE;
+    st2_server_init(&s, &l, (st2_nv_port){&sn, Epoch, NULL}, Timing(), acq, ctrl, sn.last);
+    reboot.pending = false;
+    Connect(&reboot, &s, 10000);
+    C(s.epoch != session && reboot.task.state == ST_TASK_UNKNOWN && l.generation == 123 &&
+      !reboot.pending);
+    G("R8 Pair/UID isolation / resumed session after loss and controller reboot / no NV writes or "
+      "file restart / acquisition reboot UNKNOWN");
+}
+static void Transactions(void)
+{
+    st_logger l;
+    st_logger_init(&l, (st_log_config){0}, (st_file_port){0});
+    st2_server s;
+    st2_server_init(&s, &l, (st2_nv_port){0}, Timing(), acq, ctrl, 1);
+    s.offered = s.active = true;
+    s.epoch = 5;
+    uint8_t x[64], y[64], saved[64];
+    st2_packet p = {.type = ST2_STOP, .epoch = 5, .id = 65536};
+    size_t n = Pack(p, x);
+    size_t m = st2_server_receive(&s, x, n, Measured(), 0, y);
+    C(m == 21);
+    memcpy(saved, y, m);
+    C(st2_server_receive(&s, x, n, Measured(), 100, y) == m && !memcmp(saved, y, m));
+    p.type = ST2_START;
+    n = Pack(p, x);
+    m = st2_server_receive(&s, x, n, Measured(), 100, y);
+    st2_packet reply;
+    C(st2_decode(&reply, y, m) && (reply.flags & 7u) == ST2_CONFLICT && l.state == ST_IDLE);
+    p.id--;
+    n = Pack(p, x);
+    m = st2_server_receive(&s, x, n, Measured(), 100, y);
+    C(st2_decode(&reply, y, m) && (reply.flags & 7u) == ST2_OLD);
+    st2_client c;
+    st2_client_init(&c, (st2_nv_port){0}, Timing(), ctrl, acq);
+    c.link = ST2_LINK_UP;
+    c.have_status = true;
+    c.epoch = 5;
+    c.next_command = 70000;
+    c.task.mode = ST_TASK_CAPTURE;
+    C(st2_client_command(&c, ST2_START, 0));
+    C(c.task.state == ST_TASK_STARTING);
+    p = (st2_packet){.type = ST2_STATUS,
+                     .epoch = 5,
+                     .id = 1,
+                     .flags = (uint8_t)(ST_CAPTURING | (ST2_TF_OPEN << 3)),
+                     .task_state = ST_TASK_RUNNING,
+                     .mode = ST_TASK_CAPTURE};
+    n = Pack(p, x);
+    C(st2_client_receive(&c, x, n, 10) && c.pending && c.task.state == ST_TASK_STARTING);
+    C(!st2_client_receive(&c, x, n, 20) && c.received_ms == 10);
+    p = (st2_packet){.type = ST2_ACK,
+                     .epoch = 5,
+                     .id = 70000,
+                     .flags = (uint8_t)(ST2_COMPLETED | (ST_CAPTURING << 3) | (ST2_TF_OPEN << 6))};
+    n = Pack(p, x);
+    C(st2_client_receive(&c, x, n, 20) && !c.pending && c.task.state == ST_TASK_RUNNING);
+    C(!st2_client_command(&c, ST2_START, 20));
+    C(st2_client_command(&c, ST2_STOP, 20));
+    C(!st2_client_receive(&c, x, n, 30) && c.pending && c.task.state == ST_TASK_STOPPING);
+    G("R8 duplicate result cache / conflicting and old transactions / IDs cross65535 / STATUS "
+      "cannot complete START / late reply cannot replace STOP");
+}
+static void Details(void)
+{
+    st_logger logger;
+    st_logger_init(&logger, (st_log_config){0}, (st_file_port){0});
+    logger.last_sequence = 777;
+    logger.have_sample = true;
+    logger.last_time_us = 100000;
+    st2_server server;
+    st2_server_init(&server, &logger, (st2_nv_port){0}, Timing(), acq, ctrl, 0);
+    server.active = server.offered = true;
+    server.epoch = 5;
+    st2_client client;
+    st2_client_init(&client, (st2_nv_port){0}, Timing(), ctrl, acq);
+    client.link = ST2_LINK_UP;
+    client.epoch = 5;
+    client.have_status = true;
+    client.next_command = 70000;
+    C(Link_QueryDetails(&client, 0) == ST_LINK_REQUEST_OK);
+    uint8_t request[64], first[64], second[64], repeat[64];
+    size_t n = st2_encode(&client.request, request);
+    size_t a = st2_server_receive(&server, request, n, Measured(), 1000000, first);
+    logger.last_sequence = 999;
+    size_t b = st2_server_poll(&server, Measured(), 1001000, second);
+    C(a == 35 && b == 26);
+    C(st2_client_receive(&client, second, b, 1) && client.pending);
+    C(st2_client_receive(&client, first, a, 1) && !client.pending && client.details.complete);
+    C(st_get32(client.details.data + 4) == 777 && client.details_received_ms == 1);
+    C(st2_server_receive(&server, request, n, Measured(), 9000000, repeat) == a &&
+      !memcmp(repeat, first, a));
+    C(Link_QueryDetails(&client, 1) == ST_LINK_REQUEST_OK);
+    C(!st2_client_receive(&client, first, a, 2) && client.pending && !client.details.complete);
+    client.pending = false;
+    client.need_recovery = true;
+    C(Link_QueryTask(&client, 2) == ST_LINK_REQUEST_OK);
+    n = Pack(
+        (st2_packet){
+            .type = ST2_ACK, .epoch = client.epoch, .id = client.request.id, .flags = ST2_OLD},
+        repeat);
+    C(st2_client_receive(&client, repeat, n, 2) && client.link == ST2_LINK_DOWN && !client.pending);
+    G("R8 on-demand diagnostic query uses common ID / frozen two-part DATA / reorder / duplicate / "
+      "late view cannot replace new query");
+}
+static void Heartbeat(void)
+{
+    st_logger logger;
+    st_logger_init(&logger, (st_log_config){0}, (st_file_port){0});
+    st2_server server;
+    st2_server_init(&server, &logger, (st2_nv_port){0}, Timing(), acq, ctrl, 0);
+    server.active = server.offered = true;
+    server.epoch = 1;
+    uint8_t x[64], y[64];
+    C(st2_server_poll(&server, Measured(), 0, y) == 24);
+    C(!st2_server_poll(&server, Measured(), 1999000, y));
+    C(st2_server_poll(&server, Measured(), 2000000, y) == 24);
+    st2_packet ack = {.type = ST2_STATUS_ACK, .epoch = 1, .id = 1};
+    size_t n = Pack(ack, x);
+    C(!st2_server_receive(&server, x, n, Measured(), 2000000, y) && !server.have_peer_status);
+    ack.id = 2;
+    n = Pack(ack, x);
+    C(!st2_server_receive(&server, x, n, Measured(), 2000000, y) && server.have_peer_status);
+    C(server.peer_received_ms == 2000);
+    C(!st2_server_receive(&server, x, n, Measured(), 6000000, y) &&
+      server.peer_received_ms == 2000);
+    C(Link_GetHealth(true, server.peer_received_ms, 6000, false) == ST_LINK_SLOW);
+    G("R8 exact2s heartbeat / independent STATUS sequence / bidirectional receipt ACK / old ACK "
+      "does not refresh LED age");
+}
+static void Menus(void)
+{
+    st2_client c = {.link = ST2_LINK_UP,
+                    .have_status = true,
+                    .next_command = 1,
+                    .epoch = 1,
+                    .timing = {2000, 150, 500, 120000, 4}};
+    st_ui ui;
+    st_ui_model m;
+    st_ui_init(&ui);
+    C(ui.selection == 0);
+    for (unsigned mode = 0; mode < 3; mode++)
+    {
+        st_ui_init(&ui);
+        ui.selection = mode;
+        C(!st_ui2_handle(&ui, ST_UI_PRESS, &c, 0) && ui.selection == 0);
+        C(Ui_GetItemCount(&ui) == (mode == 2 ? 2u : 4u));
+        st_ui2_render(&ui, &c, (st_voltage_view){0}, 0, &m);
+        C(m.inverse && m.inverse_row == 0);
+        C(!strcmp(m.rows[0], Ui_Text("返回", "BACK")));
+        if (mode == 2)
+        {
+            C(!m.rows[2][0] && !m.rows[3][0]);
+            for (unsigned i = 0; i < 9; i++)
+            {
+                (void)st_ui2_handle(&ui, ST_UI_NEXT, &c, 0);
+                C(ui.selection < 2);
+            }
+        }
+        ui.selection = 1;
+        (void)st_ui2_handle(&ui, ST_UI_PRESS, &c, 0);
+        C(ui.page == ST_UI_CONFIRM && ui.selection == 0 && !c.pending);
+        (void)st_ui2_handle(&ui, ST_UI_PRESS, &c, 0);
+        C(ui.selection == 0 && !c.pending);
+    }
+    st_ui_init(&ui);
+    ui.selection = 3;
+    (void)st_ui2_handle(&ui, ST_UI_PRESS, &c, 0);
+    for (unsigned i = 0; i < 9; i++)
+    {
+        st_ui2_render(&ui, &c, (st_voltage_view){0}, 0, &m);
+        C(m.inverse_row < 4);
+        (void)st_ui2_handle(&ui, ST_UI_NEXT, &c, 0);
+    }
+    ui.page = ST_UI_STATUS;
+    ui.top = 2;
+    ui.selection = 2;
+    c.flags = 0;
+    c.mv = 4100;
+    st_ui2_render(&ui, &c, (st_voltage_view){0}, 0, &m);
+    C(strstr(m.rows[0], Ui_Text("未知", "UNKNOWN")));
+    c.flags = 32;
+    c.mv = 0;
+    st_ui2_render(&ui, &c, (st_voltage_view){0}, 0, &m);
+    C(strstr(m.rows[0], "0.00V"));
+    c.task = (StTask){ST_TASK_CAPTURE, ST_TASK_RUNNING, 1, 0};
+    ui.page = ST_UI_CAPTURE;
+    ui.mode = ST_TASK_CAPTURE;
+    ui.selection = 0;
+    (void)st_ui2_handle(&ui, ST_UI_PRESS, &c, 0);
+    C(ui.page == ST_UI_HOME && c.task.state == ST_TASK_RUNNING && !c.pending);
+    for (unsigned state = 0; state <= ST_TASK_UNKNOWN; state++)
+        for (unsigned mode = 1; mode <= 3; mode++)
+        {
+            ui.page = mode == 1 ? ST_UI_CAPTURE : mode == 2 ? ST_UI_COMBINED : ST_UI_IGNITION_ONLY;
+            ui.mode = (StTaskMode)mode;
+            ui.selection = 1;
+            ui.top = 0;
+            c.task.mode = (StTaskMode)mode;
+            c.task.state = (StTaskState)state;
+            st_ui2_render(&ui, &c, (st_voltage_view){0}, 0, &m);
+            for (unsigned row = 0; row < 4; row++)
+            {
+                unsigned width;
+                C(Ui_ValidateText(m.rows[row], &width) == UI_TEXT_OK && width <= 128);
+            }
+        }
+    unsigned width;
+    C(Ui_ValidateText("\xC0\xAF", &width) == UI_TEXT_INVALID);
+    C(Ui_ValidateText("1234567890123456789012", &width) == UI_TEXT_TOO_WIDE);
+    st_button b = {0};
+    C(Button_Update(&b, false, 0) == ST_BUTTON_NONE);
+    C(Button_Update(&b, true, 1) == ST_BUTTON_NONE);
+    C(Button_Update(&b, true, 31) == ST_BUTTON_NONE);
+    C(Button_Update(&b, true, 831) == ST_BUTTON_LONG);
+    C(Button_Update(&b, true, 900) == ST_BUTTON_NONE);
+    C(Button_Update(&b, false, 901) == ST_BUTTON_NONE);
+    C(Button_Update(&b, false, 931) == ST_BUTTON_NONE);
+    C(Button_Update(&b, true, 1000) == ST_BUTTON_NONE);
+    C(Button_Update(&b, true, 1030) == ST_BUTTON_NONE);
+    C(Button_Update(&b, false, 1100) == ST_BUTTON_NONE);
+    C(Button_Update(&b, false, 1130) == ST_BUTTON_SHORT);
+    C(Link_GetHealth(true, 0, 3999, false) == ST_LINK_OK);
+    C(Link_GetHealth(true, 0, 4000, false) == ST_LINK_SLOW);
+    C(Link_GetHealth(true, 0, 7000, false) == ST_LINK_LOST);
+    C(Link_GetHealth(true, 0, 0, true) == ST_LINK_DRIVER_FAULT);
+    C(Link_GetLed(ST_LINK_OK, 1) && !Link_GetLed(ST_LINK_WAIT, 1));
+    G("R8 four fixed rows / default BACK / safe confirmation / output no STOP or blank cursor / "
+      "scrolling / task labels / UTF8 / long-short button / 4s-7s LED");
+}
+unsigned st_test_r2(unsigned *out)
+{
+    Codec();
+    Sessions();
+    Transactions();
+    Details();
+    Heartbeat();
+    Menus();
+    *out += groups;
+    return checks;
+}
