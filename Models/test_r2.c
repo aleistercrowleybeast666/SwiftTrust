@@ -252,6 +252,8 @@ static void Details(void)
 {
     st_logger logger;
     st_logger_init(&logger, (st_log_config){0}, (st_file_port){0});
+    logger.config.clock_verified = true;
+    logger.config.rate_millihz = 2000000;
     logger.last_sequence = 777;
     logger.have_sample = true;
     logger.last_time_us = 100000;
@@ -275,6 +277,24 @@ static void Details(void)
     C(st2_client_receive(&client, second, b, 1) && client.pending);
     C(st2_client_receive(&client, first, a, 1) && !client.pending && client.details.complete);
     C(st_get32(client.details.data + 4) == 777 && client.details_received_ms == 1);
+    st_ui ui = {.page = ST_UI_STATUS, .top = 4, .selection = 5};
+    st_ui_model model;
+    st_voltage_view own = {.kind = ST_V_MEASURED, .mv = 3300};
+    st_ui2_render(&ui, &client, own, 1, &model);
+    C(!strcmp(model.rows[1], "ADC 2000Hz 900ms"));
+    C(!strcmp(model.rows[2], "MCU VDDA 3.30V"));
+    for (unsigned row = 0; row < ST_OLED_ROWS; row++)
+    {
+        unsigned width;
+        C(Ui_ValidateText(model.rows[row], &width) == UI_TEXT_OK && width <= ST_OLED_WIDTH);
+    }
+    /* Golden SSD1306 page bytes for the lowercase 5x7 z, scaled by the renderer. */
+    uint8_t frame[1024];
+    model = (st_ui_model){.rows = {"z"}};
+    st_ui_raster(&model, frame);
+    const uint8_t lower[5] = {0x20, 0x38, 0x26, 0x21, 0x20};
+    for (unsigned column = 0; column < 5; column++)
+        C(frame[column] == 0xc0 && frame[128 + column] == lower[column]);
     C(st2_server_receive(&server, request, n, Measured(), 9000000, repeat) == a &&
       !memcmp(repeat, first, a));
     C(Link_QueryDetails(&client, 1) == ST_LINK_REQUEST_OK);
@@ -287,7 +307,7 @@ static void Details(void)
             .type = ST2_ACK, .epoch = client.epoch, .id = client.request.id, .flags = ST2_OLD},
         repeat);
     C(st2_client_receive(&client, repeat, n, 2) && client.link == ST2_LINK_DOWN && !client.pending);
-    G("R8 on-demand diagnostic query uses common ID / frozen two-part DATA / reorder / duplicate / "
+    G("R8 real ADC details render / lowercase z raster / VDDA label / common ID / frozen two-part DATA / reorder / duplicate / "
       "late view cannot replace new query");
 }
 static void Heartbeat(void)
