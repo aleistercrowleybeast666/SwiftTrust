@@ -131,9 +131,9 @@ result 0～11为REJECTED/ARM_GRANTED/FIRE_ACCEPTED/OUTPUT_ENDED/DISARMED/FAILED/
 
 详情known/pass bits0～12为物理许可、硬件禁止/急停、点火电源、外部反馈、自主截止、输出配置、项目校验、故障条件、记录关联、ADC、TF、配置互斥、射频时序依据；pass只能是known子集。capability bit0仅输出、bit1组合。未接入的外部量保持UNKNOWN，ignition_mV=FFFF。
 
-**R8默认不绑定真实输出**：`ST_OUTPUT_HARDWARE_ENABLED=0`、`ST_OUTPUT_SAFETY_REVIEWED=0`、真实时长0；请求得到DISABLED/UNBOUND，profile为0。PA0初始化和故障路径保持低。1秒仅是软件模拟负载候选时长，不是火工品执行时长；不能把改宏当作已经通过安全审核。真实输出启用、时长及独立物理断能/故障截止需另行审核。
+**2026-10-23项目配置已绑定真实输出**：用户确认纯阻性负载、约1秒，沿用此前典型1A/不超过2A约束。`ST_OUTPUT_HARDWARE_ENABLED=1`、`ST_OUTPUT_SAFETY_REVIEWED=1`、`ST_OUTPUT_REAL_DURATION_MS=1000`、profile为1；REVIEWED表示本次配置、代码和CAD接线审查，不代表实板资格测试。PA0初始化和故障路径保持低，TIM2自主结束脉冲。仍需独立ARM/FIRE确认和本地互锁；未接入的物理许可、外部反馈及负载电压继续显示UNKNOWN。没有执行烧录或接通负载。
 
-软件模拟绑定输出时，ARM许可10秒且不产生输出；第二次独立确认后FIRE才执行一次；动作结束为OUTPUT_ENDED/COMPLETED。主循环、返回菜单、重试、重连和重启都不产生第二次FIRE。组合模式的输出自然结束后，采集继续。组合STOP在采集端单一请求内撤销授权、截止输出、停止采集并完成TF收尾；不依赖另一包DISARM才变安全。输出菜单没有STOP按钮，安全截止接口和故障处理仍存在。
+绑定输出时，ARM许可10秒且不产生输出；第二次独立确认后FIRE才执行一次；动作结束为OUTPUT_ENDED/COMPLETED。主循环、返回菜单、重试、重连和重启都不产生第二次FIRE。组合模式的输出自然结束后，采集继续。组合STOP在采集端单一请求内撤销授权、截止输出、停止采集并完成TF收尾；不依赖另一包DISARM才变安全。输出菜单没有STOP按钮，安全截止接口和故障处理仍存在。
 
 ## 7. 四行GUI及完整触发流程
 

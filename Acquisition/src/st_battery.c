@@ -1,8 +1,8 @@
 #include "st_battery.h"
 #define BATTERY_MAX_VALID_MV 4400u
 #define BATTERY_MIN_VALID_MV 500u
-/* Coarse room-temperature low/moderate-load Li-ion curve. Last band <3.5V;
- * below about 3.3V is its lower half. Real cell/load shifts these thresholds. */
+/* Configurable NCR18650B usable-capacity bands; 12.5% starts the last LED blink.
+ * Voltage under a changing load/temperature remains an approximate gauge. */
 static const st_voltage_policy battery_policy = {
     {500, ST_BATTERY_TWO_MV, ST_BATTERY_THREE_MV, ST_BATTERY_FOUR_MV},
     BATTERY_HYSTERESIS_MV,
@@ -26,7 +26,8 @@ void Battery_Update(BatteryMonitor *battery, uint16_t code, const st_voltage *vd
         return;
     }
     st_voltage measured = st_voltage_from_adc(code, vdda->mv, BATTERY_DIVIDER_NUMERATOR,
-                                              BATTERY_DIVIDER_DENOMINATOR, now, true, true);
+                                              BATTERY_DIVIDER_DENOMINATOR, now,
+                                              ST_ACQ_BATTERY_PRESENT, ST_ACQ_BATTERY_VERIFIED);
     if (!measured.valid || measured.mv < BATTERY_MIN_VALID_MV ||
         measured.mv > BATTERY_MAX_VALID_MV || code == 4095)
     {

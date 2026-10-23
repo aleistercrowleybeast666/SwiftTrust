@@ -73,21 +73,34 @@ int main(void)
     C(IgnitionPulse_Start(NULL) == IGNITION_OUTPUT_INVALID);
     C(IgnitionPulse_Init() == IGNITION_OUTPUT_OK && gpio_phase == 3);
     C(pulse_model_timer.PSC == 83 && pulse_model_timer.ARR == IGNITION_PULSE_MS * 1000u);
-    C(!ST_OUTPUT_HARDWARE_ENABLED && !ST_OUTPUT_SAFETY_REVIEWED);
+    C(ST_OUTPUT_HARDWARE_ENABLED && ST_OUTPUT_SAFETY_REVIEWED);
+    C(IGNITION_PULSE_MS == 1000u);
     C(!IgnitionPulse_IsRunning(NULL) && !PulseModel_IsHigh());
-    C(IgnitionPulse_Start(NULL) == IGNITION_OUTPUT_INVALID);
-    for (unsigned i = 0; i < 100; i++)
+    C(IgnitionPulse_Start(NULL) == IGNITION_OUTPUT_OK);
+    C(!PulseModel_IsHigh() && IgnitionPulse_IsRunning(NULL));
+    PulseModel_Tick();
+    C(PulseModel_IsHigh());
+    C(IgnitionPulse_Start(NULL) == IGNITION_OUTPUT_BUSY);
+    /* No foreground service or interrupt is invoked during the entire pulse. */
+    for (unsigned i = 1; i < IGNITION_PULSE_MS * 1000u; i++)
         PulseModel_Tick();
+    C(PulseModel_IsHigh() && IgnitionPulse_IsRunning(NULL));
+    PulseModel_Tick();
     C(!PulseModel_IsHigh() && !IgnitionPulse_IsRunning(NULL));
+    C(IgnitionPulse_Start(NULL) == IGNITION_OUTPUT_OK);
+    PulseModel_Tick();
+    C(PulseModel_IsHigh());
     C(IgnitionPulse_Stop(NULL) == IGNITION_OUTPUT_OK && !PulseModel_IsHigh());
+    PulseModel_Tick();
+    C(!PulseModel_IsHigh() && !IgnitionPulse_IsRunning(NULL));
     peripheral_hz = 16000000;
     divider = RCC_HCLK_DIV1;
     C(IgnitionPulse_Init() == IGNITION_OUTPUT_OK && pulse_model_timer.PSC == 15);
     peripheral_hz = 16000001;
     C(IgnitionPulse_Init() == IGNITION_OUTPUT_INVALID);
     C(IgnitionPulse_Start(NULL) == IGNITION_OUTPUT_INVALID && !PulseModel_IsHigh());
-    printf("PASS actual F4 pulse driver on register model: %u checks; R8 hardware disabled, "
-           "reset-low, rejected start, forced low, clock divider\n",
+    printf("PASS actual F4 pulse driver on register model: %u checks; enabled 1s one-shot, "
+           "reset-low, busy rejection, autonomous end, early stop, clock divider\n",
            checks);
     return 0;
 }

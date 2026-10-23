@@ -58,22 +58,36 @@
 #define ST_ZERO_WINDOW_SAMPLES 512u
 #define ST_ZERO_MAX_SPAN_COUNTS 2000u
 #define ST_ZERO_TIMEOUT_MS 5000u
+/* Saved acquisition netlist confirms switched BAT+ -> R19 10k -> PC0,
+ * PC0 -> R20 10k || C19 100nF -> GND. VERIFIED accepts this CAD pin contract;
+ * divider tolerance and ADC accuracy have not been measured on hardware. */
+#ifndef ST_ACQ_BATTERY_PRESENT
+#define ST_ACQ_BATTERY_PRESENT 1
+#endif
+#ifndef ST_ACQ_BATTERY_VERIFIED
+#define ST_ACQ_BATTERY_VERIFIED 1
+#endif
 #define ST_BATTERY_DIVIDER_NUMERATOR 2u
 #define ST_BATTERY_DIVIDER_DENOMINATOR 1u
 #define ST_BATTERY_FRESH_MS 1000u
-#define ST_BATTERY_FOUR_MV 3900u
-#define ST_BATTERY_THREE_MV 3700u
-#define ST_BATTERY_TWO_MV 3500u
-#define ST_BATTERY_BLINK_MV 3300u
+/* NCR18650B, 25C/650mA graph, approximate remaining usable capacity:
+ * 75/50/25/12.5%, normalized from full to 3.2V (~3030mAh discharged).
+ * Loaded-voltage estimate only; change these when the cell/load is selected.
+ * The 3.2V reference endpoint does not implement automatic shutdown. */
+#define ST_BATTERY_FOUR_MV 3840u
+#define ST_BATTERY_THREE_MV 3630u
+#define ST_BATTERY_TWO_MV 3480u
+#define ST_BATTERY_BLINK_MV 3380u
 #define ST_BATTERY_HYSTERESIS_MV 30u
 #define ST_BATTERY_BLINK_HALF_MS 500u
 #define ST_OUTPUT_ARM_MS 10000u
-/* 1s is ONLY a non-pyrotechnic simulation candidate. Real output is disabled.
- * Enablement and a real duration require a separate documented safety review. */
+/* User-selected resistive load, nominal 1A / at most 2A, one 1s pulse.
+ * REVIEWED accepts this configuration/code/CAD review, not a bench qualification.
+ * ARM/FIRE confirmation, local interlocks and TIM2 autonomous cutoff remain. */
 #define ST_OUTPUT_SIMULATION_MS 1000u
-#define ST_OUTPUT_HARDWARE_ENABLED 0
-#define ST_OUTPUT_SAFETY_REVIEWED 0
-#define ST_OUTPUT_REAL_DURATION_MS 0u
+#define ST_OUTPUT_HARDWARE_ENABLED 1
+#define ST_OUTPUT_SAFETY_REVIEWED 1
+#define ST_OUTPUT_REAL_DURATION_MS 1000u
 #define ST_OUTPUT_PROFILE_ID 1u
 _Static_assert(ST_PROJECT_PAIR_ID != 0, "Pair ID must be configured");
 _Static_assert(ST_PROTOCOL_VERSION == 8u && ST_PROTOCOL_HEADER_BYTES == 16u &&

@@ -3,13 +3,28 @@
 #include <stdlib.h>
 static unsigned checks;
 #define C(x) do { checks++; if(!(x)) { fprintf(stderr,"battery line%d: %s\n",__LINE__,#x);exit(1); } } while(0)
+#if ST_ACQ_BATTERY_PRESENT && ST_ACQ_BATTERY_VERIFIED
 static uint16_t BatteryTest_Code(uint32_t mv)
 { return (uint16_t)((mv*4095u+3300u)/(2u*3300u)); }
+#endif
 unsigned st_test_battery(unsigned *groups)
 {
     BatteryMonitor battery={0};
     st_voltage vdda={3300,0,true,true};
-    const uint32_t levels[]={4200,3800,3600,3400,3200};
+#if !ST_ACQ_BATTERY_PRESENT || !ST_ACQ_BATTERY_VERIFIED
+    /* Every possible floating input must remain unknown despite a valid VDDA. */
+    for (unsigned raw=0;raw<=4095;raw++)
+    {
+        Battery_Update(&battery,(uint16_t)raw,&vdda,0);
+        C(!battery.voltage.valid);
+        C(Battery_Evaluate(&battery,0).kind==ST_V_UNKNOWN);
+        C(battery.view.led_mask==0&&!battery.initialized);
+    }
+    puts("PASS unconfirmed PC0: all4096 ADC codes invalid/UNKNOWN, LEDs OFF; VDDA cannot become battery");
+    (*groups)++;
+    return checks;
+#else
+    const uint32_t levels[]={4200,3750,3550,3430,3300};
     const uint8_t masks[]={15,7,3,1,1};
     for(unsigned i=0;i<5;i++)
     {
@@ -41,13 +56,30 @@ unsigned st_test_battery(unsigned *groups)
     Battery_Update(&battery,BatteryTest_Code(3200),&vdda,0);
     C(Battery_Evaluate(&battery,0).led_mask==1&&battery.blinking);
     battery.initialized=false;
-    Battery_Update(&battery,BatteryTest_Code(3310),&vdda,100000);
+    Battery_Update(&battery,BatteryTest_Code(ST_BATTERY_BLINK_MV+10u),&vdda,100000);
     (void)Battery_Evaluate(&battery,100000);C(battery.blinking);
     battery.initialized=false;
-    Battery_Update(&battery,BatteryTest_Code(3350),&vdda,200000);
+    Battery_Update(&battery,BatteryTest_Code(ST_BATTERY_BLINK_MV+50u),&vdda,200000);
     (void)Battery_Evaluate(&battery,200000);C(!battery.blinking);
     Battery_Invalidate(&battery);C(Battery_Evaluate(&battery,200000).led_mask==0);
+    /* Independent rounded readings from the manufacturer's 25C/650mA curve.
+     * Each nominal quarter has ~758mAh, final half-band ~379mAh to 3.2V. */
+    const uint32_t thresholds[]={3840,3630,3480};
+    const uint8_t lower_masks[]={7,3,1};
+    for(unsigned i=0;i<3;i++)
+    {
+        battery=(BatteryMonitor){0};
+        Battery_Update(&battery,BatteryTest_Code(thresholds[i]+50u),&vdda,0);
+        C(Battery_Evaluate(&battery,0).led_mask==(uint8_t)((lower_masks[i]<<1)|1u));
+        battery.initialized=false;
+        Battery_Update(&battery,BatteryTest_Code(thresholds[i]-10u),&vdda,100000);
+        C(Battery_Evaluate(&battery,100000).led_mask==(uint8_t)((lower_masks[i]<<1)|1u));
+        battery.initialized=false;
+        Battery_Update(&battery,BatteryTest_Code(thresholds[i]-50u),&vdda,200000);
+        C(Battery_Evaluate(&battery,200000).led_mask==lower_masks[i]);
+    }
     puts("PASS battery PC0 divide-by-two/VDDA compensation, 4/3/2/1 LEDs, lower half 1Hz blink, filter/hysteresis, stale/invalid OFF");
     (*groups)++;
     return checks;
+#endif
 }

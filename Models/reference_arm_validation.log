@@ -1,9 +1,9 @@
-2026-10-21T18:14:33.158055+00:00
+2026-10-23T07:26:06.439911+00:00
 Actual EIDE ReferenceApp application targets; complete main/HAL/IRQ integration, offline build only.
 No hardware access. Objects in auto-removed temp directories; optional sparse HEX/ELF retained.
 PASS 155 official SDK inputs match checked-in manifest SHA256.
 BOARD Acquisition
-[ INFO ] start building at 2026-10-22 02:14:33
+[ INFO ] start building at 2026-10-23 15:26:06
 
 [ TOOL ] arm-none-eabi-gcc.exe (Arm GNU Toolchain 14.3.Rel1 (Build arm-14.174)) 14.3.1 20250623
 
@@ -19,8 +19,8 @@ BOARD Acquisition
 
 >> [  1%] CC 'link_check_main.c'
 >> [  3%] CC 'st_ads.c'
->> [  4%] CC 'st_core.c'
->> [  6%] CC 'st_debug.c'
+>> [  4%] CC 'st_debug.c'
+>> [  6%] CC 'st_core.c'
 >> [  8%] CC 'st_logger.c'
 >> [  9%] CC 'st_protocol.c'
 >> [ 11%] CC 'st_radio.c'
@@ -28,25 +28,25 @@ BOARD Acquisition
 >> [ 14%] CC 'st_fatfs_worker.c'
 >> [ 16%] CC 'st_debug_uart_hal.c'
 >> [ 17%] CC 'sx128x.c'
->> [ 19%] CC 'stm32f4xx_hal.c'
->> [ 20%] CC 'ff.c'
->> [ 22%] CC 'stm32f4xx_hal_adc.c'
->> [ 24%] CC 'stm32f4xx_hal_adc_ex.c'
+>> [ 19%] CC 'ff.c'
+>> [ 20%] CC 'stm32f4xx_hal.c'
+>> [ 22%] CC 'stm32f4xx_hal_adc_ex.c'
+>> [ 24%] CC 'stm32f4xx_hal_adc.c'
 >> [ 25%] CC 'stm32f4xx_hal_cortex.c'
 >> [ 27%] CC 'stm32f4xx_hal_dma.c'
 >> [ 29%] CC 'stm32f4xx_hal_dma_ex.c'
 >> [ 30%] CC 'stm32f4xx_hal_flash.c'
 >> [ 32%] CC 'stm32f4xx_hal_flash_ex.c'
-<SDK>/f4-sdk/Src/stm32f4xx_hal_flash_ex.c: In function 'FLASH_MassErase':
-<SDK>/f4-sdk/Src/stm32f4xx_hal_flash_ex.c:948:60: [33;22mwarning: [0munused parameter 'Banks' [35;22m[-Wunused-parameter][0m
+./../../swiftthrust-official-headers/f4-sdk/Src/stm32f4xx_hal_flash_ex.c: In function 'FLASH_MassErase':
+./../../swiftthrust-official-headers/f4-sdk/Src/stm32f4xx_hal_flash_ex.c:948:60: [33;22mwarning: [0munused parameter 'Banks' [35;22m[-Wunused-parameter][0m
   948 | static void FLASH_MassErase(uint8_t VoltageRange, uint32_t Banks)
 [35;22m      |                                                   ~~~~~~~~~^~~~~[0m
-<SDK>/f4-sdk/Src/stm32f4xx_hal_flash_ex.c: In function 'FLASH_OB_EnableWRP':
-<SDK>/f4-sdk/Src/stm32f4xx_hal_flash_ex.c:1027:74: [33;22mwarning: [0munused parameter 'Banks' [35;22m[-Wunused-parameter][0m
+./../../swiftthrust-official-headers/f4-sdk/Src/stm32f4xx_hal_flash_ex.c: In function 'FLASH_OB_EnableWRP':
+./../../swiftthrust-official-headers/f4-sdk/Src/stm32f4xx_hal_flash_ex.c:1027:74: [33;22mwarning: [0munused parameter 'Banks' [35;22m[-Wunused-parameter][0m
  1027 | static HAL_StatusTypeDef FLASH_OB_EnableWRP(uint32_t WRPSector, uint32_t Banks)
 [35;22m      |                                                                 ~~~~~~~~~^~~~~[0m
-<SDK>/f4-sdk/Src/stm32f4xx_hal_flash_ex.c: In function 'FLASH_OB_DisableWRP':
-<SDK>/f4-sdk/Src/stm32f4xx_hal_flash_ex.c:1063:75: [33;22mwarning: [0munused parameter 'Banks' [35;22m[-Wunused-parameter][0m
+./../../swiftthrust-official-headers/f4-sdk/Src/stm32f4xx_hal_flash_ex.c: In function 'FLASH_OB_DisableWRP':
+./../../swiftthrust-official-headers/f4-sdk/Src/stm32f4xx_hal_flash_ex.c:1063:75: [33;22mwarning: [0munused parameter 'Banks' [35;22m[-Wunused-parameter][0m
  1063 | static HAL_StatusTypeDef FLASH_OB_DisableWRP(uint32_t WRPSector, uint32_t Banks)
 [35;22m      |                                                                  ~~~~~~~~~^~~~~[0m
 >> [ 33%] CC 'stm32f4xx_hal_gpio.c'
@@ -63,8 +63,8 @@ BOARD Acquisition
 >> [ 51%] CC 'stm32f4xx_ll_sdmmc.c'
 >> [ 53%] AS 'startup_stm32f411xe.s'
 >> [ 54%] CC 'st_block.c'
->> [ 56%] CC 'st_link2.c'
->> [ 58%] CC 'st_nv.c'
+>> [ 56%] CC 'st_nv.c'
+>> [ 58%] CC 'st_link2.c'
 >> [ 59%] CC 'st_diskio.c'
 >> [ 61%] CC 'st_sdio_hal.c'
 >> [ 62%] CC 'st_ads_hal.c'
@@ -88,51 +88,50 @@ BOARD Acquisition
 >> [ 91%] CC 'st_auto_link.c'
 >> [ 93%] CC 'st_ignition_f4.c'
 >> [ 95%] CC 'st_battery.c'
->> [ 96%] CC 'st_task.c'
->> [ 98%] CC 'st_frame.c'
+>> [ 96%] CC 'st_frame.c'
+>> [ 98%] CC 'st_task.c'
 >> [100%] CC 'st_session_zero.c'
 
 [ INFO ] start linking ...
 
 Memory region         Used Size  Region Size  %age Used
          VECTORS:         408 B        32 KB      1.25%
-           FLASH:       68972 B       192 KB     35.08%
+           FLASH:       69460 B       192 KB     35.33%
              RAM:       57640 B       128 KB     43.98%
 
 [ INFO ] start outputting files ...
 
 >> output hex file		[done]
 
-file path: "<TEMP>\Acquisition\SwiftThrust_Acquisition.hex"
+file path: "../../swift-eide-0xapnolm/Acquisition/SwiftThrust_Acquisition.hex"
 
 >> output bin file		[done]
 
-file path: "<TEMP>\Acquisition\SwiftThrust_Acquisition.bin"
+file path: "../../swift-eide-0xapnolm/Acquisition/SwiftThrust_Acquisition.bin"
 
-[ DONE ] build successfully !, elapsed time 0:0:10
+[ DONE ] build successfully !, elapsed time 0:0:12
 
 
    text	   data	    bss	    dec	    hex	filename
-  69256	    124	  57512	 126892	  1efac	<TEMP>\Acquisition\SwiftThrust_Acquisition.elf
+  69744	    124	  57512	 127380	  1f194	<TEMP>\Acquisition\SwiftThrust_Acquisition.elf
 
 PASS retained application entry/IRQ symbols: ADC_IRQHandler, DMA2_Stream0_IRQHandler, DMA2_Stream3_IRQHandler, DMA2_Stream5_IRQHandler, DMA2_Stream6_IRQHandler, EXTI4_IRQHandler, HAL_SD_MspInit, HAL_SPI_MspInit, HAL_SPI_TxRxCpltCallback, HAL_TIM_Base_MspInit, SDIO_IRQHandler, SPI1_IRQHandler, SysTick_Handler, SystemClock_Config, TIM5_IRQHandler, USART1_IRQHandler, main, st_cal_endpoint_step, st_console_feed, st_f4_capture_drdy, st_fatfs_worker_step, st_journal_open, st_link_server_step
 PASS linked application ELF, actual board handlers, no undefined symbols.
 PASS load sections exclude NV region 0x8008000..0x8010000
-Sparse HEX + ELF saved in dist/Acquisition (no BIN spanning NV holes).
 SHA256 Acquisition/board/link_check_main.c 5a7a66830e25785ce002710c8b68bd707d98fdfd9e134181badb2caca0f5aac8
 SHA256 Acquisition/src/st_ads.c 85c8921a5d8042d6b417e361f8b00301751742ace178881db9beb376076ae486
 SHA256 Acquisition/src/st_core.c f030b589b888984c48f5fd99c74f75376a61d0c6384bda27900cc5930f90ce7e
 SHA256 Acquisition/src/st_debug.c 5a83f4be52f3d1f5cf6150d40e104ff9be3754a68794df27618fb4a78ceb1a64
 SHA256 Acquisition/src/st_logger.c 9a381ae1666ebe11dd83381de46c1e159f66fb73e2f50c3051dad5fe0b5dd10f
 SHA256 Acquisition/src/st_protocol.c cf4674098beea581aed9c8ee120a39e6ee2768600ae5c1e391f1fcf10d5d35c9
-SHA256 Acquisition/src/st_radio.c c9752823c363767545a93556bbe19c5f8648bce656b7b0715509298d09e94166
+SHA256 Acquisition/src/st_radio.c 51ff18293010ddc59b7bd0d3fb536d4080def3a5caafb0f8bf2ddb5e756139e7
 SHA256 Acquisition/ports/st_f4_capture.c 6ad0bbffc62e920125c84e13497ea239436c6fd8753e3dd8b397aa6a209b81bf
 SHA256 Acquisition/ports/st_fatfs_worker.c 87e5ffc80c69b2c81d49f33be98d96f2ac05975d536d4e0356d829d79e37f33f
 SHA256 Acquisition/ports/st_debug_uart_hal.c aef17fbef2f00bb618b465fb851645cec3bfe4a540feffc4d9a6bc766cc55362
 SHA256 Acquisition/vendor/semtech_sx128x/sx128x.c 601b65e1b20b1f634495ab481e10d5ae9e3ca39b6b88eef46dcafdc72146a8ce
-SHA256 Acquisition/src/st_link2.c de8a4538955f70cbabbc2c318e5c8b6ff682dc1a0b455b8e3e1b2c4d106b0b5b
+SHA256 Acquisition/src/st_link2.c 80baad5d247f75249d8d24a67b43c946e148a851938c639a0431d297443fc0bb
 SHA256 Acquisition/src/st_block.c ad108c5001481ea463dc8c09d05c13c6f6fe8d46789c806523aa01ca2ff83cce
-SHA256 Acquisition/src/st_nv.c a0ca0ca424f70d8c875eeb140884fd7a0c36e376e9a7c753312f028b69150102
+SHA256 Acquisition/src/st_nv.c ab35c63949c6e655ea20be1e98228981ad9d21acb2ee9e3bd031752fdf63f1dd
 SHA256 Acquisition/ports/st_diskio.c 6e83666d557634404362aa74afba3ba436f98a0f4e957d9796df1e7465545121
 SHA256 Acquisition/ports/st_sdio_hal.c eac371ffddd4f778dca4fed9d5984ff93d2dc9f82b3399ebd74713409ed48e7b
 SHA256 Acquisition/ports/st_ads_hal.c f08ea425439a7f22ff53568b2734d5f45b7bf0c724b4d4cfb3cf132f1b934e06
@@ -144,23 +143,23 @@ SHA256 Acquisition/src/st_cal_view.c 7890a758ab3add4fa5d3eefd7442cbd3f0c8c81d9c4
 SHA256 Acquisition/src/st_cal_endpoint.c a43d3157fe80b972d67854d5d58eaf85c1f85b8db410759d4d51154b7a45fb9d
 SHA256 Acquisition/ports/st_cal_fatfs.c b21599fb07c2ff60c89e30e0d440df113f32dbadd33c4909555bb1a546460df3
 SHA256 Acquisition/ports/st_cal_system.c f99d419af57f09add95838ef40bf9ee6e77caa10b1c8004a50eb1f3b9ea6bde0
-SHA256 Acquisition/src/st_link_runtime.c 4220f26a50a181659fa08ea14b1c2c2ace2170e8b1630a41c0a12963efd7e008
-SHA256 Acquisition/board/reference_main.c 8a409b7e1227fdf2df8f7eeb464fcf5656b517c61b7ee7a0f55119bc0012f88e
-SHA256 Acquisition/src/st_reference.c 0afe00dc495f1c569e608d736c0f12a0e8c68a9af5d2169c1a18ef9e908e55ef
+SHA256 Acquisition/src/st_link_runtime.c 5d635ffbd250f43a35aba783590931be521cf8a9cc06493344805117fafe1ecd
+SHA256 Acquisition/board/reference_main.c 774024eb62c1ac166322847a16f483045eabd046f760d9883b31a85cf470165c
+SHA256 Acquisition/src/st_reference.c 6142580776516cb1e58b4c23bc3134a59e549392eb9dc6dde16ad3f9b6aabdcc
 SHA256 Acquisition/src/st_pairing.c cc563ab4618ab53c6b2a2bdb928217a1f310f630cf80a0cc1d3069aab88b7ef4
 SHA256 Acquisition/src/st_journal.c aa19671b7c7a0206c6c14c027661043bbe88b3ec5ef4ce06042238fd718d8b1c
 SHA256 Acquisition/src/st_console.c 400ec1bacf9af385fbc83de4d61b94f2ff41210c723f057d939c0877fd8d7795
 SHA256 Acquisition/ports/st_flash_journal.c a8a7d27cb3290036715aa3829fe254975841c8e1375525d826ab7d2a0f026183
-SHA256 Acquisition/src/st_ignition.c 4bdd16a974de09d5ef109d73a1844b2bab8cc36f2e7ab5ef5b567330a7b2c99a
+SHA256 Acquisition/src/st_ignition.c ab9ab065baa92c0759a7400fa6ffa2c2117b4f5108e7a3433f2d6fabc0d34d64
 SHA256 Acquisition/vendor/tiny_aes/aes.c f7f78b44654efd3542b6886923dd05194286807ebcfeb078ea05d21fe901ee9e
-SHA256 Acquisition/src/st_auto_link.c 2314f94f8a83a40ab0040f3d7742ff20e4709f000744c9cda97fe48c08e80f29
+SHA256 Acquisition/src/st_auto_link.c 229e699eb4b0b25ff546d6122a972c6142c8bc64cc0cdd3785805e5dff538f0e
 SHA256 Acquisition/ports/st_ignition_f4.c 18be73f5f5e2cec9add2fec7a5f291f344abd7d9075a7afafbc6de92eb76e507
-SHA256 Acquisition/src/st_battery.c 30185ab8933072143b5935b9b98457dc96ef287a9b6d86f0874e9ae9e248ab94
+SHA256 Acquisition/src/st_battery.c 346087ebcc211ed54b3812941b1336095daf321f43f6126a6c47d89415491812
 SHA256 Acquisition/src/st_frame.c 706d8ee3bb95b903922f43e1e0e5765c925c1e8876ee6feeb001b22d4dd3a7f6
 SHA256 Common/Src/st_task.c bd423410290c533af04dc69111e59f16072a1cd62e12a9cad6ee210a4ab35816
 SHA256 Acquisition/src/st_session_zero.c ed81cf3426421f58d531d466168d56ed3be1c84d2a28cb3703e30fd4ac21b2df
 SHA256 Acquisition/board/reference_memory.ld 52da7569b838506587b30b40a4060ccb1c378d31b5edc1e637ceaf2bd6c28726
-SHA256 Acquisition/.eide/eide.yml 663a6014150db51e70ec9743ba6b9e6ec1711840a6368dbec036faf1aa0ca016
+SHA256 Acquisition/.eide/eide.yml 880d08bd48f5951d692b1a0b0318e67d0755bc4d46ced5a9ef1b3b2adf951ead
 SHA256 Acquisition/board/stm32f4xx_hal_conf.h 21d2abd3fc203fa9cf18248dda801fd1cdaf4995ad89606c912d5710f26cfda0
 SHA256 Acquisition/include/st_ads.h e8b37ff483637167208fa12916541ea96a9b8c8d59e3a12b2026af0a8fdde300
 SHA256 Acquisition/include/st_auto_link.h 1d2455020db65d946b3fe387df5f79ec0e806e0f167aa67d6bf6a77f11f841cb
@@ -174,14 +173,14 @@ SHA256 Acquisition/include/st_cal_service.h 14130280ebe0f0916659995255eee18cebf5
 SHA256 Acquisition/include/st_console.h 425247ce9f76d52c62207b6ee2537a9166aedfd99aa49454161e04ff5513fd07
 SHA256 Acquisition/include/st_core.h 0581ac5300414bed7de218989976354f1ce77f694bce93f366d32739760362bb
 SHA256 Acquisition/include/st_debug.h 1761f0eb5bd3d7f208afe2b45b29a9a9d9e363ce7602d67a07cc4698a88855d8
-SHA256 Acquisition/include/st_ignition.h bf981039dd031969ec3f82d71a964ef79f9fa47edc2aba1dd7f591771c8299d3
+SHA256 Acquisition/include/st_ignition.h f0292dcc8b52190d99c0699b50094923bcdb39dd94e5dbd22c03743c548810b0
 SHA256 Acquisition/include/st_journal.h 648c5ebabf9244f3b6c3f85425848c98755893c4c1a1361fa0f9063039ee9379
 SHA256 Acquisition/include/st_link2.h 9ed899446c5b27443a6cff5f9659008727cf7d22222ab71a03103793010ca35a
 SHA256 Acquisition/include/st_link_runtime.h e7a70c2297077ca718f2816e96e04a0306faba3523c0b53d0c0b7376d86d472e
 SHA256 Acquisition/include/st_nv.h a5e4240c40b5254c7bdda55c6f35c01b6b39027aa1b40a66d9e5ae835eef8004
 SHA256 Acquisition/include/st_pairing.h 0d82b065bd80fa4076507a88799e74d6d9fd40b6c77461ae2590a20d4c7ee998
-SHA256 Acquisition/include/st_radio.h a88e812907445919bf457438a9f383afdedf3b7c7479bae2520e8fe02b0a6a6a
-SHA256 Acquisition/include/st_reference.h b222082667a9d2522a9db7a6f47019ef9e7455b1d41bcbbfcd44b8a0bdcbd389
+SHA256 Acquisition/include/st_radio.h c895490f0087cff9158afa31c10a2a0929ae2fc100f2922de9c41b8d90e375ac
+SHA256 Acquisition/include/st_reference.h e3b6c5f20a28a8cfffda2ec0fbdc27507ed144ccad9c2b9995a98f4555a54dae
 SHA256 Acquisition/include/st_session_zero.h 6f3ed3611a6788bffa27337480f67fca799db07f3bd0da863a7c57755f4bae23
 SHA256 Acquisition/ports/fatfs_config/ffconf.h 34ea22cf74dc2c21172929a7d8373cced945b1803ef56e52d7127fb1f42973f7
 SHA256 Acquisition/ports/st_ads_hal.h 1a4698f7bbf13aeb856a7843b430289d5f06813849f459891c3b59ef740647f5
@@ -192,10 +191,10 @@ SHA256 Acquisition/ports/st_diskio.h 662a3913c0448783c542acea6e0df7cdf6099056bdf
 SHA256 Acquisition/ports/st_f4_capture.h 12ae1f62e42a4f0a60fca6b7842acf81864d6eaae6a80b69b2fe16095b231c1e
 SHA256 Acquisition/ports/st_fatfs_worker.h e0b2e383aac4a8bd007380a39a45fa676b57a6821bbc6dfe608c619bd7d44b5b
 SHA256 Acquisition/ports/st_flash_journal.h 8c6c5a0cb817b5b0e4932ade79da4fa2e521d0a73dff12c09c8cb37f941485a3
-SHA256 Acquisition/ports/st_ignition_f4.h 2de6d494f15d2d586a73923cf6fe9916822b78b3e4f187c0731f66d412aba779
+SHA256 Acquisition/ports/st_ignition_f4.h 648f25d855e97b18fd7a946f9d1bbf7fba262db73759e7896e6e4cd1aa99c79d
 SHA256 Acquisition/ports/st_radio_hal.h fa923aa7c2a52717d2ae0949638f3d23e6bc70293eca590010a9d2d64a2a4039
 SHA256 Acquisition/ports/st_sdio_hal.h 4420167f20e27a68bda4271e0334e7e8d5856ebbaad4d7020f9b42701f218166
-SHA256 Common/Inc/st_project_config.h 193a3aa7e17aedc7869fbe910350e598b4ce0b690592d9f452722d2f198f0b95
+SHA256 Common/Inc/st_project_config.h b8d025cfc1eb9e44193b837d640dc865a82b37fcb1ac5149791685240644eb52
 SHA256 Common/Inc/st_task.h 8832cfeda61dbaa392bcba2900726be52411e968f8720cab43c336257b2ef1b4
 SHA256 Controller/include/st_cal_remote.h 30ef1772fe0d57d35d328755643f9adc8bf32db7ce3264723e7cae5675bd5b8c
 SHA256 Controller/include/st_cal_ui.h 1d8f1982c0640b346fd265d51def2573a8138bb6a23eea543edf290a365753e3
@@ -203,7 +202,7 @@ SHA256 Controller/include/st_controller_bsp.h e4e601548fcd6ec4842fa2ed623eb53e36
 SHA256 Controller/include/st_ui.h 2fb6b5a46a1445a6c18ca0a568696f016866a99c5b28cb6882c75e0725ebd102
 SHA256 Controller/ports/st_g0_oled.h 4df686d9b35d953204b1ed779c9c26abd41d5942586ce58527eafcfa5093b091
 BOARD Controller
-[ INFO ] start building at 2026-10-22 02:14:44
+[ INFO ] start building at 2026-10-23 15:26:19
 
 [ TOOL ] arm-none-eabi-gcc.exe (Arm GNU Toolchain 14.3.Rel1 (Build arm-14.174)) 14.3.1 20250623
 
@@ -248,8 +247,8 @@ BOARD Controller
 >> [ 52%] CC 'stm32g0xx_hal_tim_ex.c'
 >> [ 54%] CC 'stm32g0xx_hal_uart_ex.c'
 >> [ 56%] CC 'system_stm32g0xx.c'
->> [ 58%] AS 'startup_stm32g071xx.s'
->> [ 60%] CC 'stm32g0xx_hal_uart.c'
+>> [ 58%] CC 'stm32g0xx_hal_uart.c'
+>> [ 60%] AS 'startup_stm32g071xx.s'
 >> [ 61%] CC 'st_ui2.c'
 >> [ 63%] CC 'st_link2.c'
 >> [ 65%] CC 'st_nv.c'
@@ -260,8 +259,8 @@ BOARD Controller
 >> [ 74%] CC 'st_cal_ui.c'
 >> [ 76%] CC 'st_cal_remote.c'
 >> [ 78%] CC 'st_link_runtime.c'
->> [ 80%] CC 'reference_main.c'
->> [ 81%] CC 'st_reference.c'
+>> [ 80%] CC 'st_reference.c'
+>> [ 81%] CC 'reference_main.c'
 >> [ 83%] CC 'st_pairing.c'
 >> [ 85%] CC 'st_journal.c'
 >> [ 87%] CC 'st_console.c'
@@ -269,8 +268,8 @@ BOARD Controller
 >> [ 90%] CC 'aes.c'
 >> [ 92%] CC 'st_ignition.c'
 >> [ 94%] CC 'st_auto_link.c'
->> [ 96%] CC 'st_task.c'
->> [ 98%] CC 'st_frame.c'
+>> [ 96%] CC 'st_frame.c'
+>> [ 98%] CC 'st_task.c'
 >> [100%] CC 'st_session_zero.c'
 
 [ INFO ] start linking ...
@@ -283,13 +282,13 @@ Memory region         Used Size  Region Size  %age Used
 
 >> output hex file		[done]
 
-file path: "<TEMP>\Controller\SwiftThrust_Controller.hex"
+file path: "../../swift-eide-0xapnolm/Controller/SwiftThrust_Controller.hex"
 
 >> output bin file		[done]
 
-file path: "<TEMP>\Controller\SwiftThrust_Controller.bin"
+file path: "../../swift-eide-0xapnolm/Controller/SwiftThrust_Controller.bin"
 
-[ DONE ] build successfully !, elapsed time 0:0:10
+[ DONE ] build successfully !, elapsed time 0:0:11
 
 
    text	   data	    bss	    dec	    hex	filename
@@ -298,42 +297,41 @@ file path: "<TEMP>\Controller\SwiftThrust_Controller.bin"
 PASS retained application entry/IRQ symbols: ADC1_COMP_IRQHandler, EXTI4_15_IRQHandler, HAL_I2C_MspInit, HAL_SPI_MspInit, HAL_TIM_Encoder_MspInit, I2C1_IRQHandler, SysTick_Handler, SystemClock_Config, USART1_IRQHandler, main, st_cal_remote_step, st_console_feed, st_journal_open, st_link_client_step, st_oled_service, st_ui2_handle, st_ui2_render
 PASS linked application ELF, actual board handlers, no undefined symbols.
 PASS load sections exclude NV region 0x801f000..0x8020000
-Sparse HEX + ELF saved in dist/Controller (no BIN spanning NV holes).
 SHA256 Controller/board/link_check_main.c 7bab8290712a545a75244a6591171d4a5a5a9a9aacb9a6b034bb8adea3cf97d3
 SHA256 Controller/src/st_oled.c b62c7def77658e989c69bcd0f32140aa61b619ce8e1b11519661cefd78061f9c
 SHA256 Controller/src/st_raster.c 3bd25d23464a0082fdae37513a5ea1c86ff5bb2459ad6ac164f529bdcfb1f79d
-SHA256 Controller/src/st_ui.c 7fb36903e44832e27806854b1788f411a2cb6deb0c88c1bf8c102d0658f8b029
+SHA256 Controller/src/st_ui.c 8c4d0f42f41b7ee90cd234afcb8709fd30e7ac394736fccb5e3fcaaf9c2a2e5b
 SHA256 Controller/ports/st_g0_oled.c 9d67b871cb551e7483512f2754ec19451ea01254f8e80068b6577fb9a2da4716
 SHA256 Acquisition/src/st_core.c f030b589b888984c48f5fd99c74f75376a61d0c6384bda27900cc5930f90ce7e
 SHA256 Acquisition/src/st_protocol.c cf4674098beea581aed9c8ee120a39e6ee2768600ae5c1e391f1fcf10d5d35c9
-SHA256 Acquisition/src/st_radio.c c9752823c363767545a93556bbe19c5f8648bce656b7b0715509298d09e94166
+SHA256 Acquisition/src/st_radio.c 51ff18293010ddc59b7bd0d3fb536d4080def3a5caafb0f8bf2ddb5e756139e7
 SHA256 Acquisition/src/st_debug.c 5a83f4be52f3d1f5cf6150d40e104ff9be3754a68794df27618fb4a78ceb1a64
 SHA256 Acquisition/ports/st_debug_uart_hal.c aef17fbef2f00bb618b465fb851645cec3bfe4a540feffc4d9a6bc766cc55362
 SHA256 Acquisition/vendor/semtech_sx128x/sx128x.c 601b65e1b20b1f634495ab481e10d5ae9e3ca39b6b88eef46dcafdc72146a8ce
-SHA256 Acquisition/src/st_link2.c de8a4538955f70cbabbc2c318e5c8b6ff682dc1a0b455b8e3e1b2c4d106b0b5b
+SHA256 Acquisition/src/st_link2.c 80baad5d247f75249d8d24a67b43c946e148a851938c639a0431d297443fc0bb
 SHA256 Controller/src/st_ui2.c 9be4425c500b3afc41d237e91b36323ef9191a04b309dc2f5c6584182cae406e
-SHA256 Acquisition/src/st_nv.c a0ca0ca424f70d8c875eeb140884fd7a0c36e376e9a7c753312f028b69150102
+SHA256 Acquisition/src/st_nv.c ab35c63949c6e655ea20be1e98228981ad9d21acb2ee9e3bd031752fdf63f1dd
 SHA256 Acquisition/ports/st_radio_hal.c 61706294a18766cd212f663928e93c35cbee19324bb3a232f32c643d945eee7c
 SHA256 Acquisition/src/st_cal.c 6d37da45e8ac1f930bf2894d4d3eb02deb7cff33bc5fb1826f5769a34b9e9850
 SHA256 Acquisition/src/st_cal_service.c 9356e7ba2b2b199a14c4ae8dfeee5b117dfd4d2f8919e0f6e5073bb010096d50
 SHA256 Controller/src/st_cal_ui.c ccfb2ae7e61d2e54776ac8f906fcf2dd8f3b08081dd7ee6091d2db562d0780ec
 SHA256 Acquisition/src/st_cal_view.c 7890a758ab3add4fa5d3eefd7442cbd3f0c8c81d9c4e2353e3aa15d292bb2055
 SHA256 Controller/src/st_cal_remote.c 55aa38ad94a91d5db562c07e8e116a4b602a3f2707eff2f4ff89c4efd81121d5
-SHA256 Acquisition/src/st_link_runtime.c 4220f26a50a181659fa08ea14b1c2c2ace2170e8b1630a41c0a12963efd7e008
-SHA256 Controller/board/reference_main.c 107e8dc3b8209b9a327f596c5aa3311ec7393b03069115927b86f310d3f04f7d
-SHA256 Acquisition/src/st_reference.c 0afe00dc495f1c569e608d736c0f12a0e8c68a9af5d2169c1a18ef9e908e55ef
+SHA256 Acquisition/src/st_link_runtime.c 5d635ffbd250f43a35aba783590931be521cf8a9cc06493344805117fafe1ecd
+SHA256 Controller/board/reference_main.c e40bbe93048b0809ee420e29466dec67733e1fa4de6d50c0863416ec3ac649eb
+SHA256 Acquisition/src/st_reference.c 6142580776516cb1e58b4c23bc3134a59e549392eb9dc6dde16ad3f9b6aabdcc
 SHA256 Acquisition/src/st_pairing.c cc563ab4618ab53c6b2a2bdb928217a1f310f630cf80a0cc1d3069aab88b7ef4
 SHA256 Acquisition/src/st_journal.c aa19671b7c7a0206c6c14c027661043bbe88b3ec5ef4ce06042238fd718d8b1c
 SHA256 Acquisition/src/st_console.c 400ec1bacf9af385fbc83de4d61b94f2ff41210c723f057d939c0877fd8d7795
 SHA256 Acquisition/ports/st_flash_journal.c a8a7d27cb3290036715aa3829fe254975841c8e1375525d826ab7d2a0f026183
-SHA256 Acquisition/src/st_ignition.c 4bdd16a974de09d5ef109d73a1844b2bab8cc36f2e7ab5ef5b567330a7b2c99a
+SHA256 Acquisition/src/st_ignition.c ab9ab065baa92c0759a7400fa6ffa2c2117b4f5108e7a3433f2d6fabc0d34d64
 SHA256 Acquisition/vendor/tiny_aes/aes.c f7f78b44654efd3542b6886923dd05194286807ebcfeb078ea05d21fe901ee9e
-SHA256 Acquisition/src/st_auto_link.c 2314f94f8a83a40ab0040f3d7742ff20e4709f000744c9cda97fe48c08e80f29
+SHA256 Acquisition/src/st_auto_link.c 229e699eb4b0b25ff546d6122a972c6142c8bc64cc0cdd3785805e5dff538f0e
 SHA256 Acquisition/src/st_frame.c 706d8ee3bb95b903922f43e1e0e5765c925c1e8876ee6feeb001b22d4dd3a7f6
 SHA256 Common/Src/st_task.c bd423410290c533af04dc69111e59f16072a1cd62e12a9cad6ee210a4ab35816
 SHA256 Acquisition/src/st_session_zero.c ed81cf3426421f58d531d466168d56ed3be1c84d2a28cb3703e30fd4ac21b2df
 SHA256 Controller/board/reference_memory.ld 61d2dc5835ce0e3d51837edd0c2700368b15ad942889dbc5e76186b5364366ea
-SHA256 Controller/.eide/eide.yml 3aff77e35612c7115f2937776dba075f7523195768476cea0d83fa696c34542f
+SHA256 Controller/.eide/eide.yml 69ed258310d741889aaaf122b4265059edc50de25f1dd885e114848347ed3331
 SHA256 Acquisition/include/st_ads.h e8b37ff483637167208fa12916541ea96a9b8c8d59e3a12b2026af0a8fdde300
 SHA256 Acquisition/include/st_auto_link.h 1d2455020db65d946b3fe387df5f79ec0e806e0f167aa67d6bf6a77f11f841cb
 SHA256 Acquisition/include/st_battery.h 0218c86b8624037d6915f46ea0ebee19b2a111e03a3e4746a4358c5bc78050f0
@@ -346,14 +344,14 @@ SHA256 Acquisition/include/st_cal_service.h 14130280ebe0f0916659995255eee18cebf5
 SHA256 Acquisition/include/st_console.h 425247ce9f76d52c62207b6ee2537a9166aedfd99aa49454161e04ff5513fd07
 SHA256 Acquisition/include/st_core.h 0581ac5300414bed7de218989976354f1ce77f694bce93f366d32739760362bb
 SHA256 Acquisition/include/st_debug.h 1761f0eb5bd3d7f208afe2b45b29a9a9d9e363ce7602d67a07cc4698a88855d8
-SHA256 Acquisition/include/st_ignition.h bf981039dd031969ec3f82d71a964ef79f9fa47edc2aba1dd7f591771c8299d3
+SHA256 Acquisition/include/st_ignition.h f0292dcc8b52190d99c0699b50094923bcdb39dd94e5dbd22c03743c548810b0
 SHA256 Acquisition/include/st_journal.h 648c5ebabf9244f3b6c3f85425848c98755893c4c1a1361fa0f9063039ee9379
 SHA256 Acquisition/include/st_link2.h 9ed899446c5b27443a6cff5f9659008727cf7d22222ab71a03103793010ca35a
 SHA256 Acquisition/include/st_link_runtime.h e7a70c2297077ca718f2816e96e04a0306faba3523c0b53d0c0b7376d86d472e
 SHA256 Acquisition/include/st_nv.h a5e4240c40b5254c7bdda55c6f35c01b6b39027aa1b40a66d9e5ae835eef8004
 SHA256 Acquisition/include/st_pairing.h 0d82b065bd80fa4076507a88799e74d6d9fd40b6c77461ae2590a20d4c7ee998
-SHA256 Acquisition/include/st_radio.h a88e812907445919bf457438a9f383afdedf3b7c7479bae2520e8fe02b0a6a6a
-SHA256 Acquisition/include/st_reference.h b222082667a9d2522a9db7a6f47019ef9e7455b1d41bcbbfcd44b8a0bdcbd389
+SHA256 Acquisition/include/st_radio.h c895490f0087cff9158afa31c10a2a0929ae2fc100f2922de9c41b8d90e375ac
+SHA256 Acquisition/include/st_reference.h e3b6c5f20a28a8cfffda2ec0fbdc27507ed144ccad9c2b9995a98f4555a54dae
 SHA256 Acquisition/include/st_session_zero.h 6f3ed3611a6788bffa27337480f67fca799db07f3bd0da863a7c57755f4bae23
 SHA256 Acquisition/ports/fatfs_config/ffconf.h 34ea22cf74dc2c21172929a7d8373cced945b1803ef56e52d7127fb1f42973f7
 SHA256 Acquisition/ports/st_ads_hal.h 1a4698f7bbf13aeb856a7843b430289d5f06813849f459891c3b59ef740647f5
@@ -364,10 +362,10 @@ SHA256 Acquisition/ports/st_diskio.h 662a3913c0448783c542acea6e0df7cdf6099056bdf
 SHA256 Acquisition/ports/st_f4_capture.h 12ae1f62e42a4f0a60fca6b7842acf81864d6eaae6a80b69b2fe16095b231c1e
 SHA256 Acquisition/ports/st_fatfs_worker.h e0b2e383aac4a8bd007380a39a45fa676b57a6821bbc6dfe608c619bd7d44b5b
 SHA256 Acquisition/ports/st_flash_journal.h 8c6c5a0cb817b5b0e4932ade79da4fa2e521d0a73dff12c09c8cb37f941485a3
-SHA256 Acquisition/ports/st_ignition_f4.h 2de6d494f15d2d586a73923cf6fe9916822b78b3e4f187c0731f66d412aba779
+SHA256 Acquisition/ports/st_ignition_f4.h 648f25d855e97b18fd7a946f9d1bbf7fba262db73759e7896e6e4cd1aa99c79d
 SHA256 Acquisition/ports/st_radio_hal.h fa923aa7c2a52717d2ae0949638f3d23e6bc70293eca590010a9d2d64a2a4039
 SHA256 Acquisition/ports/st_sdio_hal.h 4420167f20e27a68bda4271e0334e7e8d5856ebbaad4d7020f9b42701f218166
-SHA256 Common/Inc/st_project_config.h 193a3aa7e17aedc7869fbe910350e598b4ce0b690592d9f452722d2f198f0b95
+SHA256 Common/Inc/st_project_config.h b8d025cfc1eb9e44193b837d640dc865a82b37fcb1ac5149791685240644eb52
 SHA256 Common/Inc/st_task.h 8832cfeda61dbaa392bcba2900726be52411e968f8720cab43c336257b2ef1b4
 SHA256 Controller/board/stm32g0xx_hal_conf.h 9420f139e7a939eeef429666482ea2f4058c45b9b95817f96621c50e9d0f4a1a
 SHA256 Controller/include/st_cal_remote.h 30ef1772fe0d57d35d328755643f9adc8bf32db7ce3264723e7cae5675bd5b8c

@@ -137,12 +137,12 @@ void SystemClock_Config(void)
     RCC_OscInitTypeDef o = {0};
     RCC_ClkInitTypeDef c = {0};
     __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE2);
-    o.OscillatorType = RCC_OSCILLATORTYPE_HSI;
-    o.HSIState = RCC_HSI_ON;
-    o.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
+    /* 8 MHz HSE crystal; preserve 84 MHz SYSCLK and the 48 MHz SDIO domain. */
+    o.OscillatorType = RCC_OSCILLATORTYPE_HSE;
+    o.HSEState = RCC_HSE_ON;
     o.PLL.PLLState = RCC_PLL_ON;
-    o.PLL.PLLSource = RCC_PLLSOURCE_HSI;
-    o.PLL.PLLM = 16;
+    o.PLL.PLLSource = RCC_PLLSOURCE_HSE;
+    o.PLL.PLLM = 8;
     o.PLL.PLLN = 336;
     o.PLL.PLLP = RCC_PLLP_DIV4;
     o.PLL.PLLQ = 7;
@@ -200,8 +200,9 @@ void HAL_SD_MspInit(SD_HandleTypeDef *h)
 {
     __HAL_RCC_SDIO_CLK_ENABLE();
     __HAL_RCC_DMA2_CLK_ENABLE();
-    gpio(GPIOC, GPIO_PIN_8 | GPIO_PIN_9 | GPIO_PIN_10 | GPIO_PIN_11 | GPIO_PIN_12, GPIO_MODE_AF_PP,
+    gpio(GPIOC, GPIO_PIN_8 | GPIO_PIN_9 | GPIO_PIN_10 | GPIO_PIN_11, GPIO_MODE_AF_PP,
          GPIO_PULLUP, GPIO_AF12_SDIO);
+    gpio(GPIOC, GPIO_PIN_12, GPIO_MODE_AF_PP, GPIO_NOPULL, GPIO_AF12_SDIO);
     gpio(GPIOD, GPIO_PIN_2, GPIO_MODE_AF_PP, GPIO_PULLUP, GPIO_AF12_SDIO);
     dma(&sd_rx, DMA2_Stream3, DMA_CHANNEL_4, DMA_PERIPH_TO_MEMORY, true);
     dma(&sd_tx, DMA2_Stream6, DMA_CHANNEL_4, DMA_MEMORY_TO_PERIPH, true);
@@ -366,7 +367,7 @@ static void voltage_step(uint32_t ms, uint64_t us)
             uint32_t mv = 0;
             bool ok = st_ref_vdda_mv(*VREFINT_CAL_ADDR, VREFINT_CAL_VREF, raw, &mv);
             supply = (st_voltage){mv, us, true, ok};
-            adc_next_battery = ok;
+            adc_next_battery = ok && ST_ACQ_BATTERY_PRESENT && ST_ACQ_BATTERY_VERIFIED;
             if (!ok)
                 Battery_Invalidate(&battery);
         }
