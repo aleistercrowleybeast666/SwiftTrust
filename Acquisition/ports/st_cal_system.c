@@ -19,7 +19,7 @@ st_cal_disk_state st_cal_system_init(st_cal_system *s, st_logger *l, st_fatfs_wo
     st_cal_fatfs_init(&s->disk, w, l, binding);
     st_cal_disk_state state = st_cal_fatfs_open(&s->disk, &s->active);
     st_cal_storage storage = {0};
-    if (state == ST_CAL_DISK_EMPTY || state == ST_CAL_DISK_VALID)
+    if (state == ST_CAL_DISK_EMPTY || state == ST_CAL_DISK_VALID || state == ST_CAL_DISK_MIGRATION)
         storage = st_cal_fatfs_storage(&s->disk);
     st_cal_service_init(&s->service, &s->active, &s->binding, policy, storage, s,
                         clock ? now : NULL, idle);

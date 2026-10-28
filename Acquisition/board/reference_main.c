@@ -1,5 +1,5 @@
-/* Executable REFERENCE board. See Models/REFERENCE_APPLICATION.md before use.
- * R8 output is disabled pending review; PA0 defaults low. PA11/PA12 untouched. */
+/* 2026-10-29 F411/ADS1220 board. See Models/REFERENCE_APPLICATION.md.
+ * PA0 defaults low; explicit R8 authorization and autonomous cutoff are retained. */
 #if defined(ST_REFERENCE_APPLICATION)
 #include "stm32f4xx_hal.h"
 #include "stm32f4xx_ll_adc.h"
@@ -64,7 +64,9 @@ static const st_f4_led_port leds = {
     {GPIOB, GPIOB, GPIOB, GPIOB}, {GPIO_PIN_6, GPIO_PIN_7, GPIO_PIN_8, GPIO_PIN_9}, true, true};
 static volatile bool capture_owner;
 static bool mounted, rate_ok, rate_checked, paired, change_pair, servicing, app_ready, adc_busy;
-static bool source_fault;
+static volatile bool source_fault, clock_ready, clock_fault;
+static bool nv_capture_paused;
+static uint32_t measured_rate_millihz;
 static uint32_t adc_started_ms, last_adc_ms;
 static bool adc_battery_phase, adc_next_battery;
 static void fast_service(void);
@@ -136,24 +138,45 @@ void SystemClock_Config(void)
 {
     RCC_OscInitTypeDef o = {0};
     RCC_ClkInitTypeDef c = {0};
-    __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE2);
-    /* 8 MHz HSE crystal; preserve 84 MHz SYSCLK and the 48 MHz SDIO domain. */
+    clock_ready = false;
+    __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE1);
+    /* DS10314/RM0383: PLL input 1.024MHz, VCO384MHz, HCLK96/PCLK1 48/PCLK2 96.
+     * Scale1 and 3WS are required at this frequency and the 3.3V board supply. */
     o.OscillatorType = RCC_OSCILLATORTYPE_HSE;
     o.HSEState = RCC_HSE_ON;
     o.PLL.PLLState = RCC_PLL_ON;
     o.PLL.PLLSource = RCC_PLLSOURCE_HSE;
     o.PLL.PLLM = 8;
-    o.PLL.PLLN = 336;
+    o.PLL.PLLN = 375;
     o.PLL.PLLP = RCC_PLLP_DIV4;
-    o.PLL.PLLQ = 7;
+    o.PLL.PLLQ = 8;
     need(HAL_RCC_OscConfig(&o));
+    /* The voltage-scale selection takes effect with PLL enabled. The HAL
+     * voltage macro only writes the selector; wait before switching HCLK. */
+    uint32_t voltage_started = HAL_GetTick();
+    while (!__HAL_PWR_GET_FLAG(PWR_FLAG_VOSRDY))
+        if ((uint32_t)(HAL_GetTick() - voltage_started) > 100u)
+            fatal();
+    HAL_RCC_EnableCSS();
     c.ClockType =
         RCC_CLOCKTYPE_SYSCLK | RCC_CLOCKTYPE_HCLK | RCC_CLOCKTYPE_PCLK1 | RCC_CLOCKTYPE_PCLK2;
     c.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
     c.AHBCLKDivider = RCC_SYSCLK_DIV1;
     c.APB1CLKDivider = RCC_HCLK_DIV2;
     c.APB2CLKDivider = RCC_HCLK_DIV1;
-    need(HAL_RCC_ClockConfig(&c, FLASH_LATENCY_2));
+    need(HAL_RCC_ClockConfig(&c, FLASH_LATENCY_3));
+    __HAL_RCC_GPIOA_CLK_ENABLE();
+    HAL_RCC_MCOConfig(RCC_MCO1, RCC_MCO1SOURCE_HSE, RCC_MCODIV_2);
+    clock_ready = !clock_fault && __HAL_RCC_GET_FLAG(RCC_FLAG_HSERDY) &&
+                  __HAL_RCC_GET_FLAG(RCC_FLAG_PLLRDY) &&
+                  HAL_RCC_GetSysClockFreq() == 96000000u &&
+                  HAL_RCC_GetHCLKFreq() == 96000000u &&
+                  HAL_RCC_GetPCLK1Freq() == 48000000u &&
+                  HAL_RCC_GetPCLK2Freq() == 96000000u &&
+                  (RCC->CFGR & (RCC_CFGR_MCO1 | RCC_CFGR_MCO1PRE)) ==
+                      (RCC_MCO1SOURCE_HSE | RCC_MCODIV_2);
+    if (!clock_ready || clock_fault)
+        fatal();
 }
 static void dma(DMA_HandleTypeDef *d, DMA_Stream_TypeDef *instance, uint32_t channel,
                 uint32_t direction, bool sd_dma)
@@ -198,6 +221,8 @@ void HAL_SPI_MspInit(SPI_HandleTypeDef *h)
 }
 void HAL_SD_MspInit(SD_HandleTypeDef *h)
 {
+    if (h->Instance != SDIO)
+        return;
     __HAL_RCC_SDIO_CLK_ENABLE();
     __HAL_RCC_DMA2_CLK_ENABLE();
     gpio(GPIOC, GPIO_PIN_8 | GPIO_PIN_9 | GPIO_PIN_10 | GPIO_PIN_11, GPIO_MODE_AF_PP,
@@ -256,20 +281,19 @@ static void board_init(void)
     gpio(GPIOA, GPIO_PIN_4, GPIO_MODE_OUTPUT_PP, GPIO_NOPULL, 0);
     HAL_GPIO_WritePin(GPIOB, GPIO_PIN_12 | GPIO_PIN_2, GPIO_PIN_SET);
     gpio(GPIOB, GPIO_PIN_12 | GPIO_PIN_2, GPIO_MODE_OUTPUT_PP, GPIO_NOPULL, 0);
-    HAL_GPIO_WritePin(GPIOC, GPIO_PIN_5, GPIO_PIN_SET);
-    gpio(GPIOC, GPIO_PIN_5, GPIO_MODE_OUTPUT_PP, GPIO_NOPULL, 0);
+    gpio(GPIOC, GPIO_PIN_5, GPIO_MODE_ANALOG, GPIO_NOPULL, 0);
     HAL_GPIO_WritePin(GPIOB, GPIO_PIN_6 | GPIO_PIN_7 | GPIO_PIN_8 | GPIO_PIN_9, GPIO_PIN_RESET);
     gpio(GPIOB, GPIO_PIN_6 | GPIO_PIN_7 | GPIO_PIN_8 | GPIO_PIN_9, GPIO_MODE_OUTPUT_PP, GPIO_NOPULL,
          0);
-    HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0, GPIO_PIN_RESET);
-    gpio(GPIOB, GPIO_PIN_0, GPIO_MODE_OUTPUT_PP, GPIO_NOPULL, 0);
+    HAL_GPIO_WritePin(GPIOB, GPIO_PIN_10, GPIO_PIN_RESET);
+    gpio(GPIOB, GPIO_PIN_10, GPIO_MODE_OUTPUT_PP, GPIO_NOPULL, 0);
     gpio(GPIOC, GPIO_PIN_6, GPIO_MODE_INPUT, GPIO_NOPULL, 0);
     gpio(GPIOB, GPIO_PIN_5, GPIO_MODE_INPUT, GPIO_PULLUP, 0);
     gpio(GPIOC, GPIO_PIN_4, GPIO_MODE_IT_FALLING, GPIO_NOPULL, 0);
     gpio(GPIOC, GPIO_PIN_7, GPIO_MODE_IT_RISING, GPIO_NOPULL, 0);
     irq(EXTI9_5_IRQn, 4);
     timer.Instance = TIM5;
-    timer.Init.Prescaler = 83;
+    timer.Init.Prescaler = HAL_RCC_GetPCLK1Freq() * 2u / 1000000u - 1u;
     timer.Init.CounterMode = TIM_COUNTERMODE_UP;
     timer.Init.Period = UINT32_MAX;
     timer.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
@@ -310,12 +334,37 @@ static void yield(void *ctx)
 static bool idle(void *ctx)
 {
     (void)ctx;
-    return supply.valid && supply.mv >= ST_VDDA_MIN_MV && supply.mv <= ST_VDDA_MAX_MV &&
+    return clock_ready && !clock_fault &&
+           supply.valid && supply.mv >= ST_VDDA_MIN_MV && supply.mv <= ST_VDDA_MAX_MV &&
            supply_view.age_ms <= ST_VDDA_FRESH_MS && !IgnitionServer_IsBusy(&ignition) &&
            !IgnitionPulse_IsRunning(NULL) && logger.state == ST_IDLE && !logger.inflight &&
            !atomic_load(&logger.capture_enabled) &&
            (!app_ready || !mounted || st_fatfs_idle(&worker)) &&
            (!app_ready || !cal_port.locked || !cal_port.locked(cal_port.ctx));
+}
+/* NV programming is allowed only by the existing IDLE/calibration/output gates.
+ * Pause ADC transport before Flash stalls instruction fetch; discarded idle
+ * conversions must not masquerade as timed samples or poison a later START. */
+static bool Acquisition_NvIdle(void *ctx)
+{
+    if (!idle(ctx))
+        return false;
+    if (!capture_owner || source_fault || nv_capture_paused)
+        return true;
+    uint64_t started = st_reference_time_us(NULL);
+    while (Capture_Quiesce(&capture) == ADS1220_BUSY)
+    {
+        uint64_t now = st_reference_time_us(NULL);
+        if (Capture_CheckTimeout(&capture, now) != ADS1220_OK || now - started >= 1000u)
+            return false;
+        __WFI();
+    }
+    HAL_NVIC_DisableIRQ(EXTI4_IRQn);
+    nv_capture_paused = true;
+    rate_ok = false;
+    rate_checked = false;
+    last_valid_us = 0;
+    return true;
 }
 static void changed(void *ctx)
 {
@@ -413,7 +462,33 @@ static void fast_service(void)
     IgnitionServer_Service(&ignition);
     uint64_t us = st_reference_time_us(NULL);
     uint32_t ms = (uint32_t)(us / 1000);
-    if (capture_owner && seen_version != latest_version)
+    if (nv_capture_paused && capture_owner)
+    {
+        uint32_t mask = __get_PRIMASK();
+        __disable_irq();
+        Ads1220Result resumed = Capture_ResumeAfterIdle(&capture, us);
+        nv_capture_paused = false;
+        rate_time_us = us;
+        rate_sequence = capture.drdy_edges;
+        seen_version = latest_version;
+        __HAL_GPIO_EXTI_CLEAR_IT(GPIO_PIN_4);
+        if (resumed == ADS1220_OK && !clock_fault)
+            HAL_NVIC_EnableIRQ(EXTI4_IRQn);
+        __set_PRIMASK(mask);
+        if (resumed != ADS1220_OK)
+            source_fault = true;
+    }
+    if (capture_owner && Capture_CheckTimeout(&capture, us) != ADS1220_OK)
+    {
+        if (!source_fault)
+        {
+            st_logger_source_error_isr(&logger);
+            st_cal_input_error_isr(&calibration.endpoint.input);
+        }
+        source_fault = true;
+        rate_ok = false;
+    }
+    if (capture_owner && !source_fault && seen_version != latest_version)
     {
         st_capture c;
         uint32_t mask = __get_PRIMASK();
@@ -425,37 +500,31 @@ static void fast_service(void)
         if (!decoded.flags)
             last_valid_us = c.time_us;
     }
-    if (capture_owner && us - rate_time_us >= ST_ADC_RATE_WINDOW_US)
+    if (capture_owner && !source_fault && us - rate_time_us >= ST_ADC_RATE_WINDOW_US)
     {
-        uint32_t sequence = capture.sequence;
-        rate_ok = st_ref_rate_ok(sequence - rate_sequence, us - rate_time_us);
+        uint32_t sequence = capture.drdy_edges;
+        uint64_t elapsed = us - rate_time_us;
+        uint32_t edges = sequence - rate_sequence;
+        rate_ok = st_ref_rate_ok(edges, elapsed);
+        measured_rate_millihz = (uint32_t)((uint64_t)edges * 1000000000u / elapsed);
         rate_checked = true;
         rate_sequence = sequence;
         rate_time_us = us;
     }
-    bool fresh = last_valid_us && us >= last_valid_us && us - last_valid_us <= ST_ADC_FRESH_US;
-    if ((logger.state == ST_STARTING || logger.state == ST_CAPTURING) && (!fresh || !rate_ok))
+    bool fresh = last_valid_us && (us < last_valid_us || us - last_valid_us <= ST_ADC_FRESH_US);
+    if ((logger.state == ST_STARTING || logger.state == ST_CAPTURING) && (source_fault || !fresh || !rate_ok))
     {
         if (!source_fault)
         {
             st_logger_source_error_isr(&logger);
             source_fault = true;
+            st_cal_input_error_isr(&calibration.endpoint.input);
         }
+        (void)Capture_Quiesce(&capture);
         (void)st_logger_stop(&logger);
     }
-    /* RESET/config or an idle Flash stall can leave DRDY already low, so there
-     * may be no new falling edge. Drain it only while idle, outside a wizard.
-     * Such a timestamp is never offered to a recording or calibration sample. */
-    if (capture_owner && logger.state == ST_IDLE && !atomic_load(&logger.capture_enabled) &&
-        (!cal_port.locked || !cal_port.locked(cal_port.ctx)) &&
-        calibration.endpoint.zero.state != ST_ZERO_COLLECTING)
-    {
-        uint32_t mask = __get_PRIMASK();
-        __disable_irq();
-        if (!atomic_load(&capture.busy) && HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_4) == GPIO_PIN_RESET)
-            st_f4_capture_drdy(&capture, us);
-        __set_PRIMASK(mask);
-    }
+    /* ADS1220 continuous DRDY pulses every conversion, even when unread.
+     * Only genuine EXTI edges are timestamped; no synthetic low-pin drain. */
     st_logger_service(&logger, us);
     voltage_step(ms, us);
     st_debug_service(&debug);
@@ -508,12 +577,13 @@ static bool prepare(void *ctx)
 {
     (void)ctx;
     uint64_t us = st_reference_time_us(NULL);
-    if (!mounted || block.fault || !present(NULL) || !ads.ready || !rate_ok || !last_valid_us ||
+    if (!clock_ready || source_fault || !mounted || block.fault || !present(NULL) ||
+        !ads.ready || !rate_ok || !last_valid_us ||
         us - last_valid_us > ST_ADC_FRESH_US || !st_fatfs_idle(&worker) || !idle(NULL))
         return false;
     if (!st_ref_prepare_start(&logger, cal_port, server.epoch, true, sensor.configured))
         return false;
-    source_fault = false;
+    logger.config.measured_rate_millihz = measured_rate_millihz;
     return true;
 }
 static bool reserve_epoch(void *ctx, uint64_t counter, uint32_t *epoch)
@@ -530,7 +600,7 @@ static bool reserve_epoch(void *ctx, uint64_t counter, uint32_t *epoch)
     rate_ok = false;
     rate_checked = false;
     rate_time_us = st_reference_time_us(NULL);
-    rate_sequence = capture.sequence;
+    rate_sequence = capture.drdy_edges;
     return ok;
 }
 static bool Ignition_CheckLocal(void *ctx, uint8_t mode)
@@ -538,7 +608,7 @@ static bool Ignition_CheckLocal(void *ctx, uint8_t mode)
     (void)ctx;
     bool voltage_ok = supply.valid && supply.mv >= ST_VDDA_MIN_MV && supply.mv <= ST_VDDA_MAX_MV &&
                       supply_view.age_ms <= ST_VDDA_FRESH_MS;
-    if (!voltage_ok || radio.failed || cal_locked(NULL))
+    if (!clock_ready || clock_fault || !voltage_ok || radio.failed || cal_locked(NULL))
         return false;
     if (mode == 1)
         return logger.state == ST_IDLE;
@@ -633,10 +703,11 @@ int main(void)
     st_log_config cfg = {.adc_clock_hz = ST_REF_ADC_HZ,
                          .osr = ST_REF_ADC_OSR,
                          .rate_millihz = ST_REF_ADC_RATE_MILLIHZ,
-                         .gain_ch0 = 1,
-                         .gain_ch1 = 1};
+                         .gain_ch0 = ST_REF_ADC_GAIN0,
+                         .gain_ch1 = ST_REF_ADC_GAIN1};
+    Log_ApplyAds1220Metadata(&cfg, true, 0);
     st_logger_init(&logger, cfg, st_fatfs_port(&worker));
-    flash_window = (st_flash_window){NULL, idle};
+    flash_window = (st_flash_window){NULL, Acquisition_NvIdle};
     (void)st_journal_open(&journal, st_flash_journal_port(&flash_window));
     (void)st_pairing_open(&pairing, st_journal_storage(&journal), (const uint8_t *)UID_BASE,
                           ST_NV_ACQUISITION);
@@ -650,10 +721,12 @@ int main(void)
     storage_init();
     sensor_init();
     server_init();
-    if (!st_ads_hal_bind(&ads_hal, &ads_spi, GPIOA, GPIO_PIN_4, GPIOC, GPIO_PIN_5, HAL_GetTick, 20,
-                         true))
+    if (!st_ads_hal_bind(&ads_hal, &ads_spi, GPIOA, GPIO_PIN_4, HAL_GetTick, 20, clock_ready))
         fatal();
-    st_ads_init(&ads, st_ads_hal_port(&ads_hal), st_ref_ads_config(true),
+    st_ads_config adc_config = sensor.configured ? sensor.adc_config : st_ref_ads_config(clock_ready);
+    logger.config.gain_ch0 = adc_config.gain;
+    logger.config.pga_bypass = adc_config.pga_bypass;
+    st_ads_init(&ads, st_ads_hal_port(&ads_hal), adc_config,
                 (uint32_t)st_reference_time_us(NULL));
     radio_hal = (st_radio_hal){.spi = &rf_spi,
                                .cs = GPIOB,
@@ -679,12 +752,22 @@ int main(void)
     {
         uint64_t us = st_reference_time_us(NULL);
         fast_service();
+        us = st_reference_time_us(NULL);
+        if (capture_owner && source_fault &&
+            (logger.state == ST_IDLE || logger.state == ST_FAULT) &&
+            Capture_Quiesce(&capture) == ADS1220_OK && ads_spi.State == HAL_SPI_STATE_READY)
+        {
+            HAL_NVIC_DisableIRQ(EXTI4_IRQn);
+            capture_owner = false;
+            if (Ads1220_RequestPowerdown(&ads, (uint32_t)us) != ADS1220_OK)
+                ads.failed = true;
+        }
         if (!capture_owner && !ads.failed)
         {
             st_ads_tick(&ads, (uint32_t)us);
-            if (ads.ready && st_ads_hal_idle(&ads_hal))
+            if (!source_fault && ads.ready && st_ads_hal_idle(&ads_hal))
             {
-                st_f4_capture_init(&capture, &ads_spi, GPIOA, GPIO_PIN_4, &logger, true);
+                st_f4_capture_init(&capture, &ads_spi, GPIOA, GPIO_PIN_4, &logger, true, us);
                 st_f4_capture_bind_calibration(&capture, &calibration.endpoint.input);
                 capture_owner = true;
                 rate_time_us = us;
@@ -700,7 +783,7 @@ int main(void)
             rate_ok = false;
             rate_checked = false;
             rate_time_us = us;
-            rate_sequence = capture.sequence;
+            rate_sequence = capture.drdy_edges;
         }
         st_cal_endpoint_step(&calibration.endpoint);
         {
@@ -724,7 +807,7 @@ int main(void)
         /* RF faults never interrupt local ADC/TF recording. The execution policy
          * independently removes authorization/cuts the signal on a radio fault. */
         HAL_GPIO_WritePin(
-            GPIOB, GPIO_PIN_0,
+            GPIOB, GPIO_PIN_10,
             Link_GetLed(Link_GetHealth(server.have_peer_status, server.peer_received_ms,
                                        now_ms(NULL), radio.failed),
                         now_ms(NULL))
@@ -739,6 +822,25 @@ int main(void)
             st_console_feed(&console, byte);
         __WFI();
     }
+}
+void HAL_RCC_CSSCallback(void)
+{
+    bool first_failure = !clock_fault;
+    clock_fault = true;
+    clock_ready = false;
+    source_fault = true;
+    IgnitionPulse_FaultIsr();
+    HAL_NVIC_DisableIRQ(EXTI4_IRQn);
+    Capture_ClockFaultIsr(&capture);
+    atomic_store_explicit(&logger.capture_enabled, false, memory_order_release);
+    /* Only pre-failure buffered samples may reach file finalization. Foreground
+     * handles abort, STOP and best-effort close; no SPI/FatFs work in NMI. */
+    if (first_failure)
+        st_logger_source_error_isr(&logger);
+}
+void NMI_Handler(void)
+{
+    HAL_RCC_NMI_IRQHandler();
 }
 void SysTick_Handler(void)
 {
@@ -808,12 +910,12 @@ void HAL_SPI_TxRxCpltCallback(SPI_HandleTypeDef *h)
         return;
     if (capture_owner)
     {
-        if (atomic_load(&capture.busy))
+        if (atomic_load(&capture.busy) && !atomic_load(&capture.discard_pending) && !clock_fault)
         {
             latest.time_us = capture.pending_time_us;
             latest.sequence = capture.pending_sequence;
-            for (unsigned i = 0; i < 12; i++)
-                latest.bytes[i] = capture.rx[i];
+            for (unsigned i = 0; i < sizeof latest.bytes; i++)
+                latest.bytes[i] = i < ADS1220_DATA_BYTES ? capture.rx[i] : 0;
             latest_version++;
         }
         st_f4_capture_complete(&capture, h);

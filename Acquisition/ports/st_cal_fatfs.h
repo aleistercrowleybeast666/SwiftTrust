@@ -9,7 +9,10 @@ typedef enum
     ST_CAL_DISK_DAMAGED,
     ST_CAL_DISK_FOREIGN,
     ST_CAL_DISK_IO,
-    ST_CAL_DISK_BUSY
+    ST_CAL_DISK_BUSY,
+    /* Valid incompatible coefficients remain stored but are not applied. A newly
+     * completed calibration may replace the other slot with a higher generation. */
+    ST_CAL_DISK_MIGRATION
 } st_cal_disk_state;
 typedef struct
 {

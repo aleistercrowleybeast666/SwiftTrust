@@ -75,14 +75,15 @@ static fixture *init(void)
     fixture *f = calloc(1, sizeof *f);
     C(f);
     st_logger_init(&f->logger,
-                   (st_log_config){.adc_clock_hz = 8192000,
-                                   .osr = 2048,
-                                   .rate_millihz = 2000000,
+                   (st_log_config){.adc_clock_hz = ST_ADC_CLOCK_HZ,
+                                   .osr = ST_ADC_OSR,
+                                   .rate_millihz = ST_ADC_RATE_MILLIHZ,
                                    .boot_epoch = 7,
                                    .gain_ch0 = 1,
-                                   .gain_ch1 = 1,
+                                   .gain_ch1 = 0,
                                    .clock_verified = true},
                    (st_file_port){f, submit, poll});
+    Log_ApplyAds1220Metadata(&f->logger.config, true, ST_ADC_RATE_MILLIHZ);
     st2_timing t = {10000, 150, 500, 120000, 4};
     st2_server_init(&f->server, &f->logger, (st2_nv_port){0}, t, (uint8_t[12]){1}, (uint8_t[12]){2},
                     0);

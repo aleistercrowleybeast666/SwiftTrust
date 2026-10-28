@@ -266,19 +266,25 @@ static void reference_parameters(void)
     CHECK(!st_ref_vdda_mv(1500, 2500, 1500, &mv));
     CHECK(!st_ref_vdda_mv(1500, 3300, 100, &mv));
     CHECK(st_ref_rate_ok(1000, 500000));
-    CHECK(!st_ref_rate_ok(970, 500000));
+    CHECK(!st_ref_rate_ok(960, 500000));
     CHECK(!st_ref_rate_ok(1030, 500000));
     CHECK(!st_ref_rate_ok(1, 100));
     const char *valid =
         "ACK_SENSOR_RATING=1\nPROFILE_ID=1\nSENSOR_ID=2\nWIRE_COUNT=6\nRATED_FORCE_MN="
-        "1000000\nEXCITATION_UV=2500000\nMAX_SPAN_COUNTS=100\nMIN_DELTA_COUNTS=1000\n";
+        "1000000\nEXCITATION_UV=5000000\nMAX_SPAN_COUNTS=100\nMIN_DELTA_COUNTS=1000\n"
+        "PGA_GAIN=128\nPGA_BYPASS=0\nSENSITIVITY_NV_V=2000000\n"
+        "COMMON_MODE_MIN_UV=2400000\nCOMMON_MODE_MAX_UV=2600000\n";
     st_ref_sensor sensor;
     CHECK(st_ref_sensor_parse(&sensor, valid, strlen(valid)));
-    CHECK(sensor.configured && sensor.binding.gain0 == 1 && sensor.binding.rate_millihz == 2000000);
+    CHECK(sensor.configured && sensor.binding.gain0 == 128 && sensor.binding.rate_millihz == ST_ADC_RATE_MILLIHZ);
+    CHECK(sensor.binding.adc_model == 1220 && sensor.binding.reference_uv == 5000000 &&
+          sensor.adc_config.max_differential_uv == 10000 && !sensor.adc_config.pga_bypass);
     CHECK(sensor.binding.rated_force_nn == UINT64_C(1000000000000));
+    uint32_t electrical_id = sensor.binding.config_id;
     char bad[512];
     (void)snprintf(bad,sizeof bad,"%sAUTO_ZERO=1\n",valid);
     CHECK(st_ref_sensor_parse(&sensor,bad,strlen(bad))&&sensor.auto_zero);
+    CHECK(sensor.binding.config_id == electrical_id);
     (void)snprintf(bad,sizeof bad,"%sAUTO_ZERO=2\n",valid);
     CHECK(!st_ref_sensor_parse(&sensor,bad,strlen(bad)));
     (void)snprintf(bad, sizeof bad, "%sACK_SENSOR_RATING=1\n", valid);
@@ -290,9 +296,24 @@ static void reference_parameters(void)
     rating[15] = '-';
     CHECK(!st_ref_sensor_parse(&sensor, bad, strlen(bad)));
     CHECK(!st_ref_sensor_parse(&sensor, "# no rating\n", 12));
+    strcpy(bad, valid);
+    char *sensitivity = strstr(bad, "SENSITIVITY_NV_V=2000000");
+    CHECK(sensitivity);
+    sensitivity[16] = '9'; /* 9 mV/V at PGA128 exceeds the usable input range. */
+    CHECK(!st_ref_sensor_parse(&sensor, bad, strlen(bad)));
+    strcpy(bad, valid);
+    char *common_mode = strstr(bad, "COMMON_MODE_MIN_UV=2400000");
+    CHECK(common_mode);
+    common_mode[19] = '0';
+    CHECK(!st_ref_sensor_parse(&sensor, bad, strlen(bad)));
+    const char *legacy = "ACK_SENSOR_RATING=1\nPROFILE_ID=1\nSENSOR_ID=2\nWIRE_COUNT=6\n"
+                         "RATED_FORCE_MN=1000\nEXCITATION_UV=2500000\n"
+                         "MAX_SPAN_COUNTS=100\nMIN_DELTA_COUNTS=1000\n";
+    CHECK(!st_ref_sensor_parse(&sensor, legacy, strlen(legacy)) && !sensor.configured);
     CHECK(st2_timing_valid(st_ref_link_timing()));
     st_ads_config adc = st_ref_ads_config(true);
-    CHECK(adc.clock_hz == 8192000 && adc.osr == 2048 && adc.power_mode == 2);
+    CHECK(adc.clock_hz == 4096000 && adc.reference_uv == 5000000 && adc.operating_mode == 2 &&
+          adc.pga_bypass && adc.gain == 1 && !adc.input_range_known && st_ads_config_valid(adc));
     st_radio_config radio = st_ref_radio_config(true);
     CHECK(radio.frequency_hz == 2473000000u && radio.tx_timeout_ms == 500);
 }

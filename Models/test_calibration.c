@@ -27,18 +27,20 @@ static st_cal_binding binding(void)
     return (st_cal_binding){.profile_id = 7,
                             .sensor_id = 17,
                             .config_id = 27,
-                            .adc_clock_hz = 8192000,
-                            .osr = 2048,
-                            .rate_millihz = 2000000,
-                            .excitation_nominal_uv = 2500000,
+                            .adc_clock_hz = ST_ADC_CLOCK_HZ,
+                            .osr = ST_ADC_OSR,
+                            .rate_millihz = ST_ADC_RATE_MILLIHZ,
+                            .excitation_nominal_uv = ST_BRIDGE_EXCITATION_UV,
                             .filter_id = 3,
                             .rated_force_nn = UINT64_C(500000000000),
                             .gain0 = 128,
-                            .gain1 = 1,
+                            .gain1 = 0,
                             .wire_count = 6,
                             .power_mode = 2,
                             .verified = true,
-                            .simulated = true};
+                            .simulated = true,
+                            .adc_model = 1220, .reference_uv = ST_ADC_REFERENCE_UV,
+                            .input_mux = 3, .pga_bypass = false};
 }
 static st_cal_policy policy(void)
 {
@@ -47,15 +49,10 @@ static st_cal_policy policy(void)
 static st_capture capture(int32_t raw, uint32_t sequence, uint64_t time)
 {
     st_capture c = {.time_us = time, .sequence = sequence};
-    c.bytes[0] = 1;
-    c.bytes[1] = 3;
     uint32_t value = (uint32_t)raw;
-    c.bytes[3] = (uint8_t)(value >> 16);
-    c.bytes[4] = (uint8_t)(value >> 8);
-    c.bytes[5] = (uint8_t)value;
-    uint16_t crc = st_crc16(c.bytes, 9);
-    c.bytes[9] = (uint8_t)(crc >> 8);
-    c.bytes[10] = (uint8_t)crc;
+    c.bytes[0] = (uint8_t)(value >> 16);
+    c.bytes[1] = (uint8_t)(value >> 8);
+    c.bytes[2] = (uint8_t)value;
     return c;
 }
 static void collect(st_cal_workflow *w, st_cal_binding b, int32_t raw, uint32_t first)
@@ -149,6 +146,8 @@ static void profile_and_raw(void)
     st_cal_profile parsed;
     C(st_cal_profile_decode(&parsed, bytes, 256));
     C(st_cal_profile_encode(&parsed, again) == 256 && !memcmp(bytes, again, 256));
+    C(!memcmp(bytes + 176, "ADC1", 4) && st_get16(bytes + 180) == 1220 &&
+      st_get32(bytes + 184) == ST_ADC_REFERENCE_UV);
     for (unsigned i = 0; i < 256; i++)
     {
         uint8_t bad[256];
@@ -158,14 +157,15 @@ static void profile_and_raw(void)
     }
     C(!st_cal_profile_decode(&parsed, bytes, 255));
     st_logger logger;
-    st_log_config config = {.adc_clock_hz = 8192000,
-                            .osr = 2048,
-                            .rate_millihz = 2000000,
+    st_log_config config = {.adc_clock_hz = ST_ADC_CLOCK_HZ,
+                            .osr = ST_ADC_OSR,
+                            .rate_millihz = ST_ADC_RATE_MILLIHZ,
                             .boot_epoch = 1,
                             .gain_ch0 = 128,
-                            .gain_ch1 = 1,
+                            .gain_ch1 = 0,
                             .clock_verified = true,
                             .simulated = true};
+    Log_ApplyAds1220Metadata(&config, false, 0);
     st_logger_init(&logger, config, (st_file_port){0});
     st_capture c = capture(2000, 1, 1000000), old = c;
     uint8_t raw_before[32], raw_after[32];
@@ -179,6 +179,21 @@ static void profile_and_raw(void)
     changed.excitation_nominal_uv++;
     C(!st_cal_apply_logger(&active, changed, &logger) && !logger.config.calibration_valid);
     C(active.nano_newtons_per_count == 9806650);
+    changed = binding();
+    changed.reference_uv = 2500000;
+    C(!st_cal_apply_logger(&active, changed, &logger) && !logger.config.calibration_valid);
+    st_cal_profile legacy = active;
+    legacy.binding.adc_model = 0;
+    legacy.binding.reference_uv = 0;
+    legacy.binding.input_mux = 0;
+    legacy.binding.adc_clock_hz = 8192000;
+    legacy.binding.osr = 2048;
+    legacy.binding.rate_millihz = 2000000;
+    legacy.binding.gain1 = 1;
+    legacy.binding.excitation_nominal_uv = 2500000;
+    C(st_cal_profile_encode(&legacy, bytes) == 256);
+    C(st_cal_profile_decode(&parsed, bytes, 256) && parsed.binding.adc_model == 0);
+    C(!st_cal_apply_logger(&parsed, binding(), &logger) && !logger.config.calibration_valid);
     logger.state = ST_CAPTURING;
     C(!st_cal_apply_logger(&active, binding(), &logger));
     logger.state = ST_IDLE;

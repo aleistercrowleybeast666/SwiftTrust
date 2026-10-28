@@ -1,5 +1,6 @@
 """Focused host regressions; no board, flashing, EDA, or radio access."""
 import os
+import datetime
 from pathlib import Path
 import subprocess
 import tempfile
@@ -8,6 +9,8 @@ ROOT = Path(__file__).resolve().parents[1]
 CC = os.environ.get('HOST_CC', 'gcc')
 
 def main():
+    reports = [datetime.datetime.now(datetime.timezone.utc).isoformat(),
+               'Host-only UI and battery regressions. No physical ADC, OLED or radio tested.']
     sources = sorted((ROOT/'Acquisition/src').glob('*.c'))
     sources += sorted((ROOT/'Controller/src').glob('*.c'))
     sources += [ROOT/'Common/Src/st_task.c', ROOT/'Acquisition/vendor/tiny_aes/aes.c',
@@ -38,8 +41,12 @@ def main():
                 for include in ('Acquisition/include', 'Controller/include', 'Acquisition/vendor/semtech_sx128x'):
                     cmd += ['-I', str(ROOT/include)]
                 subprocess.run(cmd + list(map(str, sources)) + [str(driver), str(obj), '-o', str(exe)], check=True)
-                print(f'CONFIG language={language} present={present} verified={verified}', flush=True)
-                subprocess.run([str(exe)], check=True)
+                description = f'CONFIG language={language} present={present} verified={verified}'
+                print(description, flush=True)
+                result = subprocess.run([str(exe)], capture_output=True, text=True, check=True)
+                print(result.stdout, end='')
+                reports += [description, result.stdout]
+    (ROOT/'Models/ui_battery_validation.log').write_text('\n'.join(reports), encoding='utf-8')
     return 0
 
 if __name__ == '__main__':

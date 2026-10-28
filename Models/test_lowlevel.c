@@ -10,32 +10,194 @@
 static unsigned checks,groups;
 #define C(x) do {checks++;if(!(x)){fprintf(stderr,"FAIL lowlevel:%d %s\n",__LINE__,#x);exit(1);}}while(0)
 #define G(n) do{groups++;printf("PASS %s\n",n);}while(0)
-typedef struct{uint16_t reg[64],response;uint8_t *rx;const uint8_t *tx;uint32_t hash;bool active,bad_crc,bad_read;unsigned waits,resets,transfers;} ads_bus;
-static void reset(void *ctx,bool asserted){ads_bus *b=ctx;if(asserted){b->resets++;memset(b->reg,0,sizeof(b->reg));b->reg[0]=0x2201;b->reg[2]=0x0510;b->response=0xff22;}}
-static st_async_result ads_submit(void *ctx,const uint8_t *tx,uint8_t *rx){ads_bus *b=ctx;C(!b->active);b->active=true;b->tx=tx;b->rx=rx;b->hash=st_crc32(tx,12);b->waits=1;b->transfers++;return ST_IO_DONE;}
-static st_async_result ads_poll(void *ctx){ads_bus *b=ctx;C(b->active&&st_crc32(b->tx,12)==b->hash);if(b->waits--!=0)return ST_IO_WAIT;
- uint16_t command=(uint16_t)(((uint16_t)b->tx[0]<<8)|b->tx[1]),value=(uint16_t)(((uint16_t)b->tx[3]<<8)|b->tx[4]);
- memset(b->rx,0,12);b->rx[0]=(uint8_t)(b->response>>8);b->rx[1]=(uint8_t)b->response;
- uint16_t crc=st_crc16(b->rx,9);b->rx[9]=(uint8_t)(crc>>8);b->rx[10]=(uint8_t)(crc^(b->bad_crc?1:0));
- unsigned address=(command>>7)&63u;
- if((command&0xe000)==0x6000){b->reg[address]=value;b->response=(uint16_t)(0x4000|(address<<7));}
- else if((command&0xe000)==0xa000)b->response=(uint16_t)(b->reg[address]^((b->bad_read&&address==2)?1:0));
- else if(command==0x0555)b->response=0x0555;else b->response=0x8103;
- b->active=false;return ST_IO_DONE;
+typedef struct
+{
+    uint8_t reg[4], *rx;
+    const uint8_t *tx;
+    uint32_t hash, now_us, reset_us;
+    size_t bytes;
+    bool active, bad_read, spi_error, submit_error, stuck;
+    unsigned waits, resets, starts, stops, transfers, commands[8];
+} ads_bus;
+static st_async_result ads_submit(void *ctx, const uint8_t *tx, uint8_t *rx, size_t bytes)
+{
+    ads_bus *b = ctx;
+    if (b->submit_error)
+        return ST_IO_ERROR;
+    C(!b->active && bytes >= 1 && bytes <= ADS1220_TRANSFER_BYTES);
+    if (b->resets)
+        C((uint32_t)(b->now_us - b->reset_us) >= 58u);
+    b->active = true;
+    b->tx = tx;
+    b->rx = rx;
+    b->bytes = bytes;
+    b->hash = st_crc32(tx, bytes);
+    b->waits = 1;
+    if (b->transfers < 8u)
+        b->commands[b->transfers] = tx[0];
+    ++b->transfers;
+    return ST_IO_DONE;
 }
-static void ads_tests(void){ads_bus b={0};st_ads a;st_ads_config cfg={8192000,2048,128,1,2,true};
- st_ads_init(&a,(st_ads_port){&b,reset,ads_submit,ads_poll},cfg,0);
- for(unsigned i=0;i<200&&!a.ready&&!a.failed;i++)st_ads_tick(&a,i*1000);
- C(a.ready&&!a.failed&&b.resets==1);C(b.reg[2]==0x0110&&b.reg[3]==0x0312&&b.reg[4]==7);
- C(b.transfers==19);G("ADS hardware-reset timing / full 24-bit frames / delayed command response / ID / three write ACKs and readbacks / LOCK / startup drain");
- memset(&b,0,sizeof(b));b.bad_read=true;st_ads_init(&a,(st_ads_port){&b,reset,ads_submit,ads_poll},cfg,UINT32_MAX-500);
- for(unsigned i=0;i<200&&!a.ready&&!a.failed;i++)st_ads_tick(&a,(UINT32_MAX-500)+i*1000);
- C(a.failed&&!a.ready);memset(&b,0,sizeof(b));b.bad_crc=true;st_ads_init(&a,(st_ads_port){&b,reset,ads_submit,ads_poll},cfg,0);
- for(unsigned i=0;i<200&&!a.failed;i++)st_ads_tick(&a,i*1000);
- C(a.failed);
- cfg.electrically_verified=false;st_ads_init(&a,(st_ads_port){&b,reset,ads_submit,ads_poll},cfg,0);C(a.failed);
- G("ADS CRC/readback rejection / timer wrap / unverified analog profile never ready");
+static st_async_result ads_poll(void *ctx)
+{
+    ads_bus *b = ctx;
+    C(b->active && st_crc32(b->tx, b->bytes) == b->hash);
+    if (b->stuck || b->waits-- != 0)
+        return ST_IO_WAIT;
+    b->active = false;
+    if (b->spi_error)
+        return ST_IO_ERROR;
+    memset(b->rx, 0, b->bytes);
+    uint8_t command = b->tx[0];
+    if (command == ADS1220_COMMAND_RESET)
+    {
+        C(b->bytes == 1);
+        ++b->resets;
+        b->reset_us = b->now_us;
+        memset(b->reg, 0, sizeof(b->reg));
+    }
+    else if (command == (ADS1220_COMMAND_RREG | 3))
+    {
+        C(b->bytes == 5);
+        memcpy(b->rx + 1, b->reg, 4);
+        if (b->bad_read)
+            b->rx[3] ^= 1;
+    }
+    else if (command == (ADS1220_COMMAND_WREG | 3))
+    {
+        C(b->bytes == 5);
+        memcpy(b->reg, b->tx + 1, 4);
+    }
+    else if (command == ADS1220_COMMAND_START)
+    {
+        C(b->bytes == 1);
+        ++b->starts;
+    }
+    else if (command == ADS1220_COMMAND_POWERDOWN)
+    {
+        C(b->bytes == 1);
+        ++b->stops;
+    }
+    else
+        C(false);
+    return ST_IO_DONE;
 }
+static void AdsTest_Tick(st_ads *a, ads_bus *b, uint32_t base, unsigned count)
+{
+    for (unsigned i = 0; i < count && !a->ready && !a->failed && !a->powered_down; ++i)
+    {
+        b->now_us = base + i * 10u;
+        st_ads_tick(a, b->now_us);
+    }
+}
+static st_ads_config AdsTest_Config(void)
+{
+    return (st_ads_config){.clock_hz = 4096000u, .reference_uv = 5000000u, .avdd_uv = 5000000u,
+        .gain = 1u, .data_rate = ADS1220_RATE_2000_TURBO, .operating_mode = ADS1220_MODE_TURBO,
+        .pga_bypass = true, .continuous = true, .electrically_verified = true};
+}
+static void ads_tests(void)
+{
+    ads_bus b = {0};
+    st_ads a;
+    st_ads_config cfg = AdsTest_Config();
+    st_ads_init(&a, (st_ads_port){&b, ads_submit, ads_poll}, cfg, 0);
+    AdsTest_Tick(&a, &b, 0, 2000);
+    C(a.ready && !a.failed && b.resets == 1 && b.starts == 1);
+    const uint8_t expected[4] = {0x31, 0xd4, 0x40, 0x00};
+    C(!memcmp(b.reg, expected, sizeof(expected)));
+    C(b.transfers == 5 && b.commands[0] == 0x06 && b.commands[1] == 0x23 &&
+      b.commands[2] == 0x43 && b.commands[3] == 0x08 && b.commands[4] == 0x23);
+    C(Ads1220_GetConversionCycles(cfg) == 2072u);
+    C(Ads1220_GetFirstConversionCycles(cfg) == 2186u);
+    C(Ads1220_GetRateMilliHz(cfg) == 1976834u);
+    cfg.continuous = false;
+    C(Ads1220_GetConversionCycles(cfg) == 2130u);
+    C(Ads1220_GetFirstConversionCycles(cfg) == 2130u);
+    cfg = AdsTest_Config();
+    C(Ads1220_Reinitialize(&a, b.now_us) == ADS1220_INVALID_STATE);
+    uint32_t shutdown_us = b.now_us;
+    C(Ads1220_RequestPowerdown(&a, shutdown_us) == ADS1220_OK);
+    AdsTest_Tick(&a, &b, shutdown_us, 10);
+    C(!a.ready && !a.powered_down && b.stops == 1);
+    AdsTest_Tick(&a, &b, shutdown_us + 100u, 100);
+    C(a.powered_down && !a.failed);
+    C(Ads1220_Reinitialize(&a, b.now_us) == ADS1220_OK);
+    AdsTest_Tick(&a, &b, b.now_us, 2000);
+    C(a.ready && b.resets == 2 && b.starts == 2);
+    G("ADS1220 RESET settle / 4-byte WREG-RREG / START / POWERDOWN drain / reinitialize / exact 2072-clock Turbo period");
+
+    uint8_t encoded[4];
+    for (unsigned gain = 1; gain <= 128; gain <<= 1)
+    {
+        cfg = AdsTest_Config();
+        cfg.gain = (uint8_t)gain;
+        cfg.pga_bypass = false;
+        cfg.input_range_known = true;
+        cfg.max_differential_uv = 10000u;
+        cfg.common_mode_min_uv = cfg.common_mode_max_uv = 2500000u;
+        C(Ads1220_EncodeConfig(cfg, encoded) == ADS1220_OK);
+        C((encoded[0] & 0xf1u) == 0x30u);
+        unsigned decoded_gain = 1u << ((encoded[0] >> 1) & 7u);
+        C(decoded_gain == gain);
+    }
+    cfg.common_mode_min_uv = 1000000u;
+    C(!st_ads_config_valid(cfg));
+    cfg.common_mode_min_uv = cfg.common_mode_max_uv = 2500000u;
+    cfg.max_differential_uv = 40000u;
+    C(!st_ads_config_valid(cfg));
+    cfg.max_differential_uv = 37000u;
+    C(!st_ads_config_valid(cfg)); /* PGA clips before ADC fullscale with 5V reference. */
+    cfg.max_differential_uv = 10000u;
+    cfg.input_range_known = false;
+    C(!st_ads_config_valid(cfg));
+    cfg = AdsTest_Config(); cfg.gain = 8; C(!st_ads_config_valid(cfg));
+    cfg = AdsTest_Config(); cfg.clock_hz = 8192000; C(!st_ads_config_valid(cfg));
+    cfg = AdsTest_Config(); cfg.data_rate = 7; C(!st_ads_config_valid(cfg));
+    cfg = AdsTest_Config(); cfg.reference_uv = 6000000; C(!st_ads_config_valid(cfg));
+    cfg = AdsTest_Config(); cfg.electrically_verified = false; C(!st_ads_config_valid(cfg));
+    C(Ads1220_EncodeConfig(AdsTest_Config(), NULL) == ADS1220_INVALID_CONFIG);
+    G("ADS1220 gain encoding / unknown-sensor gain-one fallback / fullscale and PGA common-mode bounds / illegal configuration rejection");
+
+    cfg = AdsTest_Config();
+    memset(&b, 0, sizeof(b)); b.bad_read = true;
+    st_ads_init(&a, (st_ads_port){&b, ads_submit, ads_poll}, cfg, UINT32_MAX - 500u);
+    AdsTest_Tick(&a, &b, UINT32_MAX - 500u, 2000);
+    C(a.failed && !a.ready && a.result == ADS1220_READBACK_ERROR);
+    memset(&b, 0, sizeof(b));
+    st_ads_init(&a, (st_ads_port){&b, ads_submit, ads_poll}, cfg, 0);
+    while (a.phase < 4u && !a.failed)
+    {
+        b.now_us += 10u;
+        st_ads_tick(&a, b.now_us);
+    }
+    b.bad_read = true;
+    AdsTest_Tick(&a, &b, b.now_us, 2000);
+    C(a.failed && a.result == ADS1220_READBACK_ERROR);
+    memset(&b, 0, sizeof(b)); b.spi_error = true;
+    st_ads_init(&a, (st_ads_port){&b, ads_submit, ads_poll}, cfg, 0);
+    AdsTest_Tick(&a, &b, 0, 2000);
+    C(a.failed && a.result == ADS1220_SPI_ERROR);
+    memset(&b, 0, sizeof(b)); b.submit_error = true;
+    st_ads_init(&a, (st_ads_port){&b, ads_submit, ads_poll}, cfg, 0);
+    AdsTest_Tick(&a, &b, 0, 2000);
+    C(a.failed && a.result == ADS1220_SPI_ERROR);
+    memset(&b, 0, sizeof(b)); b.stuck = true;
+    st_ads_init(&a, (st_ads_port){&b, ads_submit, ads_poll}, cfg, 0);
+    AdsTest_Tick(&a, &b, 0, 2000);
+    C(Ads1220_RequestPowerdown(&a, b.now_us) == ADS1220_BUSY);
+    st_ads_tick(&a, 2000001u);
+    C(a.failed && a.result == ADS1220_TIMEOUT && !a.ready);
+    G("ADS1220 reset/config readback rejection / SPI submit-completion errors / bounded timeout / timer wrap");
+
+    static const uint8_t raw[][3] = {{0,0,0},{0,0,1},{0xff,0xff,0xff},{0x7f,0xff,0xff},
+        {0x80,0,0},{0x80,0,1},{0x7f,0xff,0xfe}};
+    static const int32_t decoded[] = {0,1,-1,8388607,-8388608,-8388607,8388606};
+    for (unsigned i = 0; i < sizeof(decoded) / sizeof(decoded[0]); ++i)
+        C(Ads1220_DecodeRaw24(raw[i]) == decoded[i]);
+    G("ADS1220 single signed24 zero / positive / negative / exact saturation boundaries");
+}
+
 typedef struct{bool active;unsigned pages,page,x,bytes;uint8_t pixels[1024];const uint8_t *p;uint8_t copy[32];size_t n;} sh_bus;
 static st_async_result sh_submit(void *ctx,uint8_t address,const uint8_t *p,size_t n){sh_bus *b=ctx;C(address==0x3c&&!b->active);b->active=true;b->p=p;b->n=n;memcpy(b->copy,p,n);return ST_IO_DONE;}
 static st_async_result sh_poll(void *ctx){sh_bus *b=ctx;C(b->active&&!memcmp(b->copy,b->p,b->n));b->active=false;

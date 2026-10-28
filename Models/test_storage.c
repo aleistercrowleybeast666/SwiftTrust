@@ -103,11 +103,6 @@ static void yield_task(void *ctx)
                 break;
             st_capture capture = {.sequence = ++cooperative_sequence,
                                   .time_us = (uint64_t)b->now * 1000u - 500u + (uint64_t)i * 500u};
-            capture.bytes[0] = 1;
-            capture.bytes[1] = 3;
-            uint16_t crc = st_crc16(capture.bytes, 9);
-            capture.bytes[9] = (uint8_t)(crc >> 8);
-            capture.bytes[10] = (uint8_t)crc;
             C(st_logger_offer_isr(cooperative_logger, &capture));
         }
         st_logger_service(cooperative_logger, (uint64_t)b->now * 1000u);
@@ -223,16 +218,17 @@ static void fatfs_logger_test(void)
     C(f_mount(&fs, "", 1) == FR_OK);
     st_fatfs_worker worker;
     st_fatfs_init(&worker, true);
-    st_log_config cfg = {.adc_clock_hz = 8192000,
-                         .osr = 2048,
-                         .rate_millihz = 2000000,
+    st_log_config cfg = {.adc_clock_hz = ST_ADC_CLOCK_HZ,
+                         .osr = ST_ADC_OSR,
+                         .rate_millihz = ST_ADC_RATE_MILLIHZ,
                          .boot_epoch = 1,
                          .gain_ch0 = 1,
-                         .gain_ch1 = 1,
+                         .gain_ch1 = 0,
                          .clock_verified = true,
                          .simulated = true};
     st_logger *logger = malloc(sizeof(*logger));
     C(logger != NULL);
+    Log_ApplyAds1220Metadata(&cfg, false, 0);
     st_logger_init(logger, cfg, st_fatfs_port(&worker));
     C(st_logger_start(logger, 0));
     uint64_t now = 0;
@@ -246,12 +242,6 @@ static void fatfs_logger_test(void)
     for (uint32_t i = 1; i <= 1500; i++)
     {
         st_capture capture = {.time_us = now, .sequence = i};
-        capture.bytes[0] = 0x01;
-        capture.bytes[1] = 0x03;
-        st_put16(capture.bytes + 9, 0);
-        uint16_t crc = st_crc16(capture.bytes, 9);
-        capture.bytes[9] = (uint8_t)(crc >> 8);
-        capture.bytes[10] = (uint8_t)crc;
         C(st_logger_offer_isr(logger, &capture));
         st_logger_service(logger, now);
         st_fatfs_worker_step(&worker);
@@ -305,14 +295,15 @@ static void cooperative_storage_test(void)
     st_fatfs_init(&worker, true);
     st_logger *l = malloc(sizeof *l);
     C(l);
-    st_log_config config = {.adc_clock_hz = 8192000,
-                            .osr = 2048,
-                            .rate_millihz = 2000000,
+    st_log_config config = {.adc_clock_hz = ST_ADC_CLOCK_HZ,
+                            .osr = ST_ADC_OSR,
+                            .rate_millihz = ST_ADC_RATE_MILLIHZ,
                             .boot_epoch = 1,
                             .gain_ch0 = 1,
-                            .gain_ch1 = 1,
+                            .gain_ch1 = 0,
                             .clock_verified = true,
                             .simulated = true};
+    Log_ApplyAds1220Metadata(&config, false, 0);
     st_logger_init(l, config, st_fatfs_port(&worker));
     C(st_logger_start(l, (uint64_t)bus.now * 1000));
     cooperative_logger = l;
@@ -509,6 +500,7 @@ static void cal_fatfs_test(void)
     st_cal_profile p = st_cal_test_profile(), loaded = {0};
     uint8_t encoded[256], old_file[1024], again[1024];
     st_log_config cfg = {0};
+    Log_ApplyAds1220Metadata(&cfg, false, 0);
     st_logger_init(logger, cfg, st_fatfs_port(&worker));
     C(st_cal_system_init(system, logger, &worker, NULL, p.binding, p.policy, NULL, NULL) ==
       ST_CAL_DISK_EMPTY);
@@ -583,13 +575,66 @@ static void cal_fatfs_test(void)
                 uncertain++;
         }
     C(failures && uncertain);
-    /* A mismatched sensor/config does not load or overwrite either slot. */
+    /* A changed sensor/config cannot load old coefficients. Explicitly completed
+     * calibration can rebind safely, preserving the newest foreign slot. */
     st_cal_binding foreign = p.binding;
     foreign.sensor_id++;
     st_cal_fatfs_init(&system->disk, &worker, logger, foreign);
     loaded.revision = 99;
-    C(st_cal_fatfs_open(&system->disk, &loaded) == ST_CAL_DISK_FOREIGN && loaded.revision == 99);
+    C(st_cal_fatfs_open(&system->disk, &loaded) == ST_CAL_DISK_MIGRATION && !loaded.valid);
     C(!st_cal_fatfs_storage(&system->disk).save(&system->disk, encoded));
+    unsigned retained_slot = system->disk.active_slot;
+    const char *retained_name = retained_slot ? "CAL1.BIN" : "CAL0.BIN";
+    read_cal_file(retained_name, old_file);
+    st_cal_profile rebound = st_cal_test_profile();
+    rebound.binding = foreign;
+    C(st_cal_profile_encode(&rebound, encoded) == 256);
+    C(st_cal_fatfs_storage(&system->disk).save(&system->disk, encoded));
+    read_cal_file(retained_name, again);
+    C(!memcmp(old_file, again, 1024));
+    st_cal_fatfs_init(&system->disk, &worker, logger, foreign);
+    C(st_cal_fatfs_open(&system->disk, &loaded) == ST_CAL_DISK_VALID && loaded.revision == 1 &&
+      loaded.binding.sensor_id == foreign.sensor_id);
+    st_cal_fatfs_init(&system->disk, &worker, logger, p.binding);
+    C(st_cal_fatfs_open(&system->disk, &loaded) == ST_CAL_DISK_MIGRATION && !loaded.valid);
+    C(f_mount(NULL, "", 0) == FR_OK);
+    /* A legacy ADC binding is recognized without applying its coefficients.
+     * Migration preserves the newest old file until a new profile is durable. */
+    memset(disk, 0, 8192u * 512u);
+    make_fat16(disk);
+    bind_block(&device, &bus);
+    device.timeout_ms = 1000;
+    st_diskio_bind(&device);
+    C(f_mount(&fs, "", 1) == FR_OK);
+    st_cal_profile legacy = st_cal_test_profile();
+    legacy.binding.adc_model = 0;
+    legacy.binding.reference_uv = 0;
+    legacy.binding.input_mux = 0;
+    legacy.binding.pga_bypass = false;
+    legacy.binding.adc_clock_hz = 8192000;
+    legacy.binding.osr = 2048;
+    legacy.binding.rate_millihz = 2000000;
+    legacy.binding.gain1 = 1;
+    legacy.binding.excitation_nominal_uv = 2500000;
+    st_cal_fatfs_init(&system->disk, &worker, logger, legacy.binding);
+    C(st_cal_fatfs_open(&system->disk, &loaded) == ST_CAL_DISK_EMPTY);
+    port = st_cal_fatfs_storage(&system->disk);
+    C(st_cal_profile_encode(&legacy, encoded) == 256 && port.save(port.ctx, encoded));
+    legacy.revision = 2;
+    C(st_cal_profile_encode(&legacy, encoded) == 256 && port.save(port.ctx, encoded));
+    read_cal_file("CAL1.BIN", old_file);
+    p = st_cal_test_profile();
+    C(st_cal_system_init(system, logger, &worker, NULL, p.binding, p.policy, NULL, NULL) ==
+      ST_CAL_DISK_MIGRATION);
+    C(!system->active.valid && !logger->config.calibration_valid && system->service.storage.save);
+    port = st_cal_fatfs_storage(&system->disk);
+    C(st_cal_profile_encode(&p, encoded) == 256 && port.save(port.ctx, encoded));
+    C(system->disk.generation == 3 && system->disk.active_slot == 0);
+    read_cal_file("CAL1.BIN", again);
+    C(!memcmp(old_file, again, 1024));
+    st_cal_fatfs_init(&system->disk, &worker, logger, p.binding);
+    C(st_cal_fatfs_open(&system->disk, &loaded) == ST_CAL_DISK_VALID && loaded.revision == 1 &&
+      loaded.binding.adc_model == 1220);
     C(f_mount(NULL, "", 0) == FR_OK);
     st_diskio_bind(NULL);
     free(system);
@@ -598,7 +643,7 @@ static void cal_fatfs_test(void)
     free(disk);
     G("cal real FatFs two1KiB files / prepare-sync-seal-sync-close-readback / startup reload / "
       "capture guard / every sector IO fail with0-17-511B torn writes / old file byte-exact / "
-      "uncertain commit reconciled / foreign binding refused");
+      "uncertain commit reconciled / config rebind never revives stale profile / legacy ADC migration preserves latest old slot");
 }
 
 static uint64_t cal_clock(void *ctx)
@@ -626,14 +671,9 @@ static void cal_dma_window(st_cal_system *system, uint64_t *now, int32_t raw, ui
     for (unsigned i = 0; i < 16; i++)
     {
         st_capture c = {.time_us = *now, .sequence = seq + i};
-        c.bytes[0] = 1;
-        c.bytes[1] = 3;
-        c.bytes[3] = (uint8_t)((uint32_t)raw >> 16);
-        c.bytes[4] = (uint8_t)((uint32_t)raw >> 8);
-        c.bytes[5] = (uint8_t)raw;
-        uint16_t crc = st_crc16(c.bytes, 9);
-        c.bytes[9] = (uint8_t)(crc >> 8);
-        c.bytes[10] = (uint8_t)crc;
+        c.bytes[0] = (uint8_t)((uint32_t)raw >> 16);
+        c.bytes[1] = (uint8_t)((uint32_t)raw >> 8);
+        c.bytes[2] = (uint8_t)raw;
         C(st_cal_input_offer_isr(&system->endpoint.input, &c));
         *now += 500;
     }
@@ -677,6 +717,7 @@ static void cal_end_to_end(void)
                          .gain_ch1 = b.gain1,
                          .clock_verified = true,
                          .simulated = true};
+    Log_ApplyAds1220Metadata(&cfg, false, 0);
     st_logger_init(logger, cfg, st_fatfs_port(&worker));
     st2_server server;
     st2_server_init(&server, logger, (st2_nv_port){0}, (st2_timing){10000, 2200, 2500, 100000, 4},

@@ -1,4 +1,4 @@
-2026-10-21T18:08:52.121074+00:00
+2026-10-28T17:39:59.935085+00:00
 Focused RF/protocol runtime regression on software event model only. No radio, GPIO, COM, ADC or card accessed.
 R8 targeted runtime; full host and FatFs suites have separate reports.
 PASS runtime queued/on-air START then newer STOP / TX_DONE ordering / late START ACK ignored / STOP RF timeout retries same ID / RF fault retains uncertainty / no automatic replay
@@ -17,11 +17,11 @@ PASS targeted runtime: 12 groups, 931 assertions; sizeof(runtime)=104
 Source/header SHA256:
 bd423410290c533af04dc69111e59f16072a1cd62e12a9cad6ee210a4ab35816 Common/Src/st_task.c
 706d8ee3bb95b903922f43e1e0e5765c925c1e8876ee6feeb001b22d4dd3a7f6 Acquisition/src/st_frame.c
-f030b589b888984c48f5fd99c74f75376a61d0c6384bda27900cc5930f90ce7e Acquisition/src/st_core.c
+34cb14a08f5ec03b7f706fa0e5afd34585e9a30143bc7ed6cd38d560f581acb8 Acquisition/src/st_core.c
 2314f94f8a83a40ab0040f3d7742ff20e4709f000744c9cda97fe48c08e80f29 Acquisition/src/st_auto_link.c
 cc563ab4618ab53c6b2a2bdb928217a1f310f630cf80a0cc1d3069aab88b7ef4 Acquisition/src/st_pairing.c
 a0ca0ca424f70d8c875eeb140884fd7a0c36e376e9a7c753312f028b69150102 Acquisition/src/st_nv.c
-9a381ae1666ebe11dd83381de46c1e159f66fb73e2f50c3051dad5fe0b5dd10f Acquisition/src/st_logger.c
+6b34e2c4f57e18e7b17b56ecdc92a2f46d0c524ed516198dc0d36214fe4f9681 Acquisition/src/st_logger.c
 de8a4538955f70cbabbc2c318e5c8b6ff682dc1a0b455b8e3e1b2c4d106b0b5b Acquisition/src/st_link2.c
 4bdd16a974de09d5ef109d73a1844b2bab8cc36f2e7ab5ef5b567330a7b2c99a Acquisition/src/st_ignition.c
 f7f78b44654efd3542b6886923dd05194286807ebcfeb078ea05d21fe901ee9e Acquisition/vendor/tiny_aes/aes.c

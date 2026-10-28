@@ -1,3 +1,5 @@
+> 历史评审记录：本文中的旧ADC、时钟及引脚假设已由[2026-10-29双板硬件契约](REFERENCE_APPLICATION.md)替代；当前测试/交付见[R8硬件适配报告](R8_HARDWARE_ADAPTATION_20261029.md)。历史结果不代表当前固件或实板验证。
+
 # 双板 ReferenceApp 构建审查
 
 2026-10-20。已从 b539928d 的组件CRC/WFI入口推进到两板实际参考应用。实际参考接线、参数、首次配对和升级边界见 [REFERENCE_APPLICATION](REFERENCE_APPLICATION.md)。板子未完成，没有连接或烧录硬件，以下是离线证据。

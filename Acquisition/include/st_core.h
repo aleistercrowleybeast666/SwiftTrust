@@ -31,6 +31,8 @@ typedef struct
 {
     uint64_t time_us;
     uint32_t sequence;
+    /* ADS1220 signed24, MSB first in bytes[0..2]; remaining bytes are zero.
+     * Padding preserves the existing SRAM queue budget, not a second channel. */
     uint8_t bytes[12];
     uint32_t reserved[2];
 } st_capture;
@@ -120,7 +122,15 @@ typedef struct
     uint32_t zero_samples;
     uint64_t zero_time_us;
     bool session_zero_valid;
+    uint16_t adc_model;
+    uint8_t channel_count, input_mux, operating_mode;
+    bool pga_bypass;
+    uint32_t reference_uv, excitation_uv, nominal_rate_millihz, conversion_cycles;
+    uint32_t measured_rate_millihz;
 } st_log_config;
+/* Metadata for the current single AIN1-AIN2 board contract. Measured rate is
+ * zero until DRDY timestamps provide a real observation. */
+void Log_ApplyAds1220Metadata(st_log_config *, bool pga_bypass, uint32_t measured_rate_millihz);
 typedef enum
 {
     ST_IDLE,

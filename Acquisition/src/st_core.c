@@ -62,15 +62,13 @@ static int32_t signed24(const uint8_t *p)
 }
 st_adc_sample st_adc_decode(const uint8_t f[12])
 {
-    st_adc_sample s = {signed24(f + 3), signed24(f + 6), (uint16_t)(((uint16_t)f[0] << 8) | f[1]),
-                       0};
-    if (st_crc16(f, 9) != (uint16_t)(((uint16_t)f[9] << 8) | f[10]))
-        s.flags |= ST_REC_CRC;
-    if ((s.status & 0x0300) != 0x0100 || (s.status & 0x0800) || f[2] || f[11])
-        s.flags |= ST_REC_FORMAT;
-    if ((s.status & 0x7400) || (s.status & 3) != 3)
-        s.flags |= ST_REC_ADC_FAULT;
-    if (s.ch0 == 8388607 || s.ch0 == -8388608 || s.ch1 == 8388607 || s.ch1 == -8388608)
+    /* ADS1220 supplies neither status word nor CRC. Transport errors are
+     * reported by the DMA owner; a successful read cannot prove analog validity. */
+    st_adc_sample s = {signed24(f), INT32_MIN, 0, 0};
+    for (unsigned i = 3; i < 12; i++)
+        if (f[i])
+            s.flags |= ST_REC_FORMAT;
+    if (s.ch0 == 8388607 || s.ch0 == -8388608)
         s.flags |= ST_REC_SATURATED;
     return s;
 }

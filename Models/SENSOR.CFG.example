@@ -1,6 +1,6 @@
 # Copy to TF root as SENSOR.CFG only AFTER filling real sensor data.
 # 0 values deliberately keep force calibration disabled; raw capture still works.
-# ACK=1 means the operator checked the sensor rating, 2.5V excitation and wiring.
+# ACK=1 means the operator checked the sensor rating, 5V excitation and wiring.
 # PROFILE_ID/SENSOR_ID must identify the actual profile/sensor, never a test fixture.
 # MAX_SPAN/MIN_DELTA are raw counts, chosen from measured noise and useful load.
 ACK_SENSOR_RATING=0
@@ -8,8 +8,17 @@ PROFILE_ID=0
 SENSOR_ID=0
 WIRE_COUNT=0
 RATED_FORCE_MN=0
-EXCITATION_UV=2500000
+EXCITATION_UV=5000000
 MAX_SPAN_COUNTS=0
 MIN_DELTA_COUNTS=0
+# Gain is configurable. PGA bypass only supports gains 1, 2, 4.
+# SENSITIVITY_NV_V is rated differential output per volt excitation: 2mV/V=2000000.
+# Common-mode bounds must cover the real sensor over its declared input range.
+# These zero values deliberately require a real sensor configuration.
+PGA_GAIN=1
+PGA_BYPASS=1
+SENSITIVITY_NV_V=0
+COMMON_MODE_MIN_UV=0
+COMMON_MODE_MAX_UV=0
 # Optional boot default. Runtime menu changes apply until reboot; no calibration rewrite.
 AUTO_ZERO=0

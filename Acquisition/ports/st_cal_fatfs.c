@@ -66,8 +66,10 @@ st_cal_disk_state st_cal_fatfs_open(st_cal_fatfs *s, st_cal_profile *active)
     s->opened = false;
     st_cal_profile best = {0}, p;
     uint64_t best_gen = 0, gen = 0;
+    uint64_t foreign_gen = 0, previous_gen = 0;
     bool damaged = false;
     unsigned best_slot = 0;
+    unsigned foreign_slot = 0;
     for (unsigned i = 0; i < 2; i++)
     {
         int r = read_slot(s, i, &p, &gen);
@@ -81,11 +83,21 @@ st_cal_disk_state st_cal_fatfs_open(st_cal_fatfs *s, st_cal_profile *active)
             damaged = true;
         if (r != 1)
             continue;
-        if (!st_cal_binding_equal(p.binding, s->binding))
+        if (gen == previous_gen)
         {
-            s->state = ST_CAL_DISK_FOREIGN;
+            s->state = ST_CAL_DISK_DAMAGED;
             s->fault = true;
             return s->state;
+        }
+        previous_gen = gen;
+        if (!st_cal_binding_equal(p.binding, s->binding))
+        {
+            if (gen > foreign_gen)
+            {
+                foreign_gen = gen;
+                foreign_slot = i;
+            }
+            continue;
         }
         if (gen == best_gen)
         {
@@ -100,10 +112,23 @@ st_cal_disk_state st_cal_fatfs_open(st_cal_fatfs *s, st_cal_profile *active)
             best_slot = i;
         }
     }
-    if (!best_gen && damaged)
+    if (!best_gen && !foreign_gen && damaged)
     {
         s->state = ST_CAL_DISK_DAMAGED;
         s->fault = true;
+        return s->state;
+    }
+    /* A newer incompatible configuration must invalidate even an older matching
+     * slot. Only an explicit completed calibration may create the next generation. */
+    if (foreign_gen > best_gen)
+    {
+        s->generation = foreign_gen;
+        s->revision = 0;
+        s->active_slot = foreign_slot;
+        s->opened = true;
+        s->fault = false;
+        s->state = ST_CAL_DISK_MIGRATION;
+        *active = (st_cal_profile){0};
         return s->state;
     }
     s->generation = best_gen;

@@ -1,67 +1,37 @@
 log4j user configuration file not found: C:\Users\chdxm/.stm32cubemx/log4j2.xml
 Configure log4j with default settings from jar:file:/C:/Program%20Files/STMicroelectronics/STM32Cube/STM32CubeMX/STM32CubeMX.exe!/log4j/log4j2.stm32cubemx.xml
-2026-10-22 01:35:46,765 [ERROR] WebUtils:398 - Updater is busy
-2026-10-22 01:35:46,833 [ERROR] WebUtils:657 - Updater is busy
 config load D:\stm32_project\SwiftThrust\Controller\SwiftThrust_Controller_Candidate\SwiftThrust_Controller_Candidate.ioc
-2026-10-22 01:35:47,126 [ERROR] ThirdPartyApiDb:497 - Cannot delete folder C:\Users\chdxm\.stm32cubemx\plugins\thirdparty\db\Avnet-IOTCONNECT\X-CUBE-iotc-st67-sdk\1.0.0: Unable to delete file: C:\Users\chdxm\.stm32cubemx\plugins\thirdparty\db\Avnet-IOTCONNECT\X-CUBE-iotc-st67-sdk\1.0.0\Avnet-IOTCONNECT.X-CUBE-iotc-st67-sdk.1.0.0_Modes.xml
-2026-10-22 01:35:47,129 [ERROR] ThirdPartyApiDb:497 - Cannot delete folder C:\Users\chdxm\.stm32cubemx\plugins\thirdparty\db\Avnet-IOTCONNECT: Unable to delete directory C:\Users\chdxm\.stm32cubemx\plugins\thirdparty\db\Avnet-IOTCONNECT\X-CUBE-iotc-st67-sdk.
-2026-10-22 01:35:47,740 [ERROR] Engine:466 - C:\Users\chdxm\.stm32cubemx\thirdparties\pdsc\STMicroelectronics.X-CUBE-SMBUS.2.1.1.pdsc: PDSC version is not supported
-2026-10-22 01:35:48,119 [ERROR] Engine:466 - C:\Users\chdxm\.stm32cubemx\thirdparties\pdsc\STMicroelectronics.X-CUBE-WBA.1.1.0.pdsc: PDSC version is not supported
+2026-10-29 01:27:56,059 [ERROR] Engine:466 - C:\Users\chdxm\.stm32cubemx\thirdparties\pdsc\STMicroelectronics.X-CUBE-SMBUS.2.1.1.pdsc: PDSC version is not supported
+2026-10-29 01:27:56,570 [ERROR] Engine:466 - C:\Users\chdxm\.stm32cubemx\thirdparties\pdsc\STMicroelectronics.X-CUBE-WBA.1.1.0.pdsc: PDSC version is not supported
 1 : Invalid condition id : UX_CORESTACK_Condition cause : null
 1 : Invalid condition id : UX_CORESTACK_Condition cause : null
 1 : Invalid condition id : UX_CORESTACK_Condition cause : null
 1 : Invalid condition id : UX_CORESTACK_Condition cause : null
 1 : Invalid condition id : UX_CORESTACK_Condition cause : null
-2026-10-22 01:35:50,130 [ERROR] Engine:466 - C:\Users\chdxm\.stm32cubemx\thirdparties\pdsc\STMicroelectronics.FP-SNS-STAIOTCFT.2.0.0.pdsc: PDSC version is not supported
-2026-10-22 01:35:51,310 [ERROR] Engine:466 - C:\Users\chdxm\.stm32cubemx\thirdparties\pdsc\STMicroelectronics.X-CUBE-ST67W61.1.3.0.pdsc: PDSC version is not supported
-2026-10-22 01:35:52,068 [ERROR] Engine:466 - C:\Users\chdxm\.stm32cubemx\thirdparties\pdsc\STMicroelectronics.X-CUBE-BLEMGR.4.2.0.pdsc: PDSC version is not supported
+2026-10-29 01:27:57,681 [ERROR] Engine:466 - C:\Users\chdxm\.stm32cubemx\thirdparties\pdsc\STMicroelectronics.FP-SNS-STAIOTCFT.2.0.0.pdsc: PDSC version is not supported
+2026-10-29 01:27:58,058 [ERROR] Engine:466 - C:\Users\chdxm\.stm32cubemx\thirdparties\pdsc\STMicroelectronics.X-CUBE-ST67W61.1.3.0.pdsc: PDSC version is not supported
+2026-10-29 01:27:58,367 [ERROR] Engine:466 - C:\Users\chdxm\.stm32cubemx\thirdparties\pdsc\STMicroelectronics.X-CUBE-BLEMGR.4.2.0.pdsc: PDSC version is not supported
 OK
 get version
 6.15.0
 OK
-set pin PB6 GPIO_EXTI6
-OK
-lock pin PB6 true
-OK
-set gpio parameters PB6 GPIO_Label CAND_RADIO_DIO1
-OK
-set gpio parameters PB6 GPIO_ModeDefaultEXTI GPIO_MODE_IT_RISING
-OK
-set mode SYS Serial_Wire
-OK
 get mode active .*
-Mode: active | ADC1 | IN4 | IN4:Set
+Mode: active | ADC1 | IN3 | IN3:Set
+Mode: active | ADC1 | IN-Vrefint | Vrefint Channel:Set
 Mode: active | I2C1 | I2C | I2C:I2C
 Mode: active | SPI1 | Full_Duplex_Master | Mode:Full-Duplex Master
 Mode: active | SYS | Serial_Wire | Debug:Set
+Mode: active | SYS | PINREMAP | Pin PA9 instead of pin PA11:Set
+Mode: active | SYS | PINREMAP_10_12 | Pin PA10 instead of pin PA12:Set
 Mode: active | SYS | SysTick | Timebase Source:SysTick
 Mode: active | TIM2 | Encoder_Interface | Combined Channels:Encoder Mode
 Mode: active | USART1 | Asynchronous | Mode:Asynchronous
 OK
-set pin PA9 USART1_TX
-OK
-lock pin PA9 true
-OK
-set gpio parameters PA9 GPIO_Label CAND_DEBUG_UART_TX
-OK
-set pin PA10 USART1_RX
-OK
-lock pin PA10 true
-OK
-set gpio parameters PA10 GPIO_Label CAND_DEBUG_UART_RX
-OK
-set mode USART1 Asynchronous
-OK
-set pin PB0 GPIO_Output
-OK
-lock pin PB0 true
-OK
-set gpio parameters PB0 GPIO_Label CAND_LINK_LED
-OK
-set gpio parameters PB0 PinState GPIO_PIN_RESET
-OK
 isPluginError "Pinout & Configuration"
 Pinout & Configuration Error: false
+OK
+isPluginError "Clock Configuration"
+Clock Configuration Error: false
 OK
 get pinout
 PB9: I2C1_SDAPB9: I2C1_SDA
@@ -73,8 +43,8 @@ PF2 - NRST: Reset_State
 PA0: TIM2_CH1PA0: TIM2_CH1
 PA1: TIM2_CH2PA1: TIM2_CH2
 PA2: GPIO_InputPA2: GPIO_Input
-PA3: GPIO_InputPA3: GPIO_Input
-PA4: ADC1_IN4PA4: ADC1_IN4
+PA3: ADC1_IN3PA3: ADC1_IN3
+PA4: Reset_State
 PA5: Reset_State
 PA6: Reset_State
 PA7: Reset_State
@@ -82,11 +52,11 @@ PB0: GPIO_OutputPB0: GPIO_Output
 PB1: Reset_State
 PB2: Reset_State
 PA8: GPIO_OutputPA8: GPIO_Output
-PA9: USART1_TXPA9: USART1_TX
+UCPD1_DBCC1: Reset_State
 PC6: Reset_State
-PA10: USART1_RXPA10: USART1_RX
-PA11 [PA9]: Reset_State
-PA12 [PA10]: Reset_State
+UCPD1_DBCC2: Reset_State
+PA9 [PA11]: USART1_TXPA9 [PA11]: USART1_TX
+PA10 [PA12]: USART1_RXPA10 [PA12]: USART1_RX
 PA13: SYS_SWDIOPA13: SYS_SWDIO
 PA14-BOOT0: SYS_SWCLKPA14-BOOT0: SYS_SWCLK
 PA15: GPIO_OutputPA15: GPIO_Output

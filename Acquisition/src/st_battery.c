@@ -15,7 +15,8 @@ void Battery_Invalidate(BatteryMonitor *battery)
     battery->voltage.valid = false;
     battery->initialized = battery->blinking = false;
 }
-void Battery_Update(BatteryMonitor *battery, uint16_t code, const st_voltage *vdda, uint64_t now)
+void Battery_UpdateCircuit(BatteryMonitor *battery, uint16_t code, const st_voltage *vdda,
+                            uint64_t now, bool present, bool scale_verified)
 {
     if (!battery)
         return;
@@ -27,7 +28,7 @@ void Battery_Update(BatteryMonitor *battery, uint16_t code, const st_voltage *vd
     }
     st_voltage measured = st_voltage_from_adc(code, vdda->mv, BATTERY_DIVIDER_NUMERATOR,
                                               BATTERY_DIVIDER_DENOMINATOR, now,
-                                              ST_ACQ_BATTERY_PRESENT, ST_ACQ_BATTERY_VERIFIED);
+                                              present, scale_verified);
     if (!measured.valid || measured.mv < BATTERY_MIN_VALID_MV ||
         measured.mv > BATTERY_MAX_VALID_MV || code == 4095)
     {
@@ -40,6 +41,11 @@ void Battery_Update(BatteryMonitor *battery, uint16_t code, const st_voltage *vd
     battery->initialized = true;
     measured.mv = battery->filtered_mv;
     battery->voltage = measured;
+}
+void Battery_Update(BatteryMonitor *battery, uint16_t code, const st_voltage *vdda, uint64_t now)
+{
+    Battery_UpdateCircuit(battery, code, vdda, now, ST_ACQ_BATTERY_PRESENT,
+                           ST_ACQ_BATTERY_VERIFIED);
 }
 st_voltage_view Battery_Evaluate(BatteryMonitor *battery, uint64_t now)
 {

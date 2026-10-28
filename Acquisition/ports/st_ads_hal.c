@@ -8,7 +8,7 @@ enum
     ADS_FAILED
 };
 bool st_ads_hal_bind(st_ads_hal *p, SPI_HandleTypeDef *spi, GPIO_TypeDef *cs, uint16_t cs_pin,
-                     GPIO_TypeDef *reset, uint16_t reset_pin, uint32_t (*now)(void),
+                     uint32_t (*now)(void),
                      uint32_t timeout, bool verified)
 {
     memset(p, 0, sizeof(*p));
@@ -16,29 +16,29 @@ bool st_ads_hal_bind(st_ads_hal *p, SPI_HandleTypeDef *spi, GPIO_TypeDef *cs, ui
     p->spi = spi;
     p->cs = cs;
     p->cs_pin = cs_pin;
-    p->reset = reset;
-    p->reset_pin = reset_pin;
     p->now_ms = now;
     p->timeout_ms = timeout;
     p->verified =
         verified && spi && spi->Instance == SPI1 && spi->hdmarx && spi->hdmatx && cs && cs_pin &&
-        reset && reset_pin && now && timeout && timeout <= 100 &&
+        now && timeout && timeout <= 100 &&
         spi->Init.Mode == SPI_MODE_MASTER && spi->Init.Direction == SPI_DIRECTION_2LINES &&
         spi->Init.DataSize == SPI_DATASIZE_8BIT && spi->Init.CLKPolarity == SPI_POLARITY_LOW &&
         spi->Init.CLKPhase == SPI_PHASE_2EDGE && spi->Init.FirstBit == SPI_FIRSTBIT_MSB &&
-        spi->Init.NSS == SPI_NSS_SOFT && spi->Init.CRCCalculation == SPI_CRCCALCULATION_DISABLE;
+        spi->Init.NSS == SPI_NSS_SOFT && spi->Init.CRCCalculation == SPI_CRCCALCULATION_DISABLE &&
+        HAL_RCC_GetPCLK2Freq() / (2u << ((spi->Init.BaudRatePrescaler >> 3) & 7u)) <= 6000000u;
     return p->verified;
 }
-static void reset_pin(void *ctx, bool asserted)
+static void Ads1220Hal_WaitChipSelect(void)
 {
-    st_ads_hal *p = ctx;
-    if (p->verified)
-        HAL_GPIO_WritePin(p->reset, p->reset_pin, asserted ? GPIO_PIN_RESET : GPIO_PIN_SET);
+    /* At F411's maximum 100 MHz, eight core cycles exceed the 50 ns
+     * setup/high and 25 ns hold minimums. Never a microsecond busy wait. */
+    __NOP(); __NOP(); __NOP(); __NOP();
+    __NOP(); __NOP(); __NOP(); __NOP();
 }
-static st_async_result submit(void *ctx, const uint8_t tx[12], uint8_t rx[12])
+static st_async_result submit(void *ctx, const uint8_t *tx, uint8_t *rx, size_t bytes)
 {
     st_ads_hal *p = ctx;
-    if (!p->verified)
+    if (!p->verified || !tx || !rx || !bytes || bytes > ADS1220_TRANSFER_BYTES)
         return ST_IO_ERROR;
     unsigned state = atomic_load_explicit(&p->transfer, memory_order_acquire);
     if (state == ADS_FAILED)
@@ -48,8 +48,9 @@ static st_async_result submit(void *ctx, const uint8_t tx[12], uint8_t rx[12])
     p->started_ms = p->now_ms();
     atomic_store_explicit(&p->transfer, ADS_BUSY, memory_order_release);
     HAL_GPIO_WritePin(p->cs, p->cs_pin, GPIO_PIN_RESET);
+    Ads1220Hal_WaitChipSelect();
     HAL_StatusTypeDef result =
-        HAL_SPI_TransmitReceive_DMA(p->spi, (uint8_t *)(uintptr_t)tx, rx, 12);
+        HAL_SPI_TransmitReceive_DMA(p->spi, (uint8_t *)(uintptr_t)tx, rx, (uint16_t)bytes);
     if (result == HAL_OK)
         return ST_IO_DONE;
     HAL_GPIO_WritePin(p->cs, p->cs_pin, GPIO_PIN_SET);
@@ -79,13 +80,14 @@ static st_async_result poll(void *ctx)
 }
 st_ads_port st_ads_hal_port(st_ads_hal *p)
 {
-    return (st_ads_port){p, reset_pin, submit, poll};
+    return (st_ads_port){p, submit, poll};
 }
 void st_ads_hal_complete(st_ads_hal *p, SPI_HandleTypeDef *spi)
 {
     if (p->verified && spi == p->spi &&
         atomic_load_explicit(&p->transfer, memory_order_acquire) == ADS_BUSY)
     {
+        Ads1220Hal_WaitChipSelect();
         HAL_GPIO_WritePin(p->cs, p->cs_pin, GPIO_PIN_SET);
         atomic_store_explicit(&p->transfer, ADS_DONE, memory_order_release);
     }

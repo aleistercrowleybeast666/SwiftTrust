@@ -7,7 +7,9 @@
 #error                                                                                             \
     "SwiftThrust controller UNBOUND: verify exact GP/N part, schematic and supply divider before target integration"
 #endif
-/* Event-loop contract. All reads may report unavailable; zero is not full. */
+/* Historical unbound interface draft; not used by ReferenceApp.
+ * The executable G071 board is board/reference_main.c (2026-10-29).
+ * Event-loop contract. All reads may report unavailable; zero is not full. */
 typedef struct
 {
     uint32_t millivolts;
@@ -23,8 +25,8 @@ typedef enum
     ST_VALUE_MEASURED
 } st_voltage_state;
 /* UI policy needs configured threshold and freshness timeout; neither is fixed.
- * Display controller and acquisition supplies separately. Future independent
- * power is UNKNOWN without a real sensing circuit. Voltage is not battery SOH.
+ * Display controller and acquisition supplies separately. The active ReferenceApp measures its PA3 battery independently from VDDA;
+ * this historical draft must not replace that implementation. Voltage is not battery SOH.
  * Link RSSI/SNR and peer freshness are independent of local battery readings. */
 st_controller_voltage st_controller_bsp_local_voltage(void);
 void st_controller_bsp_poll_events(void);

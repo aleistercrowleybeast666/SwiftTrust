@@ -1,0 +1,89 @@
+2026-10-28T17:26:04.509628+00:00
+Host-only UI and battery regressions. No physical ADC, OLED or radio tested.
+CONFIG language=1 present=0 verified=0
+PASS R8 seven logical types / exact lengths / 32-bit IDs / every byte corruption and truncation / explicit R7 rejection
+PASS R8 Pair/UID isolation / resumed session after loss and controller reboot / no NV writes or file restart / acquisition reboot UNKNOWN
+PASS R8 duplicate result cache / conflicting and old transactions / IDs cross65535 / STATUS cannot complete START / late reply cannot replace STOP
+PASS R8 real ADC details render / lowercase z raster / controller battery label / common ID / frozen two-part DATA / reorder / duplicate / late view cannot replace new query
+PASS R8 exact2s heartbeat / independent STATUS sequence / bidirectional receipt ACK / old ACK does not refresh LED age
+PASS R8 four fixed rows / default BACK / safe confirmation / output no STOP or blank cursor / scrolling / task labels / UTF8 / long-short button / 4s-7s LED
+PASS controller PA3 divider, independent circuit acceptance, VDDA compensation and stale/error rejection
+PASS unconfirmed PC0: all4096 ADC codes invalid/UNKNOWN, LEDs OFF; VDDA cannot become battery
+PASS focused: 8 groups, 13599 assertions
+
+CONFIG language=1 present=1 verified=0
+PASS R8 seven logical types / exact lengths / 32-bit IDs / every byte corruption and truncation / explicit R7 rejection
+PASS R8 Pair/UID isolation / resumed session after loss and controller reboot / no NV writes or file restart / acquisition reboot UNKNOWN
+PASS R8 duplicate result cache / conflicting and old transactions / IDs cross65535 / STATUS cannot complete START / late reply cannot replace STOP
+PASS R8 real ADC details render / lowercase z raster / controller battery label / common ID / frozen two-part DATA / reorder / duplicate / late view cannot replace new query
+PASS R8 exact2s heartbeat / independent STATUS sequence / bidirectional receipt ACK / old ACK does not refresh LED age
+PASS R8 four fixed rows / default BACK / safe confirmation / output no STOP or blank cursor / scrolling / task labels / UTF8 / long-short button / 4s-7s LED
+PASS controller PA3 divider, independent circuit acceptance, VDDA compensation and stale/error rejection
+PASS unconfirmed PC0: all4096 ADC codes invalid/UNKNOWN, LEDs OFF; VDDA cannot become battery
+PASS focused: 8 groups, 13599 assertions
+
+CONFIG language=1 present=0 verified=1
+PASS R8 seven logical types / exact lengths / 32-bit IDs / every byte corruption and truncation / explicit R7 rejection
+PASS R8 Pair/UID isolation / resumed session after loss and controller reboot / no NV writes or file restart / acquisition reboot UNKNOWN
+PASS R8 duplicate result cache / conflicting and old transactions / IDs cross65535 / STATUS cannot complete START / late reply cannot replace STOP
+PASS R8 real ADC details render / lowercase z raster / controller battery label / common ID / frozen two-part DATA / reorder / duplicate / late view cannot replace new query
+PASS R8 exact2s heartbeat / independent STATUS sequence / bidirectional receipt ACK / old ACK does not refresh LED age
+PASS R8 four fixed rows / default BACK / safe confirmation / output no STOP or blank cursor / scrolling / task labels / UTF8 / long-short button / 4s-7s LED
+PASS controller PA3 divider, independent circuit acceptance, VDDA compensation and stale/error rejection
+PASS unconfirmed PC0: all4096 ADC codes invalid/UNKNOWN, LEDs OFF; VDDA cannot become battery
+PASS focused: 8 groups, 13599 assertions
+
+CONFIG language=1 present=1 verified=1
+PASS R8 seven logical types / exact lengths / 32-bit IDs / every byte corruption and truncation / explicit R7 rejection
+PASS R8 Pair/UID isolation / resumed session after loss and controller reboot / no NV writes or file restart / acquisition reboot UNKNOWN
+PASS R8 duplicate result cache / conflicting and old transactions / IDs cross65535 / STATUS cannot complete START / late reply cannot replace STOP
+PASS R8 real ADC details render / lowercase z raster / controller battery label / common ID / frozen two-part DATA / reorder / duplicate / late view cannot replace new query
+PASS R8 exact2s heartbeat / independent STATUS sequence / bidirectional receipt ACK / old ACK does not refresh LED age
+PASS R8 four fixed rows / default BACK / safe confirmation / output no STOP or blank cursor / scrolling / task labels / UTF8 / long-short button / 4s-7s LED
+PASS controller PA3 divider, independent circuit acceptance, VDDA compensation and stale/error rejection
+PASS battery PC0 divide-by-two/VDDA compensation, 4/3/2/1 LEDs, lower half 1Hz blink, filter/hysteresis, stale/invalid OFF
+PASS focused: 8 groups, 1347 assertions
+
+CONFIG language=0 present=0 verified=0
+PASS R8 seven logical types / exact lengths / 32-bit IDs / every byte corruption and truncation / explicit R7 rejection
+PASS R8 Pair/UID isolation / resumed session after loss and controller reboot / no NV writes or file restart / acquisition reboot UNKNOWN
+PASS R8 duplicate result cache / conflicting and old transactions / IDs cross65535 / STATUS cannot complete START / late reply cannot replace STOP
+PASS R8 real ADC details render / lowercase z raster / controller battery label / common ID / frozen two-part DATA / reorder / duplicate / late view cannot replace new query
+PASS R8 exact2s heartbeat / independent STATUS sequence / bidirectional receipt ACK / old ACK does not refresh LED age
+PASS R8 four fixed rows / default BACK / safe confirmation / output no STOP or blank cursor / scrolling / task labels / UTF8 / long-short button / 4s-7s LED
+PASS controller PA3 divider, independent circuit acceptance, VDDA compensation and stale/error rejection
+PASS unconfirmed PC0: all4096 ADC codes invalid/UNKNOWN, LEDs OFF; VDDA cannot become battery
+PASS focused: 8 groups, 13599 assertions
+
+CONFIG language=0 present=1 verified=0
+PASS R8 seven logical types / exact lengths / 32-bit IDs / every byte corruption and truncation / explicit R7 rejection
+PASS R8 Pair/UID isolation / resumed session after loss and controller reboot / no NV writes or file restart / acquisition reboot UNKNOWN
+PASS R8 duplicate result cache / conflicting and old transactions / IDs cross65535 / STATUS cannot complete START / late reply cannot replace STOP
+PASS R8 real ADC details render / lowercase z raster / controller battery label / common ID / frozen two-part DATA / reorder / duplicate / late view cannot replace new query
+PASS R8 exact2s heartbeat / independent STATUS sequence / bidirectional receipt ACK / old ACK does not refresh LED age
+PASS R8 four fixed rows / default BACK / safe confirmation / output no STOP or blank cursor / scrolling / task labels / UTF8 / long-short button / 4s-7s LED
+PASS controller PA3 divider, independent circuit acceptance, VDDA compensation and stale/error rejection
+PASS unconfirmed PC0: all4096 ADC codes invalid/UNKNOWN, LEDs OFF; VDDA cannot become battery
+PASS focused: 8 groups, 13599 assertions
+
+CONFIG language=0 present=0 verified=1
+PASS R8 seven logical types / exact lengths / 32-bit IDs / every byte corruption and truncation / explicit R7 rejection
+PASS R8 Pair/UID isolation / resumed session after loss and controller reboot / no NV writes or file restart / acquisition reboot UNKNOWN
+PASS R8 duplicate result cache / conflicting and old transactions / IDs cross65535 / STATUS cannot complete START / late reply cannot replace STOP
+PASS R8 real ADC details render / lowercase z raster / controller battery label / common ID / frozen two-part DATA / reorder / duplicate / late view cannot replace new query
+PASS R8 exact2s heartbeat / independent STATUS sequence / bidirectional receipt ACK / old ACK does not refresh LED age
+PASS R8 four fixed rows / default BACK / safe confirmation / output no STOP or blank cursor / scrolling / task labels / UTF8 / long-short button / 4s-7s LED
+PASS controller PA3 divider, independent circuit acceptance, VDDA compensation and stale/error rejection
+PASS unconfirmed PC0: all4096 ADC codes invalid/UNKNOWN, LEDs OFF; VDDA cannot become battery
+PASS focused: 8 groups, 13599 assertions
+
+CONFIG language=0 present=1 verified=1
+PASS R8 seven logical types / exact lengths / 32-bit IDs / every byte corruption and truncation / explicit R7 rejection
+PASS R8 Pair/UID isolation / resumed session after loss and controller reboot / no NV writes or file restart / acquisition reboot UNKNOWN
+PASS R8 duplicate result cache / conflicting and old transactions / IDs cross65535 / STATUS cannot complete START / late reply cannot replace STOP
+PASS R8 real ADC details render / lowercase z raster / controller battery label / common ID / frozen two-part DATA / reorder / duplicate / late view cannot replace new query
+PASS R8 exact2s heartbeat / independent STATUS sequence / bidirectional receipt ACK / old ACK does not refresh LED age
+PASS R8 four fixed rows / default BACK / safe confirmation / output no STOP or blank cursor / scrolling / task labels / UTF8 / long-short button / 4s-7s LED
+PASS controller PA3 divider, independent circuit acceptance, VDDA compensation and stale/error rejection
+PASS battery PC0 divide-by-two/VDDA compensation, 4/3/2/1 LEDs, lower half 1Hz blink, filter/hysteresis, stale/invalid OFF
+PASS focused: 8 groups, 1347 assertions

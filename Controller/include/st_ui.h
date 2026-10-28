@@ -58,6 +58,7 @@ void st_ui_attach_calibration(st_ui *, st_cal_ui *);
  * created ignition request. real output remains disabled pending review. */
 bool st_ui2_handle(st_ui *, st_ui_event, st2_client *, uint32_t now_ms);
 void st_ui2_service(st_ui *, st2_client *, uint32_t now_ms);
+/* Voltage argument is the local PA3 battery measurement, never MCU VDDA. */
 void st_ui2_render(const st_ui *, const st2_client *, st_voltage_view, uint32_t now_ms,
                    st_ui_model *);
 void st_ui_raster(const st_ui_model *m, uint8_t frame[1024]);

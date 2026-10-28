@@ -1,3 +1,5 @@
+> 历史评审记录：本文中的旧ADC、时钟及引脚假设已由[2026-10-29双板硬件契约](REFERENCE_APPLICATION.md)替代；当前测试/交付见[R8硬件适配报告](R8_HARDWARE_ADAPTATION_20261029.md)。历史结果不代表当前固件或实板验证。
+
 # SwiftThrust R8 交付
 
 2026-10-22。基于 GitHub main 起点463011bbd5a6210257f275202c7f1b4cf823d3f7，修改完成后提交并推送。此文档与变更在同一提交内；最终SHA见交付消息及 git log -1。

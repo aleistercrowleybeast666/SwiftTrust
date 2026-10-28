@@ -172,6 +172,9 @@
       },
       {
         "path": "../Acquisition/src/st_session_zero.c"
+      },
+      {
+        "path": "../Acquisition/src/st_battery.c"
       }
     ],
     "folders": []

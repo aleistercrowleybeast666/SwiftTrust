@@ -33,6 +33,11 @@ def png_preview(frames,target):
 def main():
     language='en' if '--english' in sys.argv else 'zh'
     reports=[datetime.datetime.now(datetime.timezone.utc).isoformat(), 'Host-only synthetic regression. No MCU/RF/SD/OLED hardware accessed.']
+    capture_run=subprocess.run([sys.executable,'-B',str(ROOT/'Models/check_ads1220_capture.py')],
+                               capture_output=True,text=True,encoding='utf-8',errors='replace',timeout=90)
+    reports += [capture_run.stdout,capture_run.stderr]
+    if capture_run.returncode:
+        print('\n'.join(reports));return capture_run.returncode
     with tempfile.TemporaryDirectory(prefix='swiftthrust-host-') as temporary:
         t=Path(temporary);exe=t/'tests.exe';fixture=t/'synthetic.stlog';frames=t/'ui.raw';calframes=t/'calibration.raw'
         sources=sorted((ROOT/'Acquisition/src').glob('*.c'))+sorted((ROOT/'Controller/src').glob('*.c'))+[ROOT/'Common/Src/st_task.c',ROOT/'Models/test_core.c',ROOT/'Models/test_lowlevel.c',ROOT/'Models/test_r2.c',ROOT/'Models/test_stop.c',ROOT/'Models/test_storage.c',ROOT/'Models/test_calibration.c',ROOT/'Acquisition/ports/st_diskio.c',ROOT/'Acquisition/ports/st_fatfs_worker.c',ROOT/'Acquisition/ports/st_cal_fatfs.c',ROOT/'Acquisition/ports/st_cal_system.c',ROOT/'Models/test_cal_integration.c',ROOT/'Acquisition/vendor/tiny_aes/aes.c',ROOT/'Models/test_ignition.c',ROOT/'Models/test_battery.c']
@@ -61,6 +66,12 @@ def main():
         rows,report=read_log(fixture)
         assert len(rows)==1500 and report['clean_close'] and report['simulated'] and not report['calibrated']
         assert all(r['force_N']=='' and r['ch1_V']=='' for r in rows)
+        assert report['adc']['model']=='ADS1220' and report['adc']['channels']==1
+        assert report['adc']['conversion_cycles']==2072
+        assert report['adc']['theoretical_rate_hz'].startswith('1976.833976')
+        assert report['adc']['measured_drdy_rate_millihz'] is None
+        assert all(r['raw_ch1']=='' and r['adc_status']=='' for r in rows)
+        assert rows[0]['adc_input_V']=='0.0000011920928955078125'
         exported=export(fixture,t/'synthetic.csv');assert exported==report
         try:export(fixture,t/'synthetic.csv')
         except FileExistsError:pass
@@ -87,7 +98,27 @@ def main():
             'calibration_zero_raw':100,'session_zero_raw':150,'samples':512,'time_us':1000000}
         calibrated[512+22]=1;struct.pack_into('<I',calibrated,512+28,zlib.crc32(calibrated[512:512+28]))
         fixture.write_bytes(calibrated);values,_=read_log(fixture);assert values[0]['force_N']==''
+        legacy=bytearray(original)
+        legacy[84:128]=bytes(44);legacy[57]=1
+        struct.pack_into('<II',legacy,12,8192000,2048)
+        struct.pack_into('<I',legacy,20,2000000)
+        struct.pack_into('<I',legacy,508,zlib.crc32(legacy[:508]))
+        for at in range(512,len(legacy)-32,32):
+            struct.pack_into('<iH',legacy,at+16,-256,0x0103)
+            struct.pack_into('<I',legacy,at+28,zlib.crc32(legacy[at:at+28]))
+        fixture.write_bytes(legacy);values,rep=read_log(fixture)
+        assert rep['clean_close'] and rep['adc']['model']=='ADS131M02' and rep['adc']['channels']==2
+        assert values[0]['raw_ch1']==-256 and values[0]['adc_status']=='0x0103'
+        invalid=bytearray(original);struct.pack_into('<i',invalid,512+16,0)
+        struct.pack_into('<I',invalid,512+28,zlib.crc32(invalid[512:512+28]))
+        fixture.write_bytes(invalid);values,rep=read_log(fixture)
+        assert not values and 'single-channel' in rep['issue']
+        negative=bytearray(original);struct.pack_into('<i',negative,512+12,-4194304)
+        struct.pack_into('<I',negative,512+28,zlib.crc32(negative[512:512+28]))
+        fixture.write_bytes(negative);values,rep=read_log(fixture)
+        assert values[0]['adc_input_V']=='-0.01953125' and values[0]['sample_valid']
         reports+=['PASS Python exporter: clean/uncalibrated/calibrated/SZR1-and-old-header-compatibility/invalid-ADC/truncated-tail/record-CRC/header-CRC/exclusive-output',
+                  'PASS ADS1220 ADC1 metadata / exact conversion period / absent second channel / legacy ADS131M02 dual-channel export / invalid single-channel slot rejection',
                   'R8 previews: four fixed rows, home, three modes, default BACK confirmation, sensor settings, scrollable status, calibration and eight output task states (synthetic values).']
         png_preview(frames.read_bytes(),ROOT/('Models/ui_host_preview'+('_en' if language=='en' else '')+'.png'))
         png_preview(calframes.read_bytes(),ROOT/('Models/calibration_ui_preview'+('_en' if language=='en' else '')+'.png'))

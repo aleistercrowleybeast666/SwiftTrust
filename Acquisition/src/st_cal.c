@@ -4,7 +4,7 @@
 enum
 {
     CAL_CRC = 252,
-    CAL_RESERVED = 176
+    CAL_RESERVED = 192
 };
 static bool gain_valid(uint8_t gain)
 {
@@ -12,12 +12,21 @@ static bool gain_valid(uint8_t gain)
 }
 bool st_cal_binding_valid(st_cal_binding b)
 {
-    return b.verified && b.profile_id && b.sensor_id && b.config_id && b.filter_id &&
+    bool adc_valid;
+    if (b.adc_model == 1220)
+        adc_valid = b.adc_clock_hz == ST_ADC_CLOCK_HZ && !b.osr &&
+                    b.rate_millihz == ST_ADC_RATE_MILLIHZ && b.reference_uv == ST_ADC_REFERENCE_UV &&
+                    b.excitation_nominal_uv == ST_BRIDGE_EXCITATION_UV && b.input_mux == 3 &&
+                    b.power_mode == 2 && !b.gain1 && (!b.pga_bypass || b.gain0 <= 4);
+    else
+        adc_valid = !b.adc_model && !b.reference_uv && !b.input_mux && !b.pga_bypass &&
+                    b.adc_clock_hz && b.adc_clock_hz <= 8400000 && b.rate_millihz &&
+                    (b.osr == 64 || (b.osr >= 128 && b.osr <= 8192 && !(b.osr & (b.osr - 1u)))) &&
+                    gain_valid(b.gain1) && b.power_mode <= 2;
+    return adc_valid && b.verified && b.profile_id && b.sensor_id && b.config_id && b.filter_id &&
            b.excitation_nominal_uv && b.adc_clock_hz && b.adc_clock_hz <= 8400000 &&
            b.rate_millihz && b.rated_force_nn && b.rated_force_nn <= (uint64_t)INT64_MAX / 2 &&
-           (b.osr == 64 || (b.osr >= 128 && b.osr <= 8192 && !(b.osr & (b.osr - 1u)))) &&
-           gain_valid(b.gain0) && gain_valid(b.gain1) && (b.wire_count == 4 || b.wire_count == 6) &&
-           b.power_mode <= 2;
+           gain_valid(b.gain0) && (b.wire_count == 4 || b.wire_count == 6);
 }
 bool st_cal_binding_equal(st_cal_binding a, st_cal_binding b)
 {
@@ -27,7 +36,9 @@ bool st_cal_binding_equal(st_cal_binding a, st_cal_binding b)
            a.rated_force_nn == b.rated_force_nn && a.adc_clock_hz == b.adc_clock_hz &&
            a.osr == b.osr && a.rate_millihz == b.rate_millihz && a.gain0 == b.gain0 &&
            a.gain1 == b.gain1 && a.wire_count == b.wire_count && a.power_mode == b.power_mode &&
-           a.verified == b.verified && a.simulated == b.simulated;
+           a.verified == b.verified && a.simulated == b.simulated &&
+           a.adc_model == b.adc_model && a.reference_uv == b.reference_uv &&
+           a.input_mux == b.input_mux && a.pga_bypass == b.pga_bypass;
 }
 bool st_cal_reference_force(st_cal_reference ref, int64_t *force)
 {
@@ -148,6 +159,15 @@ size_t st_cal_profile_encode(const st_cal_profile *p, uint8_t out[ST_CAL_PROFILE
     st_put64(out + 156, b->rated_force_nn);
     st_put32(out + 164, p->policy.zero_max_age_us);
     st_put64(out + 168, p->zero.last_us);
+    if (b->adc_model)
+    {
+        memcpy(out + 176, "ADC1", 4);
+        st_put16(out + 180, b->adc_model);
+        out[182] = b->input_mux;
+        out[183] = b->pga_bypass ? 1 : 0;
+        st_put32(out + 184, b->reference_uv);
+        st_put32(out + 188, 1); /* extension version */
+    }
     st_put32(out + CAL_CRC, st_crc32(out, CAL_CRC));
     return ST_CAL_PROFILE_BYTES;
 }
@@ -164,6 +184,21 @@ bool st_cal_profile_decode(st_cal_profile *p, const uint8_t *in, size_t n)
             return false;
     st_cal_profile result = {0};
     st_cal_binding *b = &result.binding;
+    if (!memcmp(in + 176, "ADC1", 4))
+    {
+        if (st_get32(in + 188) != 1 || in[183] > 1)
+            return false;
+        b->adc_model = st_get16(in + 180);
+        b->input_mux = in[182];
+        b->pga_bypass = in[183] != 0;
+        b->reference_uv = st_get32(in + 184);
+        if (b->adc_model != 1220)
+            return false;
+    }
+    else
+        for (unsigned i = 176; i < CAL_RESERVED; i++)
+            if (in[i])
+                return false;
     b->profile_id = st_get32(in + 12);
     result.revision = st_get32(in + 16);
     b->sensor_id = st_get32(in + 20);
@@ -406,7 +441,10 @@ bool st_cal_apply_logger(const st_cal_profile *p, st_cal_binding b, st_logger *l
     if (!profile_valid(p) || !st_cal_binding_equal(p->binding, b) || !st_cal_binding_valid(b) ||
         !cfg->clock_verified || cfg->adc_clock_hz != b.adc_clock_hz || cfg->osr != b.osr ||
         cfg->rate_millihz != b.rate_millihz || cfg->gain_ch0 != b.gain0 ||
-        cfg->gain_ch1 != b.gain1 || cfg->simulated != b.simulated)
+        cfg->gain_ch1 != b.gain1 || cfg->simulated != b.simulated ||
+        b.adc_model != 1220 || cfg->adc_model != b.adc_model || cfg->reference_uv != b.reference_uv ||
+        cfg->input_mux != b.input_mux || cfg->pga_bypass != b.pga_bypass ||
+        cfg->excitation_uv != b.excitation_nominal_uv || cfg->operating_mode != b.power_mode)
     {
         cfg->calibration_valid = false;
         return false;

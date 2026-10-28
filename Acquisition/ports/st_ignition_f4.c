@@ -7,12 +7,25 @@
 #define IGNITION_PIN GPIO_PIN_0
 #define IGNITION_TIMER_HZ 1000000u
 #define IGNITION_TIMER_COUNTS (IGNITION_PULSE_MS * 1000u)
-static bool pulse_ready;
+static volatile bool pulse_ready, pulse_fault;
+
+void IgnitionPulse_FaultIsr(void)
+{
+    pulse_fault = true;
+    pulse_ready = false;
+    __HAL_RCC_GPIOA_CLK_ENABLE();
+    IGNITION_PORT->BSRR = (uint32_t)IGNITION_PIN << 16;
+    /* Disconnect the timer physically. If this NMI interrupted Start(), its
+     * resumed timer writes cannot reassert PA0 after the clock has failed. */
+    MODIFY_REG(IGNITION_PORT->MODER, GPIO_MODER_MODER0, GPIO_MODER_MODER0_0);
+    IGNITION_TIMER->CCMR1 = TIM_OCMODE_FORCED_INACTIVE;
+    IGNITION_TIMER->CR1 = TIM_CR1_OPM;
+}
 
 IgnitionOutputResult IgnitionPulse_Stop(void *ctx)
 {
     (void)ctx;
-    if (!pulse_ready)
+    if (!pulse_ready || pulse_fault)
         return IGNITION_OUTPUT_INVALID;
     /* Force low before resetting CNT; PWM1 would return HIGH at an OPM update. */
     IGNITION_TIMER->CCMR1 = TIM_OCMODE_FORCED_INACTIVE;
@@ -25,14 +38,14 @@ IgnitionOutputResult IgnitionPulse_Stop(void *ctx)
 bool IgnitionPulse_IsRunning(void *ctx)
 {
     (void)ctx;
-    return pulse_ready && (IGNITION_TIMER->CR1 & TIM_CR1_CEN) != 0;
+    return pulse_ready && !pulse_fault && (IGNITION_TIMER->CR1 & TIM_CR1_CEN) != 0;
 }
 IgnitionOutputResult IgnitionPulse_Start(void *ctx)
 {
     (void)ctx;
     if (!ST_OUTPUT_HARDWARE_ENABLED || !ST_OUTPUT_SAFETY_REVIEWED)
         return IGNITION_OUTPUT_INVALID;
-    if (!pulse_ready)
+    if (!pulse_ready || pulse_fault)
         return IGNITION_OUTPUT_INVALID;
     if (IgnitionPulse_IsRunning(NULL))
         return IGNITION_OUTPUT_BUSY;
@@ -52,6 +65,8 @@ IgnitionOutputResult IgnitionPulse_Start(void *ctx)
 IgnitionOutputResult IgnitionPulse_Init(void)
 {
     pulse_ready = false;
+    if (pulse_fault)
+        return IGNITION_OUTPUT_FAULT;
     __HAL_RCC_GPIOA_CLK_ENABLE();
     HAL_GPIO_WritePin(IGNITION_PORT, IGNITION_PIN, GPIO_PIN_RESET);
     GPIO_InitTypeDef gpio = {.Pin = IGNITION_PIN,

@@ -47,12 +47,18 @@
 #define ST_ADC_FRESH_US 10000u
 #define ST_ADC_RATE_WINDOW_US 500000u
 #define ST_DEBUG_UART_BAUD 115200u
-#define ST_ADC_CLOCK_HZ 8192000u
-#define ST_ADC_OSR 2048u
-#define ST_ADC_RATE_MILLIHZ 2000000u
+#define ST_ADC_CLOCK_HZ 4096000u
+/* ADS1220 Turbo DR=110: Table 8-4, 2072 CLK periods per continuous result. */
+#define ST_ADC_OSR 0u /* Legacy field is inapplicable; explicit ADC1 metadata identifies format. */
+#define ST_ADC_CONVERSION_CYCLES 2072u
+#define ST_ADC_NOMINAL_RATE_MILLIHZ 2000000u
+#define ST_ADC_RATE_MILLIHZ 1976834u
+#define ST_ADC_REFERENCE_UV 5000000u
 #define ST_ADC_GAIN_CH0 1u
-#define ST_ADC_GAIN_CH1 1u
-#define ST_BRIDGE_EXCITATION_UV 2500000u
+#define ST_ADC_GAIN_CH1 0u /* No second differential channel is wired. */
+#define ST_BRIDGE_EXCITATION_UV 5000000u
+#define ST_CTRL_BATTERY_PRESENT 1
+#define ST_CTRL_BATTERY_VERIFIED 1 /* Accepted CAD contract; bench measurement still required. */
 #define ST_TRANSACTION_LIMIT UINT32_MAX
 #define ST_AUTO_ZERO_DEFAULT 0
 #define ST_ZERO_WINDOW_SAMPLES 512u

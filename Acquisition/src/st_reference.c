@@ -11,8 +11,15 @@ const uint8_t *st_ref_ignition_key(void)
 }
 st_ads_config st_ref_ads_config(bool accepted)
 {
-    return (st_ads_config){ST_REF_ADC_HZ, ST_REF_ADC_OSR, ST_REF_ADC_GAIN0, ST_REF_ADC_GAIN1, 2,
-                           accepted};
+    return (st_ads_config){.clock_hz = ST_REF_ADC_HZ,
+                           .reference_uv = ST_ADC_REFERENCE_UV,
+                           .avdd_uv = ST_BRIDGE_EXCITATION_UV,
+                           .gain = ST_REF_ADC_GAIN0,
+                           .data_rate = ADS1220_RATE_2000_TURBO,
+                           .operating_mode = ADS1220_MODE_TURBO,
+                           .pga_bypass = true,
+                           .continuous = true,
+                           .electrically_verified = accepted};
 }
 st_radio_config st_ref_radio_config(bool accepted)
 {
@@ -44,8 +51,11 @@ bool st_ref_rate_ok(uint32_t edges, uint64_t elapsed)
     if (elapsed < 250000 || elapsed > 2000000 || edges > 5000)
         return false;
     uint64_t observed = (uint64_t)edges * 1000000u;
-    /* Startup sanity check against nominal HSI clock, not clock metrology. */
-    return observed >= 1950u * elapsed && observed <= 2050u * elapsed;
+    /* +/-2% sanity window around CLK/2072, including IRQ window quantization.
+     * Both clocks share HSE: this verifies conversion cadence, not crystal accuracy. */
+    uint64_t expected = (uint64_t)ST_ADC_RATE_MILLIHZ * elapsed;
+    return observed * 1000u >= expected * 98u / 100u &&
+           observed * 1000u <= expected * 102u / 100u;
 }
 static bool number(const char *p, size_t n, uint32_t *out)
 {
@@ -73,8 +83,11 @@ bool st_ref_sensor_parse(st_ref_sensor *out, const char *data, size_t n)
         return false;
     static const char *const keys[] = {"ACK_SENSOR_RATING", "PROFILE_ID",       "SENSOR_ID",
                                        "WIRE_COUNT",        "RATED_FORCE_MN",   "EXCITATION_UV",
-                                       "MAX_SPAN_COUNTS",   "MIN_DELTA_COUNTS", "AUTO_ZERO"};
-    uint32_t values[9] = {0}, seen = 0;
+                                       "MAX_SPAN_COUNTS",   "MIN_DELTA_COUNTS", "AUTO_ZERO",
+                                       "PGA_GAIN", "PGA_BYPASS", "SENSITIVITY_NV_V",
+                                       "COMMON_MODE_MIN_UV", "COMMON_MODE_MAX_UV"};
+    enum { SENSOR_KEYS = 14 };
+    uint32_t values[SENSOR_KEYS] = {0}, seen = 0;
     size_t at = 0;
     while (at < n)
     {
@@ -98,42 +111,71 @@ bool st_ref_sensor_parse(st_ref_sensor *out, const char *data, size_t n)
             eq++;
         if (eq == end)
             return false;
-        unsigned key = 9;
-        for (unsigned i = 0; i < 9; i++)
+        unsigned key = SENSOR_KEYS;
+        for (unsigned i = 0; i < SENSOR_KEYS; i++)
             if (strlen(keys[i]) == eq - first && !memcmp(keys[i], data + first, eq - first))
             {
                 key = i;
                 break;
             }
-        if (key == 9 || (seen & (1u << key)) || !number(data + eq + 1, end - eq - 1, &values[key]))
+        if (key == SENSOR_KEYS || (seen & (1u << key)) || !number(data + eq + 1, end - eq - 1, &values[key]))
             return false;
         seen |= 1u << key;
     }
-    if ((seen & 255u) != 255u || values[0] != 1 || !values[1] || !values[2] ||
+    const uint32_t required = ((1u << SENSOR_KEYS) - 1u) & ~256u;
+    if ((seen & required) != required || values[0] != 1 || !values[1] || !values[2] ||
         (values[3] != 4 && values[3] != 6) || !values[4] || values[5] != ST_REF_BRIDGE_UV ||
-        !values[6] || values[6] >= 16777215 || values[7] <= values[6] || values[7] > 16777215)
+        !values[6] || values[6] >= 16777215 || values[7] <= values[6] || values[7] > 16777215 ||
+        values[9] > 128 || values[10] > 1 || !values[11])
         return false;
+    uint64_t differential = ((uint64_t)values[5] * values[11] + 999999999u) / 1000000000u;
+    if (!differential || differential > UINT32_MAX)
+        return false;
+    st_ads_config adc = st_ref_ads_config(true);
+    adc.gain = (uint8_t)values[9];
+    adc.pga_bypass = values[10] != 0;
+    adc.max_differential_uv = (uint32_t)differential;
+    adc.common_mode_min_uv = values[12];
+    adc.common_mode_max_uv = values[13];
+    adc.input_range_known = true;
+    if (!st_ads_config_valid(adc))
+        return false;
+    /* Bind electrical meaning, not formatting or the transient auto-zero option. */
+    uint8_t configuration[52];
+    unsigned index = 0;
+    for (unsigned i = 1; i < SENSOR_KEYS; i++)
+        if (i != 8)
+        {
+            st_put32(configuration + index, values[i]);
+            index += 4;
+        }
+    st_put32(configuration + index, 20261029u);
     st_cal_binding b = {.profile_id = values[1],
                         .sensor_id = values[2],
-                        .config_id = 20261020,
+                        .config_id = st_crc32(configuration, sizeof configuration),
                         .adc_clock_hz = ST_REF_ADC_HZ,
                         .osr = ST_REF_ADC_OSR,
                         .rate_millihz = ST_REF_ADC_RATE_MILLIHZ,
                         .excitation_nominal_uv = values[5],
                         .filter_id = 1,
                         .rated_force_nn = (uint64_t)values[4] * 1000000u,
-                        .gain0 = ST_REF_ADC_GAIN0,
+                        .gain0 = adc.gain,
                         .gain1 = ST_REF_ADC_GAIN1,
                         .wire_count = (uint8_t)values[3],
                         .power_mode = 2,
                         .verified = true,
-                        .simulated = false};
+                        .simulated = false,
+                        .adc_model = 1220,
+                        .reference_uv = ST_ADC_REFERENCE_UV,
+                        .input_mux = 3,
+                        .pga_bypass = adc.pga_bypass};
     if (!st_cal_binding_valid(b))
         return false;
     if ((seen & 256u) && values[8] > 1)
         return false;
     out->auto_zero = (seen & 256u) ? values[8] != 0 : ST_AUTO_ZERO_DEFAULT != 0;
     out->binding = b;
+    out->adc_config = adc;
     out->policy = (st_cal_policy){256, values[6], values[7], 100000, 5000000, 180000000};
     out->configured = true;
     return true;

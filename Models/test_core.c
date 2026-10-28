@@ -25,10 +25,7 @@ static st_capture capture(uint32_t seq)
 {
     st_capture c = {.time_us = (uint64_t)seq * 500,
                     .sequence = seq,
-                    .bytes = {1, 3, 0, 0, 1, 0, 0xff, 0xff, 0x00, 0, 0, 0}};
-    uint16_t crc = st_crc16(c.bytes, 9);
-    c.bytes[9] = (uint8_t)(crc >> 8);
-    c.bytes[10] = (uint8_t)crc;
+                    .bytes = {0, 1, 0}};
     return c;
 }
 static void test_crc_adc(void)
@@ -38,31 +35,30 @@ static void test_crc_adc(void)
     CHECK(st_crc32(vector, 9) == 0xcbf43926u);
     st_capture c = capture(1);
     st_adc_sample s = st_adc_decode(c.bytes);
-    CHECK(s.flags == 0 && s.ch0 == 256 && s.ch1 == -256 && s.status == 0x0103);
-    c.bytes[3] = 0x80;
-    c.bytes[4] = c.bytes[5] = 0;
-    c.bytes[6] = 0x7f;
-    c.bytes[7] = c.bytes[8] = 0xff;
-    uint16_t crc = st_crc16(c.bytes, 9);
-    c.bytes[9] = (uint8_t)(crc >> 8);
-    c.bytes[10] = (uint8_t)crc;
+    CHECK(s.flags == 0 && s.ch0 == 256 && s.ch1 == INT32_MIN && s.status == 0);
+    c.bytes[0] = 0x80;
+    c.bytes[1] = c.bytes[2] = 0;
     s = st_adc_decode(c.bytes);
-    CHECK(s.ch0 == -8388608 && s.ch1 == 8388607 && s.flags == ST_REC_SATURATED);
-    c.bytes[4] ^= 1;
+    CHECK(s.ch0 == -8388608 && s.ch1 == INT32_MIN && s.flags == ST_REC_SATURATED);
+    c.bytes[0] = 0x7f;
+    c.bytes[1] = c.bytes[2] = 0xff;
     s = st_adc_decode(c.bytes);
-    CHECK(s.flags & ST_REC_CRC);
-    c.bytes[0] = 0x0b;
-    c.bytes[2] = 1;
+    CHECK(s.ch0 == 8388607 && s.flags == ST_REC_SATURATED);
+    c.bytes[0] = c.bytes[1] = c.bytes[2] = 0xff;
+    s = st_adc_decode(c.bytes);
+    CHECK(s.ch0 == -1 && !s.flags);
+    c.bytes[0] = c.bytes[1] = c.bytes[2] = 0;
+    s = st_adc_decode(c.bytes);
+    CHECK(s.ch0 == 0 && !s.flags);
+    c.bytes[3] = 1;
     s = st_adc_decode(c.bytes);
     CHECK(s.flags & ST_REC_FORMAT);
-    c.bytes[0] = 0x75;
-    s = st_adc_decode(c.bytes);
-    CHECK(s.flags & ST_REC_ADC_FAULT);
     uint8_t record[32];
     st_record(record, &c, ST_REC_GAP, 4);
     CHECK(st_get32(record) == 1 && st_get64(record + 4) == 500 && st_get32(record + 24) == 4);
     CHECK(st_crc32(record, 28) == st_get32(record + 28));
-    GROUP("CRC vectors / ADS signed24 / bad CRC-status-padding / record CRC");
+    CHECK((int32_t)st_get32(record + 16) == INT32_MIN);
+    GROUP("CRC vectors / ADS1220 signed24 zero-negative-rails / absent channel / padding / record CRC");
 }
 static void test_ring(void)
 {
@@ -199,14 +195,16 @@ static st_async_result disk_poll(void *ctx, size_t *bytes)
 }
 static st_log_config config(void)
 {
-    return (st_log_config){.adc_clock_hz = 8192000,
-                           .osr = 2048,
-                           .rate_millihz = 2000000,
+    st_log_config cfg = {.adc_clock_hz = ST_ADC_CLOCK_HZ,
+                           .osr = ST_ADC_OSR,
+                           .rate_millihz = ST_ADC_RATE_MILLIHZ,
                            .boot_epoch = 7,
                            .gain_ch0 = 128,
-                           .gain_ch1 = 1,
+                           .gain_ch1 = 0,
                            .simulated = true,
                            .clock_verified = true};
+    Log_ApplyAds1220Metadata(&cfg, false, 0);
+    return cfg;
 }
 static void init_logger(st_logger *l, disk *d)
 {

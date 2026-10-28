@@ -5,6 +5,21 @@ static bool valid_gain(uint8_t g)
 {
     return g && g <= 128 && (g & (g - 1)) == 0;
 }
+void Log_ApplyAds1220Metadata(st_log_config *c, bool bypass, uint32_t measured)
+{
+    if (!c)
+        return;
+    c->adc_model = 1220;
+    c->channel_count = 1;
+    c->input_mux = 3; /* AIN1 positive, AIN2 negative */
+    c->operating_mode = 2; /* Turbo */
+    c->pga_bypass = bypass;
+    c->reference_uv = ST_ADC_REFERENCE_UV;
+    c->excitation_uv = ST_BRIDGE_EXCITATION_UV;
+    c->nominal_rate_millihz = ST_ADC_NOMINAL_RATE_MILLIHZ;
+    c->conversion_cycles = ST_ADC_CONVERSION_CYCLES;
+    c->measured_rate_millihz = measured;
+}
 static void header_build(st_logger *l)
 {
     uint8_t *h = l->header;
@@ -34,6 +49,27 @@ static void header_build(st_logger *l)
         st_put32(h + 72, c->zero_samples);
         st_put64(h + 76, c->zero_time_us);
     }
+    /* ADC1 extends only previously reserved header bytes; fixed record offsets
+     * and SZR1 are retained. INT32_MIN in the old ch1 slot means absent. */
+    memcpy(h + 84, "ADC1", 4);
+    st_put16(h + 88, 1);
+    st_put16(h + 90, 44);
+    st_put16(h + 92, c->adc_model);
+    h[94] = c->channel_count;
+    h[95] = 24;
+    st_put32(h + 96, c->reference_uv);
+    st_put32(h + 100, c->nominal_rate_millihz);
+    st_put32(h + 104, c->conversion_cycles);
+    st_put32(h + 108, c->measured_rate_millihz);
+    h[112] = c->input_mux;
+    h[113] = c->operating_mode;
+    h[114] = c->pga_bypass ? 1 : 0;
+    h[115] = 1; /* positive AIN1 */
+    h[116] = 2; /* negative AIN2 */
+    h[117] = 1; /* signed two's complement */
+    st_put32(h + 120, c->excitation_uv);
+    st_put32(h + 124, (c->clock_verified ? 1u : 0u) |
+                         (c->measured_rate_millihz ? 2u : 0u));
     st_put32(h + 508, st_crc32(h, 508));
 }
 void st_logger_init(st_logger *l, st_log_config cfg, st_file_port port)
@@ -51,8 +87,13 @@ bool st_logger_start(st_logger *l, uint64_t now)
 {
     const st_log_config *c = &l->config;
     if (l->state != ST_IDLE || l->generation == UINT32_MAX || !l->port.submit || !l->port.poll ||
-        !c->boot_epoch || !c->clock_verified || !c->adc_clock_hz || !c->osr || !c->rate_millihz ||
-        !valid_gain(c->gain_ch0) || !valid_gain(c->gain_ch1))
+        !c->boot_epoch || !c->clock_verified || c->adc_clock_hz != ST_ADC_CLOCK_HZ || c->osr ||
+        c->rate_millihz != ST_ADC_RATE_MILLIHZ || !valid_gain(c->gain_ch0) || c->gain_ch1 ||
+        c->adc_model != 1220 || c->channel_count != 1 || c->input_mux != 3 ||
+        c->operating_mode != 2 || c->reference_uv != ST_ADC_REFERENCE_UV ||
+        c->conversion_cycles != ST_ADC_CONVERSION_CYCLES ||
+        c->nominal_rate_millihz != ST_ADC_NOMINAL_RATE_MILLIHZ ||
+        c->excitation_uv != ST_BRIDGE_EXCITATION_UV || (c->pga_bypass && c->gain_ch0 > 4))
         return false;
     if (c->calibration_valid &&
         (!c->profile_id || !c->profile_version || !c->nano_newtons_per_count ||

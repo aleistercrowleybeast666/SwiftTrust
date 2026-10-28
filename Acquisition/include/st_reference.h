@@ -4,10 +4,10 @@
 #include "st_cal.h"
 #include "st_radio.h"
 #include "st_link2.h"
-/* Executable REFERENCE design, not a frozen PCB or hardware-test declaration.
- * Default ADC PGA1 avoids assuming a load-cell sensitivity or high-gain CM range.
- * ADC CLKIN is an external 8.192MHz oscillator; no MCU pin drives it by default.
- * MCU timestamp scale is nominal HSI; its accuracy must be measured on a board. */
+/* 2026-10-29 CAD contract, not a hardware-test declaration. Default ADC gain1
+ * bypass allows raw capture before a sensor profile is selected. 8.192MHz HSE
+ * feeds both the 96MHz MCU PLL and PA8 MCO1 /2 (4.096MHz ADC CLK).
+ * TIM5 timestamps use a separate 1MHz counter derived from the MCU bus clock. */
 enum
 {
     ST_REF_ADC_HZ = ST_ADC_CLOCK_HZ,
@@ -23,6 +23,7 @@ typedef struct
 {
     st_cal_binding binding;
     st_cal_policy policy;
+    st_ads_config adc_config;
     bool configured;
     bool auto_zero;
 } st_ref_sensor;

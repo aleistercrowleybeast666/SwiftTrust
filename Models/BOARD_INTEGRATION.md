@@ -1,3 +1,5 @@
+> 历史评审记录：本文中的旧ADC、时钟及引脚假设已由[2026-10-29双板硬件契约](REFERENCE_APPLICATION.md)替代；当前测试/交付见[R8硬件适配报告](R8_HARDWARE_ADAPTATION_20261029.md)。历史结果不代表当前固件或实板验证。
+
 > 2026-10-20 更新：下文是 b539928d 之前的组件阶段记录，已由实际双板 ReferenceApp 替代；当前入口、参考参数、NV与接线以 [REFERENCE_APPLICATION.md](REFERENCE_APPLICATION.md) 为准。未上板验证仍然成立。
 
 # 板级接入：当前依赖和可编译范围

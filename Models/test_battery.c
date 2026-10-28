@@ -9,6 +9,31 @@ static uint16_t BatteryTest_Code(uint32_t mv)
 #endif
 unsigned st_test_battery(unsigned *groups)
 {
+    /* G071 PA3 circuit is independent from the F411 build-time circuit flags. */
+    BatteryMonitor controller = {0};
+    st_voltage controller_vdda = {3300, 0, true, true};
+    Battery_UpdateCircuit(&controller, 2606, &controller_vdda, 0, true, true);
+    C(controller.voltage.valid && controller.voltage.mv >= 4199 &&
+      controller.voltage.mv <= 4202 && controller.voltage.mv != controller_vdda.mv);
+    Battery_UpdateCircuit(&controller, 2606, &controller_vdda, 0, false, true);
+    C(!controller.voltage.valid);
+    Battery_UpdateCircuit(&controller, 2606, &controller_vdda, 0, true, false);
+    C(!controller.voltage.valid);
+    controller_vdda = (st_voltage){3000, 100000, true, true};
+    Battery_UpdateCircuit(&controller, 2867, &controller_vdda, 100000, true, true);
+    C(controller.voltage.valid && controller.voltage.mv >= 4199 &&
+      controller.voltage.mv <= 4202);
+    Battery_UpdateCircuit(&controller, 2867, &controller_vdda, 1100001, true, true);
+    C(!controller.voltage.valid && !controller.initialized);
+    Battery_UpdateCircuit(&controller, 4095, &controller_vdda, 100000, true, true);
+    C(!controller.voltage.valid);
+    Battery_UpdateCircuit(&controller, 0, &controller_vdda, 100000, true, true);
+    C(!controller.voltage.valid);
+    controller_vdda.valid = false;
+    Battery_UpdateCircuit(&controller, 2867, &controller_vdda, 100000, true, true);
+    C(!controller.voltage.valid);
+    puts("PASS controller PA3 divider, independent circuit acceptance, VDDA compensation and stale/error rejection");
+    (*groups)++;
     BatteryMonitor battery={0};
     st_voltage vdda={3300,0,true,true};
 #if !ST_ACQ_BATTERY_PRESENT || !ST_ACQ_BATTERY_VERIFIED

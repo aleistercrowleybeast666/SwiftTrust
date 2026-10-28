@@ -1,3 +1,5 @@
+> 历史评审记录：本文中的旧ADC、时钟及引脚假设已由[2026-10-29双板硬件契约](REFERENCE_APPLICATION.md)替代；当前测试/交付见[R8硬件适配报告](R8_HARDWARE_ADAPTATION_20261029.md)。历史结果不代表当前固件或实板验证。
+
 # 首次START / 取消再启动回归
 
 2026-10-20。仅离线测试，没有连接硬件。应用准备逻辑由F411 `reference_main.c` 实际调用的 `st_ref_prepare_start` 提供；回归经真实 `st2_server_receive`、`st_cal_endpoint_port`、`st_cal_apply_logger`、`st_logger_start` 生成STLOG001头。文件提交/完成由有界内存端口模拟，TF硬件可靠性不在此测试中。

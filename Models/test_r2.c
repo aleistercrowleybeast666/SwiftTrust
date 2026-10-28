@@ -253,7 +253,7 @@ static void Details(void)
     st_logger logger;
     st_logger_init(&logger, (st_log_config){0}, (st_file_port){0});
     logger.config.clock_verified = true;
-    logger.config.rate_millihz = 2000000;
+    logger.config.rate_millihz = ST_ADC_RATE_MILLIHZ;
     logger.last_sequence = 777;
     logger.have_sample = true;
     logger.last_time_us = 100000;
@@ -279,10 +279,10 @@ static void Details(void)
     C(st_get32(client.details.data + 4) == 777 && client.details_received_ms == 1);
     st_ui ui = {.page = ST_UI_STATUS, .top = 4, .selection = 5};
     st_ui_model model;
-    st_voltage_view own = {.kind = ST_V_MEASURED, .mv = 3300};
+    st_voltage_view own = {.kind = ST_V_MEASURED, .mv = 4200};
     st_ui2_render(&ui, &client, own, 1, &model);
-    C(!strcmp(model.rows[1], "ADC 2000Hz 900ms"));
-    C(!strcmp(model.rows[2], "MCU VDDA 3.30V"));
+    C(!strcmp(model.rows[1], "ADC 1976Hz 900ms"));
+    C(!strcmp(model.rows[2], Ui_Text("遥控电池：4.20V", "CTRL BAT 4.20V")));
     for (unsigned row = 0; row < ST_OLED_ROWS; row++)
     {
         unsigned width;
@@ -307,7 +307,7 @@ static void Details(void)
             .type = ST2_ACK, .epoch = client.epoch, .id = client.request.id, .flags = ST2_OLD},
         repeat);
     C(st2_client_receive(&client, repeat, n, 2) && client.link == ST2_LINK_DOWN && !client.pending);
-    G("R8 real ADC details render / lowercase z raster / VDDA label / common ID / frozen two-part DATA / reorder / duplicate / "
+    G("R8 real ADC details render / lowercase z raster / controller battery label / common ID / frozen two-part DATA / reorder / duplicate / "
       "late view cannot replace new query");
 }
 static void Heartbeat(void)

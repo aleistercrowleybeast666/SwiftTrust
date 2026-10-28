@@ -5,7 +5,7 @@
 #include <stdint.h>
 #include <stddef.h>
 typedef struct { volatile uint32_t CR1, CCMR1, CNT, ARR, CCR1, EGR, SR, PSC, CCER; } TIM_TypeDef;
-typedef struct { uint32_t unused; } GPIO_TypeDef;
+typedef struct { volatile uint32_t MODER, BSRR; } GPIO_TypeDef;
 typedef struct { uint32_t Pin, Mode, Pull, Speed, Alternate; } GPIO_InitTypeDef;
 typedef struct { uint32_t APB1CLKDivider; } RCC_ClkInitTypeDef;
 extern TIM_TypeDef pulse_model_timer;
@@ -25,6 +25,9 @@ extern GPIO_TypeDef pulse_model_gpio;
 #define GPIO_PULLDOWN 0x02u
 #define GPIO_SPEED_FREQ_LOW 0u
 #define GPIO_AF1_TIM2 0x01u
+#define GPIO_MODER_MODER0 0x03u
+#define GPIO_MODER_MODER0_0 0x01u
+#define MODIFY_REG(reg, clear, set) ((reg) = ((reg) & ~(clear)) | (set))
 #define RCC_HCLK_DIV1 0u
 #define RCC_HCLK_DIV2 0x1000u
 #define __HAL_RCC_GPIOA_CLK_ENABLE() ((void)0)

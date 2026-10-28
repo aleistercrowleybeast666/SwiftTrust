@@ -1,56 +1,8 @@
 config load ${PROJECT_ROOT}\Acquisition\SwiftThrust_Acquisition_Candidate\SwiftThrust_Acquisition_Candidate.ioc
 get version
-set pin PC4 GPIO_EXTI4
-lock pin PC4 true
-set gpio parameters PC4 GPIO_Label CAND_ADC_DRDY
-set gpio parameters PC4 GPIO_ModeDefaultEXTI GPIO_MODE_IT_FALLING
-set pin PC7 GPIO_EXTI7
-lock pin PC7 true
-set gpio parameters PC7 GPIO_Label CAND_RADIO_DIO1
-set gpio parameters PC7 GPIO_ModeDefaultEXTI GPIO_MODE_IT_RISING
-set mode SYS Serial_Wire
-set userconst SWIFTTHRUST_ADC_AVDD_MV_CANDIDATE 3300
-set userconst SWIFTTHRUST_ADC_DVDD_MV_CANDIDATE 3300
-set userconst SWIFTTHRUST_BRIDGE_EXC_MV_CANDIDATE 2500
-set userconst SWIFTTHRUST_CH2_SCALE_PPM_CANDIDATE 400000
-set pin PB6 GPIO_Input
-lock pin PB6 true
-set gpio parameters PB6 GPIO_Label CAND_LED_VOLT_1
-set pin PB7 GPIO_Input
-lock pin PB7 true
-set gpio parameters PB7 GPIO_Label CAND_LED_VOLT_2
-set pin PB8 GPIO_Input
-lock pin PB8 true
-set gpio parameters PB8 GPIO_Label CAND_LED_VOLT_3
-set pin PB9 GPIO_Input
-lock pin PB9 true
-set gpio parameters PB9 GPIO_Label CAND_LED_VOLT_4
 get mode active .*
-set pin PA9 USART1_TX
-lock pin PA9 true
-set gpio parameters PA9 GPIO_Label CAND_DEBUG_UART_TX
-set pin PA10 USART1_RX
-lock pin PA10 true
-set gpio parameters PA10 GPIO_Label CAND_DEBUG_UART_RX
-set mode USART1 Asynchronous
-set pin PA0-WKUP TIM2_CH1
-lock pin PA0-WKUP true
-set gpio parameters PA0-WKUP GPIO_Label CAND_IGNITION_SIGNAL
-set gpio parameters PA0-WKUP GPIO_PuPd GPIO_PULLDOWN
-set mode TIM2 "PWM Generation1 CH1"
-set mode TIM2 Internal
-set mode TIM2 OPM_bit
-set ip parameters TIM2 Prescaler 15
-set ip parameters TIM2 Period 1000000
-set ip parameters TIM2 OCMode_PWM TIM_OCMODE_PWM2
-set ip parameters TIM2 Pulse 1
-set ip parameters TIM2 TIM_OnePulse_Mode TIM_OPMODE_SINGLE
-set ip parameters ADC1 SamplingTime-0#ChannelRegularConversion ADC_SAMPLETIME_480CYCLES
-set pin PB0 GPIO_Output
-lock pin PB0 true
-set gpio parameters PB0 GPIO_Label CAND_LINK_LED
-set gpio parameters PB0 PinState GPIO_PIN_RESET
 isPluginError "Pinout & Configuration"
+isPluginError "Clock Configuration"
 get pinout
 config save ${PROJECT_ROOT}\Acquisition\SwiftThrust_Acquisition_Candidate\SwiftThrust_Acquisition_Candidate.ioc
 exit

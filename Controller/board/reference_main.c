@@ -1,4 +1,4 @@
-/* Executable replaceable reference board; PA11/PA12 reservations untouched. */
+/* Executable G071KBT6 board contract, ProDoc_Controller 2026-10-29. */
 #if defined(ST_REFERENCE_APPLICATION)
 #include "stm32g0xx_hal.h"
 #include "stm32g0xx_ll_adc.h"
@@ -10,6 +10,7 @@
 #include "st_debug_uart_hal.h"
 #include "st_g0_oled.h"
 #include "st_cal_remote.h"
+#include "st_battery.h"
 #include <stdio.h>
 #include <string.h>
 static SPI_HandleTypeDef rf_spi;
@@ -37,14 +38,18 @@ static st_pairing pairing;
 static AutoLink auto_link;
 static st_console console;
 static st_flash_window flash_window;
-static volatile bool adc_done;
+static volatile bool adc_done, adc_failed;
 static volatile uint16_t adc_raw;
-static bool paired, change_pair, adc_busy, oled_reported;
+static bool paired, change_pair, adc_busy, adc_battery_channel, oled_reported;
 static uint32_t last_ms, voltage_ms, adc_started, render_ms;
 static uint32_t auto_connect_ms;
 static uint64_t uptime_ms;
 static st_voltage supply;
 static st_voltage_view supply_view;
+static BatteryMonitor battery;
+static st_voltage_view battery_view;
+#define CONTROLLER_ADC_PERIOD_MS 100u
+#define CONTROLLER_ADC_TIMEOUT_MS 20u
 static const st_voltage_policy supply_policy = {ST_VDDA_DISPLAY_LEVELS_MV, ST_VDDA_HYSTERESIS_MV,
                                                 ST_VDDA_FRESH_MS, true};
 static uint32_t now_ms(void *ctx)
@@ -92,10 +97,10 @@ void HAL_MspInit(void)
 {
     __HAL_RCC_SYSCFG_CLK_ENABLE();
     __HAL_RCC_PWR_CLK_ENABLE();
-    /* Same dead-battery strobe as ST's G071 examples. Keep physical PA9/10;
-     * PA11/12 reservations are not USART remap destinations. */
+    /* RM0444 CFGR1: physical PA11/PA12 operate as logical PA9/PA10.
+     * The UART port configures GPIOA 9/10 AF1; original pads become analog. */
     HAL_SYSCFG_StrobeDBattpinsConfig(SYSCFG_CFGR1_UCPD1_STROBE | SYSCFG_CFGR1_UCPD2_STROBE);
-    CLEAR_BIT(SYSCFG->CFGR1, SYSCFG_CFGR1_PA11_RMP | SYSCFG_CFGR1_PA12_RMP);
+    SET_BIT(SYSCFG->CFGR1, SYSCFG_CFGR1_PA11_RMP | SYSCFG_CFGR1_PA12_RMP);
 }
 void SystemClock_Config(void)
 {
@@ -146,9 +151,12 @@ void HAL_TIM_Encoder_MspInit(TIM_HandleTypeDef *h)
 }
 void HAL_ADC_MspInit(ADC_HandleTypeDef *h)
 {
-    (void)h;
-    __HAL_RCC_ADC_CLK_ENABLE();
-    irq(ADC1_COMP_IRQn, 2);
+    if (h->Instance == ADC1)
+    {
+        __HAL_RCC_ADC_CLK_ENABLE();
+        gpio(GPIOA, GPIO_PIN_3, GPIO_MODE_ANALOG, GPIO_NOPULL, 0);
+        irq(ADC1_COMP_IRQn, 2);
+    }
 }
 static void board_init(void)
 {
@@ -223,7 +231,7 @@ static void board_init(void)
     need(HAL_ADCEx_Calibration_Start(&vref_adc));
     ADC_ChannelConfTypeDef a = {0};
     a.Channel = ADC_CHANNEL_VREFINT;
-    a.Rank = ADC_RANK_CHANNEL_NUMBER;
+    a.Rank = ADC_REGULAR_RANK_1;
     a.SamplingTime = ADC_SAMPLINGTIME_COMMON_1;
     need(HAL_ADC_ConfigChannel(&vref_adc, &a));
 }
@@ -242,11 +250,12 @@ static void changed(void *ctx)
 static void status(void *ctx)
 {
     (void)ctx;
-    char s[120];
-    (void)snprintf(s, sizeof s, "LINK %u RF %u OLED %u NV %u VDDA %lu VALID %u\r\n",
+    char s[160];
+    (void)snprintf(s, sizeof s, "LINK %u RF %u OLED %u NV %u VDDA %lu VALID %u CTRL_BAT %lu VALID %u\r\n",
                    (unsigned)client.link, (!radio.failed && radio.phase >= 13) ? 1u : 0u,
                    oled.failed ? 0u : 1u, (unsigned)pairing.store.status, (unsigned long)supply.mv,
-                   supply.valid ? 1u : 0u);
+                   supply.valid ? 1u : 0u, (unsigned long)battery.voltage.mv,
+                   battery.voltage.valid ? 1u : 0u);
     emit(NULL, s);
     emit(NULL, ignition.auth.key_bound ? "IGN PROJECT CHECK READY / NO EXTERNAL FEEDBACK\r\n"
                                        : "IGN WAIT AUTO LINK\r\n");
@@ -289,6 +298,24 @@ static void client_init(void)
     st_cal_ui_init(&cal_ui, st_cal_remote_port(&cal_remote));
     st_ui_attach_calibration(&ui, &cal_ui);
 }
+static HAL_StatusTypeDef Controller_StartAdc(uint32_t channel, bool battery_channel, uint32_t ms)
+{
+    ADC_ChannelConfTypeDef config = {0};
+    config.Channel = channel;
+    config.Rank = ADC_REGULAR_RANK_1;
+    config.SamplingTime = ADC_SAMPLINGTIME_COMMON_1;
+    HAL_StatusTypeDef result = HAL_ADC_ConfigChannel(&vref_adc, &config);
+    if (result != HAL_OK)
+        return result;
+    adc_done = adc_failed = false;
+    adc_battery_channel = battery_channel;
+    adc_started = ms;
+    adc_busy = true;
+    result = HAL_ADC_Start_IT(&vref_adc);
+    if (result != HAL_OK)
+        adc_busy = false;
+    return result;
+}
 static void voltage_step(uint32_t ms)
 {
     if (adc_done)
@@ -296,29 +323,47 @@ static void voltage_step(uint32_t ms)
         uint32_t mask = __get_PRIMASK();
         __disable_irq();
         uint16_t raw = adc_raw;
+        bool failed = adc_failed;
         adc_done = false;
         __set_PRIMASK(mask);
-        (void)HAL_ADC_Stop_IT(&vref_adc);
+        failed |= HAL_ADC_Stop_IT(&vref_adc) != HAL_OK;
         adc_busy = false;
-        uint32_t mv = 0;
-        bool valid = st_ref_vdda_mv(*VREFINT_CAL_ADDR, VREFINT_CAL_VREF, raw, &mv);
-        supply = (st_voltage){mv, uptime_ms * 1000, true, valid};
+        if (failed)
+        {
+            supply.valid = false;
+            Battery_Invalidate(&battery);
+        }
+        else if (adc_battery_channel)
+            Battery_UpdateCircuit(&battery, raw, &supply, uptime_ms * 1000,
+                                    ST_CTRL_BATTERY_PRESENT, ST_CTRL_BATTERY_VERIFIED);
+        else
+        {
+            uint32_t mv = 0;
+            bool valid = st_ref_vdda_mv(*VREFINT_CAL_ADDR, VREFINT_CAL_VREF, raw, &mv);
+            supply = (st_voltage){mv, uptime_ms * 1000, true, valid};
+            if (!valid || Controller_StartAdc(ADC_CHANNEL_3, true, ms) != HAL_OK)
+                Battery_Invalidate(&battery);
+        }
     }
-    if (adc_busy && (uint32_t)(ms - adc_started) > 20)
+    if (adc_busy && (uint32_t)(ms - adc_started) > CONTROLLER_ADC_TIMEOUT_MS)
     {
         (void)HAL_ADC_Stop_IT(&vref_adc);
         adc_busy = false;
         supply.valid = false;
+        adc_done = false;
+        Battery_Invalidate(&battery);
     }
-    if (!adc_busy && (uint32_t)(ms - voltage_ms) >= 100)
+    if (!adc_busy && (uint32_t)(ms - voltage_ms) >= CONTROLLER_ADC_PERIOD_MS)
     {
         voltage_ms = ms;
-        adc_started = ms;
-        adc_busy = HAL_ADC_Start_IT(&vref_adc) == HAL_OK;
-        if (!adc_busy)
+        if (Controller_StartAdc(ADC_CHANNEL_VREFINT, false, ms) != HAL_OK)
+        {
             supply.valid = false;
+            Battery_Invalidate(&battery);
+        }
     }
     supply_view = st_voltage_evaluate(&supply_policy, &supply, uptime_ms * 1000, supply_view);
+    battery_view = Battery_Evaluate(&battery, uptime_ms * 1000);
 }
 static void event(st_ui_event e, uint32_t ms)
 {
@@ -434,7 +479,7 @@ int main(void)
         if ((uint32_t)(ms - render_ms) >= 100)
         {
             render_ms = ms;
-            st_ui2_render(&ui, &client, supply_view, ms, &model);
+            st_ui2_render(&ui, &client, battery_view, ms, &model);
             st_ui_raster(&model, frame);
             (void)st_oled_present(&oled, frame);
         }
@@ -488,7 +533,7 @@ void HAL_ADC_ErrorCallback(ADC_HandleTypeDef *h)
 {
     if (h == &vref_adc)
     {
-        adc_raw = 0;
+        adc_failed = true;
         adc_done = true;
     }
 }

@@ -6,8 +6,8 @@
   "width": 12,
   "height": 14,
   "weight": 500,
-  "glyph_count": 123,
-  "glyph_bitmap_bytes": 2952,
+  "glyph_count": 124,
+  "glyph_bitmap_bytes": 2976,
   "codepoints": [
     183,
     19979,
@@ -115,6 +115,7 @@
     36830,
     36831,
     36873,
+    36965,
     37096,
     37197,
     37319,

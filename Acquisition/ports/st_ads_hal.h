@@ -5,18 +5,22 @@
 typedef struct
 {
     SPI_HandleTypeDef *spi;
-    GPIO_TypeDef *cs, *reset;
-    uint16_t cs_pin, reset_pin;
+    GPIO_TypeDef *cs;
+    uint16_t cs_pin;
     uint32_t (*now_ms)(void);
     uint32_t started_ms, timeout_ms;
     _Atomic(unsigned) transfer;
     bool verified;
 } st_ads_hal;
 /* Config-phase owner only. Handles already use SPI1 mode1/8bit/MSB and DMA.
- * Pins, CLKIN, analog profile and reset pin electrical behavior are external.
- * Quiesce this owner before passing the same SPI to st_f4_capture. */
+ * Pins, MCO clock and analog profile are checked by the board contract.
+ * Quiesce this owner before passing the same SPI to st_f4_capture.
+ * After a transport fault, first complete/abort DMA and require SPI READY,
+ * then rebind this port before Ads1220_Reinitialize. Reinitializing only the
+ * command state machine cannot clear this transport's latched ADS_FAILED.
+ * The board deliberately requires reset after a recording source fault. */
 bool st_ads_hal_bind(st_ads_hal *, SPI_HandleTypeDef *, GPIO_TypeDef *cs, uint16_t cs_pin,
-                     GPIO_TypeDef *reset, uint16_t reset_pin, uint32_t (*now_ms)(void),
+                     uint32_t (*now_ms)(void),
                      uint32_t timeout_ms, bool verified);
 st_ads_port st_ads_hal_port(st_ads_hal *);
 void st_ads_hal_complete(st_ads_hal *, SPI_HandleTypeDef *);

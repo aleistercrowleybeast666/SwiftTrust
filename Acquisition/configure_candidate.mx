@@ -1,4 +1,4 @@
-load STM32F411RCTx
+config load ${PROJECT_ROOT}\Acquisition\SwiftThrust_Acquisition_Candidate\SwiftThrust_Acquisition_Candidate.ioc
 get version
 project name SwiftThrust_Acquisition_Candidate
 project path ${PROJECT_ROOT}\Acquisition
@@ -26,10 +26,6 @@ set pin PC4 GPIO_EXTI4
 lock pin PC4 true
 set gpio parameters PC4 GPIO_Label CAND_ADC_DRDY
 set gpio parameters PC4 GPIO_ModeDefaultEXTI GPIO_MODE_IT_FALLING
-set pin PC5 GPIO_Output
-lock pin PC5 true
-set gpio parameters PC5 GPIO_Label CAND_ADC_SYNC_RESET
-set gpio parameters PC5 PinState GPIO_PIN_SET
 set pin PC8 SDIO_D0
 lock pin PC8 true
 set gpio parameters PC8 GPIO_Label CAND_TF_D0
@@ -78,13 +74,13 @@ set gpio parameters PB2 PinState GPIO_PIN_SET
 set pin PC0 ADC1_IN10
 lock pin PC0 true
 set gpio parameters PC0 GPIO_Label CAND_ACQUISITION_BATTERY
-set pin PB6 GPIO_Input
+set pin PB6 GPIO_Output
 lock pin PB6 true
 set gpio parameters PB6 GPIO_Label CAND_LED_VOLT_1
-set pin PB7 GPIO_Input
+set pin PB7 GPIO_Output
 lock pin PB7 true
 set gpio parameters PB7 GPIO_Label CAND_LED_VOLT_2
-set pin PB8 GPIO_Input
+set pin PB8 GPIO_Output
 lock pin PB8 true
 set gpio parameters PB8 GPIO_Label CAND_LED_VOLT_3
 set pin PA13 SYS_JTMS-SWDIO
@@ -94,20 +90,19 @@ set pin PA14 SYS_JTCK-SWCLK
 lock pin PA14 true
 set gpio parameters PA14 GPIO_Label CAND_SWCLK
 set mode SYS Serial_Wire
-set userconst SWIFTTHRUST_ADC_AVDD_MV_CANDIDATE 3300
+set userconst SWIFTTHRUST_ADC_AVDD_MV_CANDIDATE 5000
 set userconst SWIFTTHRUST_ADC_DVDD_MV_CANDIDATE 3300
-set userconst SWIFTTHRUST_BRIDGE_EXC_MV_CANDIDATE 2500
-set userconst SWIFTTHRUST_CH2_SCALE_PPM_CANDIDATE 400000
-set pin PB6 GPIO_Input
+set userconst SWIFTTHRUST_BRIDGE_EXC_MV_CANDIDATE 5000
+set pin PB6 GPIO_Output
 lock pin PB6 true
 set gpio parameters PB6 GPIO_Label CAND_LED_VOLT_1
-set pin PB7 GPIO_Input
+set pin PB7 GPIO_Output
 lock pin PB7 true
 set gpio parameters PB7 GPIO_Label CAND_LED_VOLT_2
-set pin PB8 GPIO_Input
+set pin PB8 GPIO_Output
 lock pin PB8 true
 set gpio parameters PB8 GPIO_Label CAND_LED_VOLT_3
-set pin PB9 GPIO_Input
+set pin PB9 GPIO_Output
 lock pin PB9 true
 set gpio parameters PB9 GPIO_Label CAND_LED_VOLT_4
 get mode active SPI1
@@ -127,17 +122,34 @@ set gpio parameters PA0-WKUP GPIO_PuPd GPIO_PULLDOWN
 set mode TIM2 "PWM Generation1 CH1"
 set mode TIM2 Internal
 set mode TIM2 OPM_bit
-set ip parameters TIM2 Prescaler 15
+set ip parameters TIM2 Prescaler 95
 set ip parameters TIM2 Period 1000000
 set ip parameters TIM2 OCMode_PWM TIM_OCMODE_PWM2
 set ip parameters TIM2 Pulse 1
 set ip parameters TIM2 TIM_OnePulse_Mode TIM_OPMODE_SINGLE
 set ip parameters ADC1 SamplingTime-0#ChannelRegularConversion ADC_SAMPLETIME_480CYCLES
-set pin PB0 GPIO_Output
-lock pin PB0 true
-set gpio parameters PB0 GPIO_Label CAND_LINK_LED
-set gpio parameters PB0 PinState GPIO_PIN_RESET
+set pin PB10 GPIO_Output
+lock pin PB10 true
+set gpio parameters PB10 GPIO_Label CAND_LINK_LED
+set gpio parameters PB10 PinState GPIO_PIN_RESET
+set pin PA8 RCC_MCO_1
+lock pin PA8 true
+set gpio parameters PA8 GPIO_Label CAND_ADC_CLK
+set mode RCC HSE-External-Oscillator
+set gpio parameters PH0.* GPIO_Label CAND_HSE_IN
+set gpio parameters PH1.* GPIO_Label CAND_HSE_OUT
+set ip parameters RCC HSE_VALUE 8192000
+set ip parameters RCC PLLM 8
+set ip parameters RCC PLLN 375
+set ip parameters RCC PLLP RCC_PLLP_DIV4
+set ip parameters RCC PLLQ 8
+set ip parameters RCC PLLSourceVirtual RCC_PLLSOURCE_HSE
+set ip parameters RCC SYSCLKSource RCC_SYSCLKSOURCE_PLLCLK
+set ip parameters RCC APB1CLKDivider RCC_HCLK_DIV2
+set ip parameters RCC RCC_MCO1Source RCC_MCO1SOURCE_HSE
+set ip parameters RCC RCC_MCODiv1 RCC_MCODIV_2
 isPluginError "Pinout & Configuration"
+isPluginError "Clock Configuration"
 get pinout
-config save ${PROJECT_ROOT}\Acquisition\SwiftThrust_Acquisition_Candidate.ioc
+config save ${PROJECT_ROOT}\Acquisition\SwiftThrust_Acquisition_Candidate\SwiftThrust_Acquisition_Candidate.ioc
 exit

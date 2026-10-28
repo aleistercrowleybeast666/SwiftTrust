@@ -388,10 +388,11 @@ static void Ui_GetLine(const st_ui *ui, const st2_client *client, st_voltage_vie
         else if (item == 6)
         {
             if (own.kind == ST_V_UNKNOWN || own.kind == ST_V_STALE)
-                text = "MCU VDDA UNKNOWN";
+                text = Ui_Text("遥控电池：未知", "CTRL BAT UNKNOWN");
             else
             {
-                (void)snprintf(line, ST_UI_ROW_BYTES, "MCU VDDA %lu.%02luV",
+                (void)snprintf(line, ST_UI_ROW_BYTES, "%s%lu.%02luV",
+                               Ui_Text("遥控电池：", "CTRL BAT "),
                                (unsigned long)(own.mv / 1000u),
                                (unsigned long)((own.mv % 1000u) / 10u));
                 return;

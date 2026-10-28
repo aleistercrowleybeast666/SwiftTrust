@@ -46,12 +46,9 @@ set gpio parameters PA1 GPIO_Label CAND_ENCODER_B
 set pin PA2 GPIO_Input
 lock pin PA2 true
 set gpio parameters PA2 GPIO_Label CAND_ENCODER_PRESS
-set pin PA3 GPIO_Input
+set pin PA3 ADC1_IN3
 lock pin PA3 true
-set gpio parameters PA3 GPIO_Label CAND_OPERATION_KEY
-set pin PA4 ADC1_IN4
-lock pin PA4 true
-set gpio parameters PA4 GPIO_Label CAND_CONTROLLER_BATTERY
+set gpio parameters PA3 GPIO_Label CAND_CONTROLLER_BATTERY
 set pin PA13 SYS_SWDIO
 lock pin PA13 true
 set gpio parameters PA13 GPIO_Label CAND_SWDIO
@@ -63,18 +60,30 @@ set mode SYS Serial_Wire
 get mode active SPI1
 get mode active I2C1
 get mode active TIM2
-set pin PA9 USART1_TX
-lock pin PA9 true
-set gpio parameters PA9 GPIO_Label CAND_DEBUG_UART_TX
-set pin PA10 USART1_RX
-lock pin PA10 true
-set gpio parameters PA10 GPIO_Label CAND_DEBUG_UART_RX
+lock pin PA9 false
+lock pin PA10 false
+set mode SYS PINREMAP
+set mode SYS PINREMAP_10_12
+set pin "PA9 [PA11]" USART1_TX
+lock pin "PA9 [PA11]" true
+set gpio parameters PA9.* GPIO_Label CAND_DEBUG_UART_TX
+set pin "PA10 [PA12]" USART1_RX
+lock pin "PA10 [PA12]" true
+set gpio parameters PA10.* GPIO_Label CAND_DEBUG_UART_RX
 set mode USART1 Asynchronous
 set pin PB0 GPIO_Output
 lock pin PB0 true
 set gpio parameters PB0 GPIO_Label CAND_LINK_LED
 set gpio parameters PB0 PinState GPIO_PIN_RESET
+set ip parameters SPI1 BaudRatePrescaler SPI_BAUDRATEPRESCALER_4
+set mode ADC1 IN-Vrefint
+set ip parameters ADC1 ClockPrescaler ADC_CLOCK_SYNC_PCLK_DIV2
+set ip parameters ADC1 SamplingTimeCommon1 ADC_SAMPLETIME_160CYCLES_5
+set ip parameters ADC1 ScanConvMode ADC_SCAN_DISABLE
+set ip parameters ADC1 Channel-0#ChannelRegularConversion ADC_CHANNEL_VREFINT
+set gpio parameters PA2 GPIO_PuPd GPIO_PULLUP
 isPluginError "Pinout & Configuration"
+isPluginError "Clock Configuration"
 get pinout
-config save ${PROJECT_ROOT}\Controller\SwiftThrust_Controller_Candidate.ioc
+config save ${PROJECT_ROOT}\Controller\SwiftThrust_Controller_Candidate\SwiftThrust_Controller_Candidate.ioc
 exit

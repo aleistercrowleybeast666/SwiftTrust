@@ -1,3 +1,5 @@
+> 历史评审记录：本文中的旧ADC、时钟及引脚假设已由[2026-10-29双板硬件契约](REFERENCE_APPLICATION.md)替代；当前测试/交付见[R8硬件适配报告](R8_HARDWARE_ADAPTATION_20261029.md)。历史结果不代表当前固件或实板验证。
+
 > 历史阶段记录。当前OLED/菜单/协议/实现状态以../HANDOFF.md、OLED_REFERENCE.md和../PROTOCOLS.md为准。
 
 # SwiftThrust v0.1：资源、接口及调度候选

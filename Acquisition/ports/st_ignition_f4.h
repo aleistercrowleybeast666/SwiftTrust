@@ -6,4 +6,6 @@ IgnitionOutputResult IgnitionPulse_Init(void);
 IgnitionOutputResult IgnitionPulse_Start(void *);
 IgnitionOutputResult IgnitionPulse_Stop(void *);
 bool IgnitionPulse_IsRunning(void *);
+/* NMI-safe permanent cutoff. Only a hardware reset can restore authorization. */
+void IgnitionPulse_FaultIsr(void);
 #endif

@@ -29,6 +29,11 @@ typedef struct
     uint64_t rated_force_nn;
     uint8_t gain0, gain1, wire_count, power_mode;
     bool verified, simulated;
+    /* Zero denotes the historical ADS131M02 profile. Never matches ADS1220. */
+    uint16_t adc_model;
+    uint32_t reference_uv;
+    uint8_t input_mux;
+    bool pga_bypass;
 } st_cal_binding;
 typedef struct
 {

@@ -17,8 +17,12 @@ typedef struct
     uint32_t filtered_mv;
     bool initialized, blinking;
 } BatteryMonitor;
-/* PC0 ADC1_IN10: 10k from BAT+ to PC0, 10k PC0 to GND, 100nF PC0 to GND.
- * VREFINT provides actual VDDA; this is a voltage estimate, not a fuel gauge. */
+/* PC0/F411 or PA3/G071: 10k from BAT+ to input, 10k || 100nF to GND.
+ * VREFINT provides actual VDDA; this is a voltage estimate, not a fuel gauge.
+ * Circuit acceptance is independent for the two boards. */
+void Battery_UpdateCircuit(BatteryMonitor *, uint16_t code, const st_voltage *vdda,
+                            uint64_t now_us, bool present, bool scale_verified);
+/* Acquisition board's configured circuit. */
 void Battery_Update(BatteryMonitor *, uint16_t code, const st_voltage *vdda, uint64_t now_us);
 void Battery_Invalidate(BatteryMonitor *);
 st_voltage_view Battery_Evaluate(BatteryMonitor *, uint64_t now_us);

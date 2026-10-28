@@ -3,13 +3,14 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
-/* Contract only. No HAL implementation, pins, clocks or output driver exists. */
+/* Legacy standalone interface, unused by ReferenceApp. Actual board integration
+ * lives in board/reference_main.c and ports; see Models/reference_pins.csv. */
 #if defined(ST_TARGET_BUILD) || defined(__arm__) || defined(__thumb__) || defined(__ICCARM__) ||   \
     defined(__ARMCC_VERSION)
 #error                                                                                             \
     "SwiftThrust board UNBOUND: confirm schematic, power, clocks, DMA and supply monitors before target integration"
 #endif
-#define ST_ADC_FRAME_BYTES 12u
+#define ST_ADC_FRAME_BYTES 3u
 #define ST_REQUESTED_SAMPLE_RATE_SPS 2000u
 /* Called with the DRDY-edge timestamp, not SD/write/radio completion time.
  * DMA buffers remain owned by producer until the consumer explicitly releases.
@@ -36,7 +37,7 @@ typedef struct
     bool valid;
 } st_supply_measurement;
 /* Future implementations must be asynchronous/bounded and return UNBOUND
- * until the actual board is verified. CRC, conversion and file work stay out
+ * until explicitly implemented. Conversion and file work stay out
  * of DRDY ISR. SD completion != durable file sync. Radio is drop-on-busy. */
 st_io_result st_bsp_adc_submit_dma(uint32_t sequence, uint64_t drdy_time_us);
 st_io_result st_bsp_storage_append(const uint8_t *data, size_t length);

@@ -4,8 +4,8 @@ Acquisition,PA6,22,SPI1_MISO,ADC_DOUT,ADC digital,reference_contract_hardware_un
 Acquisition,PA7,23,SPI1_MOSI,ADC_DIN,ADC digital,reference_contract_hardware_unverified
 Acquisition,PA4,20,GPIO_Output,ADC_CS,ADC digital,reference_contract_hardware_unverified
 Acquisition,PC4,24,GPIO_EXTI4,ADC_DRDY,ADC digital,reference_contract_hardware_unverified
-Acquisition,PC5,25,GPIO_Output,ADC_SYNC_RESET,ADC digital,reference_contract_hardware_unverified
-Acquisition,PA8,41,RESERVED,ADC_CLK_OPTION,clock,not_configured_by_ReferenceApp
+Acquisition,PC5,25,RESERVED,UNUSED_PC5,ADC digital,not_connected_analog_mode
+Acquisition,PA8,41,RCC_MCO_1,ADC_CLK,clock,HSE_div2_4096000Hz
 Acquisition,PC8,39,SDIO_D0,TF_D0,TF,reference_contract_hardware_unverified
 Acquisition,PC9,40,SDIO_D1,TF_D1,TF,reference_contract_hardware_unverified
 Acquisition,PC10,51,SDIO_D2,TF_D2,TF,reference_contract_hardware_unverified
@@ -21,10 +21,10 @@ Acquisition,PC6,37,GPIO_Input,RADIO_BUSY,radio,reference_contract_hardware_unver
 Acquisition,PC7,38,GPIO_EXTI7,RADIO_DIO1,radio,reference_contract_hardware_unverified
 Acquisition,PB2,28,GPIO_Output,RADIO_NRESET,radio,reference_contract_hardware_unverified
 Acquisition,PC0,8,ADC1_IN10,ACQUISITION_BATTERY,power,reference_contract_hardware_unverified
-Acquisition,PB6,58,GPIO_Output,LED_VOLT_1,voltage indicators,reference_active_high_VDDA
-Acquisition,PB7,59,GPIO_Output,LED_VOLT_2,voltage indicators,reference_active_high_VDDA
-Acquisition,PB8,61,GPIO_Output,LED_VOLT_3,voltage indicators,reference_active_high_VDDA
-Acquisition,PB9,62,GPIO_Output,LED_VOLT_4,voltage indicators,reference_active_high_VDDA
+Acquisition,PB6,58,GPIO_Output,LED_VOLT_1,voltage indicators,active_high_battery_estimate
+Acquisition,PB7,59,GPIO_Output,LED_VOLT_2,voltage indicators,active_high_battery_estimate
+Acquisition,PB8,61,GPIO_Output,LED_VOLT_3,voltage indicators,active_high_battery_estimate
+Acquisition,PB9,62,GPIO_Output,LED_VOLT_4,voltage indicators,active_high_battery_estimate
 Acquisition,PA13,46,SYS_JTMS-SWDIO,SWDIO,debug,reference_contract_hardware_unverified
 Acquisition,PA14,49,SYS_JTCK-SWCLK,SWCLK,debug,reference_contract_hardware_unverified
 Acquisition,PA9,42,USART1_TX,DEBUG_UART_TX,debug serial,reference_contract_hardware_unverified
@@ -43,14 +43,14 @@ Controller,PB9,1,I2C1_SDA,OLED_SDA,OLED,reference_contract_hardware_unverified
 Controller,PA0,7,TIM2_CH1,ENCODER_A,input,reference_contract_hardware_unverified
 Controller,PA1,8,TIM2_CH2,ENCODER_B,input,reference_contract_hardware_unverified
 Controller,PA2,9,GPIO_Input,ENCODER_PRESS,input,reference_active_low_pullup_30ms
-Controller,PA3,10,RESERVED,OPERATION_KEY,input,not_configured_by_ReferenceApp
-Controller,PA4,11,RESERVED,CONTROLLER_BATTERY,power,not_configured_by_ReferenceApp
+Controller,PA3,10,ADC1_IN3,CONTROLLER_BATTERY,input,divider_10k_10k_100nF
+Controller,PA4,11,RESERVED,UNUSED_PA4,power,not_connected
 Controller,PA13,24,SYS_SWDIO,SWDIO,debug,reference_contract_hardware_unverified
 Controller,PA14-BOOT0,25,SYS_SWCLK,SWCLK,debug,reference_contract_hardware_unverified
-Controller,PA9,19,USART1_TX,DEBUG_UART_TX,debug serial,reference_contract_hardware_unverified
-Controller,PA10,21,USART1_RX,DEBUG_UART_RX,debug serial,reference_contract_hardware_unverified
-Controller,PA11,22,RESERVED,STATIC_FUTURE_PLACEHOLDER,reserved,no_GPIO_configuration_no_write_no_protocol
-Controller,PA12,23,RESERVED,STATIC_FUTURE_PLACEHOLDER,reserved,no_GPIO_configuration_no_write_no_protocol
+Controller,PA9 [PA11],22,USART1_TX,DEBUG_UART_TX,debug serial,SYSCFG_PA11_RMP_set
+Controller,PA10 [PA12],23,USART1_RX,DEBUG_UART_RX,debug serial,SYSCFG_PA12_RMP_set
 Acquisition,PA0-WKUP,14,TIM2_CH1,IGNITION_SIGNAL,logic output,reference_contract_hardware_unverified
-Acquisition,PB0,26,GPIO_Output,LINK_LED,link indication,reference_contract_hardware_unverified
+Acquisition,PB10,29,GPIO_Output,LINK_LED,link indication,reference_contract_hardware_unverified
 Controller,PB0,15,GPIO_Output,LINK_LED,link indication,reference_contract_hardware_unverified
+Acquisition,PH0 - OSC_IN,5,RCC_OSC_IN,HSE_IN,clock,8192000Hz_crystal
+Acquisition,PH1 - OSC_OUT,6,RCC_OSC_OUT,HSE_OUT,clock,8192000Hz_crystal

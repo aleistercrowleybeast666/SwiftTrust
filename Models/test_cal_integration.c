@@ -72,6 +72,7 @@ static void init(fixture *f)
                          .gain_ch1 = f->binding.gain1,
                          .clock_verified = true,
                          .simulated = true};
+    Log_ApplyAds1220Metadata(&cfg, false, 0);
     st_logger_init(&f->logger, cfg, (st_file_port){0});
     st_cal_service_init(&f->service, &f->active, &f->binding, f->active.policy,
                         (st_cal_storage){f, save}, f, now_us, idle);
@@ -95,14 +96,9 @@ static void init(fixture *f)
 static st_capture capture(int32_t raw, uint32_t seq, uint64_t now)
 {
     st_capture c = {.time_us = now, .sequence = seq};
-    c.bytes[0] = 1;
-    c.bytes[1] = 3;
-    c.bytes[3] = (uint8_t)((uint32_t)raw >> 16);
-    c.bytes[4] = (uint8_t)((uint32_t)raw >> 8);
-    c.bytes[5] = (uint8_t)raw;
-    uint16_t crc = st_crc16(c.bytes, 9);
-    c.bytes[9] = (uint8_t)(crc >> 8);
-    c.bytes[10] = (uint8_t)crc;
+    c.bytes[0] = (uint8_t)((uint32_t)raw >> 16);
+    c.bytes[1] = (uint8_t)((uint32_t)raw >> 8);
+    c.bytes[2] = (uint8_t)raw;
     return c;
 }
 static void feed(fixture *f, int32_t raw, uint32_t seq)
