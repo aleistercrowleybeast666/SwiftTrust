@@ -18,6 +18,20 @@ PARTS = {
     "Acquisition": ("STM32F411RCT6", "STM32F411R(C-E)Tx.xml", "LQFP64"),
     "Controller": ("STM32G071KBT6", "STM32G071K(6-8-B)Tx.xml", "LQFP32"),
 }
+ACQUISITION_PIN_ASSIGNMENT = {
+    "ADC_SCK": ("PB3", "55", "SPI1_SCK"),
+    "ADC_DOUT": ("PB4", "56", "SPI1_MISO"),
+    "ADC_DIN": ("PB5", "57", "SPI1_MOSI"),
+    "ADC_CS": ("PB6", "58", "GPIO_Output"),
+    "ADC_DRDY": ("PA15", "50", "GPIO_EXTI15"),
+    "LED_VOLT_1": ("PA4", "20", "GPIO_Output"),
+    "LED_VOLT_2": ("PA5", "21", "GPIO_Output"),
+    "LED_VOLT_3": ("PA6", "22", "GPIO_Output"),
+    "LED_VOLT_4": ("PA7", "23", "GPIO_Output"),
+    "TF_CARD_DETECT": ("PA9", "42", "GPIO_Input"),
+    "DEBUG_UART_TX": ("PA2", "16", "USART2_TX"),
+    "DEBUG_UART_RX": ("PA3", "17", "USART2_RX"),
+}
 
 
 def read_csv(path):
@@ -29,6 +43,34 @@ def pin_db(filename):
     root = ET.parse(DB / filename).getroot()
     return {p.get("Name"): (p.get("Position"), {s.get("Name") for s in p.findall("m:Signal", NS)})
             for p in root.findall("m:Pin", NS)}
+
+
+def gpio_af_db():
+    root = ET.parse(DB / "IP/GPIO-STM32F411_gpio_v1_0_Modes.xml").getroot()
+    return {(pin.get("Name"), signal.get("Name")): {
+                value.text for value in signal.findall(
+                    "m:SpecificParameter[@Name='GPIO_AF']/m:PossibleValue", NS)}
+            for pin in root.findall("m:GPIO_Pin", NS)
+            for signal in pin.findall("m:PinSignal", NS)}
+
+
+def usart_async_defaults():
+    # CubeMX omits parameters set to their defaults when saving the IOC.
+    root = ET.parse(DB / "IP/USART-sci2_v1_2_Cube_Modes.xml").getroot()
+    fields = {"BaudRate", "WordLength", "StopBits", "Parity"}
+    return {param.get("Name"): param.get("DefaultValue")
+            for param in root.findall("m:RefParameter", NS)
+            if param.get("Name") in fields and param.find("m:Condition", NS) is None}
+
+
+def validate_acquisition_assignment(rows):
+    # Explicit user assignment takes precedence over the still-old CAD export.
+    by_role = {row["role"]: row for row in rows}
+    for role, expected in ACQUISITION_PIN_ASSIGNMENT.items():
+        row = by_role.get(role, {})
+        actual = tuple(row.get(key) for key in ("pin", "package_position", "signal"))
+        if actual != expected:
+            raise ValueError("Acquisition 2026-11-01 pin assignment mismatch: " + role)
 
 
 def validate_pins(rows, pins):
@@ -130,6 +172,7 @@ def validate_ioc(board, rows):
         if row["status"] == "idle_high_candidate" and values.get(f"{pin}.PinState") != "GPIO_PIN_SET":
             raise ValueError(f"Candidate CS/reset idle state missing: {pin}")
     if board == "Acquisition":
+        validate_acquisition_assignment(rows)
         clock = {
             "HSE_VALUE": "8192000", "PLLM": "8", "PLLN": "375",
             "PLLP": "RCC_PLLP_DIV4", "PLLQ": "8",
@@ -147,6 +190,29 @@ def validate_ioc(board, rows):
             raise ValueError("ADS SPI must be mode 1")
         if values.get("SPI1.Mode") != "SPI_MODE_MASTER" or values.get("SPI2.Mode") != "SPI_MODE_MASTER":
             raise ValueError("SPI master configuration missing")
+        expected_gpio = {
+            "PA15.GPIO_ModeDefaultEXTI": "GPIO_MODE_IT_FALLING",
+            "PA9.GPIO_PuPd": "GPIO_PULLUP", "PB6.PinState": "GPIO_PIN_SET",
+            "PA4.PinState": "GPIO_PIN_RESET", "PA5.PinState": "GPIO_PIN_RESET",
+            "PA6.PinState": "GPIO_PIN_RESET", "PA7.PinState": "GPIO_PIN_RESET",
+            "USART2.VirtualMode": "VM_ASYNC"}
+        for key, expected in expected_gpio.items():
+            if values.get(key) != expected:
+                raise ValueError("Acquisition GPIO/UART contract differs: " + key)
+        defaults = usart_async_defaults()
+        for key, expected in {"BaudRate": "115200", "WordLength": "WORDLENGTH_8B",
+                              "StopBits": "STOPBITS_1", "Parity": "PARITY_NONE"}.items():
+            if values.get("USART2." + key, defaults.get(key)) != expected:
+                raise ValueError("Acquisition USART2 frame differs: " + key)
+        for irq, priority in (("EXTI15_10_IRQn", "0"), ("EXTI9_5_IRQn", "4"),
+                              ("USART2_IRQn", "14")):
+            if values.get("NVIC." + irq, "").split("\\:")[:2] != ["true", priority]:
+                raise ValueError("Acquisition IRQ binding missing or wrong priority: " + irq)
+        for pin in ("PC4", "PA10", "PB7", "PB8", "PB9"):
+            if values.get(pin + ".Signal"):
+                raise ValueError("Obsolete acquisition pin assignment is still active: " + pin)
+        if any(key.startswith("USART1.") for key in values):
+            raise ValueError("Acquisition debug UART must no longer use USART1")
         for pin in ["PC8", "PC9", "PC10", "PC11", "PC12", "PD2"]:
             if values.get(f"{pin}.Mode") != "SD_4_bits_Wide_bus":
                 raise ValueError("SDIO four-bit mode missing")
@@ -212,9 +278,37 @@ class Regression(unittest.TestCase):
 
     def test_same_exti_line_on_different_ports_rejected(self):
         rows = read_csv(ROOT / "Acquisition/pin_candidates.csv")
-        rows.append(dict(pin="PB4",package_position="56",signal="GPXTI4"))
-        with self.assertRaises(ValueError):
+        rows.append(dict(pin="PC15-OSC32_OUT", package_position="4", signal="GPXTI15"))
+        with self.assertRaisesRegex(ValueError, "conflicting EXTI"):
             validate_pins(rows, pin_db(PARTS["Acquisition"][1]))
+
+    def test_acquisition_new_pin_assignment_and_official_af_numbers(self):
+        validate_acquisition_assignment(read_csv(ROOT / "Acquisition/pin_candidates.csv"))
+        validate_acquisition_assignment([row for row in read_csv(ROOT / "Models/reference_pins.csv")
+                                          if row["board"] == "Acquisition"])
+        afs = gpio_af_db()
+        for pin, signal in (("PB3", "SPI1_SCK"), ("PB4", "SPI1_MISO"), ("PB5", "SPI1_MOSI")):
+            self.assertEqual(afs[pin, signal], {"GPIO_AF5_SPI1"})
+        for pin, signal in (("PA2", "USART2_TX"), ("PA3", "USART2_RX")):
+            self.assertEqual(afs[pin, signal], {"GPIO_AF7_USART2"})
+
+    def test_old_acquisition_roles_and_drdy_polarity_rejected(self):
+        rows = read_csv(ROOT / "Acquisition/pin_candidates.csv")
+        old = [dict(row) for row in rows]
+        next(row for row in old if row["role"] == "ADC_SCK").update(pin="PA5", package_position="21")
+        with self.assertRaisesRegex(ValueError, "pin assignment mismatch"):
+            validate_acquisition_assignment(old)
+        path = ROOT / "Acquisition/SwiftThrust_Acquisition_Candidate/SwiftThrust_Acquisition_Candidate.ioc"
+        for key, wrong in (("PA15.GPIO_ModeDefaultEXTI", "GPIO_MODE_IT_RISING"),
+                            ("PA9.GPIO_PuPd", "GPIO_NOPULL"),
+                            ("PA4.PinState", "GPIO_PIN_SET"),
+                            ("NVIC.EXTI15_10_IRQn", "false\\:0"),
+                            ("USART2.BaudRate", "9600")):
+            values = read_ioc(path)
+            values[key] = wrong
+            with patch(__name__ + ".read_ioc", return_value=values):
+                with self.assertRaises(ValueError):
+                    validate_ioc("Acquisition", rows)
 
     def test_dma_plan_in_official_database(self):
         validate_dma(read_csv(ROOT / "Acquisition/dma_candidates.csv"), dma_db())
@@ -261,10 +355,21 @@ class Regression(unittest.TestCase):
 
     def test_pending_values_not_silently_selected(self):
         config = json.loads((ROOT / "Models/config_pending.json").read_text(encoding="utf8"))
-        self.assertIs(config["board_bound"], True)  # accepted CAD contract, not a bench claim
+        self.assertIs(config["board_bound"], True)  # accepted target assignment, not a bench claim
         for field in ["bridge_sensitivity_mv_per_v", "sensor_wire_count", "divider_ratio_ch1", "regulator", "charger"]:
             self.assertIsNone(config["acquisition"][field], field)
         adc = config["acquisition"]
+        self.assertEqual(adc["source"], "user_requested_pin_assignment")
+        self.assertIs(adc["final_cad_match"], True)
+        self.assertEqual(adc["final_cad_status"], "matched_schematic_and_PCB_PAD_NET_not_copper_or_bench_validation")
+        sources = config["hardware_sources"]
+        snapshot = json.loads((ROOT / sources["acquisition_final_snapshot"]).read_text(encoding="utf8"))
+        comparison = json.loads((ROOT / sources["acquisition_final_comparison"]).read_text(encoding="utf8"))
+        for evidence in (snapshot, comparison):
+            self.assertEqual(adc["final_cad_source"], evidence["source"])
+            self.assertEqual(adc["final_cad_sha256"], evidence["sha256"])
+        self.assertEqual(comparison["status"], "MATCH")
+        self.assertEqual(comparison["mismatches"], 0)
         self.assertEqual(adc["adc"], "ADS1220IPWR")
         self.assertEqual((adc["adc_clock_hz"], adc["adc_power_mode"], adc["channel_count"]),
                          (4096000, "turbo", 1))
@@ -334,11 +439,12 @@ class Regression(unittest.TestCase):
     def test_analog_cad_contract_stays_physically_unverified(self):
         config = json.loads((ROOT / "Models/config_pending.json").read_text(encoding="utf8"))
         candidate = config["hardware_candidate"]
-        self.assertEqual(candidate["status"], "20261029_epro2_contract_not_bench_verified")
+        self.assertEqual(candidate["status"], "20261101_acquisition_user_pin_assignment_final_CAD_matched_controller_20261029_CAD")
         self.assertEqual(candidate["controller_exact_part"], "STM32G071KBT6")
         self.assertTrue(adc_input_fits(candidate["adc_avdd_v"], 128, candidate["bridge_excitation_v"] / 2 + 0.0025, candidate["bridge_excitation_v"] / 2 - 0.0025))
         self.assertIs(config["board_bound"], True)
         self.assertIs(config["reference_application"]["hardware_tested"], False)
+        self.assertIs(config["reference_application"]["cad_contract_bound"], True)
         self.assertEqual(candidate["adc_reference_v"], candidate["bridge_excitation_v"])
         self.assertEqual(config["acquisition"]["pga_ch0"], 1)
         self.assertTrue(config["reference_application"]["adc"]["default_pga_bypass"])

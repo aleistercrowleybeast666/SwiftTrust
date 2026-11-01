@@ -1,4 +1,4 @@
-2026-10-28T17:40:07.317900+00:00
+2026-11-01T04:46:12.724222+00:00
 PASS reference integration: 6 groups, 76678 checks; automatic UID link, 256 torn writes, 97 compaction cuts, 128 reboot/counter cycles
 Synthetic flash model only; no MCU/TF/RF/electrical/power-loss hardware test.
 Strict C11 warnings including conversion/shadow are errors.

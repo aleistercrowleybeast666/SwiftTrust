@@ -1,0 +1,110 @@
+log4j user configuration file not found: C:\Users\chdxm/.stm32cubemx/log4j2.xml
+Configure log4j with default settings from jar:file:/C:/Program%20Files/STMicroelectronics/STM32Cube/STM32CubeMX/STM32CubeMX.exe!/log4j/log4j2.stm32cubemx.xml
+2026-11-01 12:42:27,849 [ERROR] WebUtils:398 - Updater is busy
+config load D:\stm32_project\SwiftThrust\Acquisition\SwiftThrust_Acquisition_Candidate\SwiftThrust_Acquisition_Candidate.ioc
+2026-11-01 12:42:30,550 [ERROR] Engine:466 - C:\Users\chdxm\.stm32cubemx\thirdparties\pdsc\STMicroelectronics.X-CUBE-SMBUS.2.1.1.pdsc: PDSC version is not supported
+2026-11-01 12:42:33,455 [ERROR] Engine:466 - C:\Users\chdxm\.stm32cubemx\thirdparties\pdsc\STMicroelectronics.X-CUBE-WBA.1.1.0.pdsc: PDSC version is not supported
+1 : Invalid condition id : UX_CORESTACK_Condition cause : null
+1 : Invalid condition id : UX_CORESTACK_Condition cause : null
+1 : Invalid condition id : UX_CORESTACK_Condition cause : null
+1 : Invalid condition id : UX_CORESTACK_Condition cause : null
+1 : Invalid condition id : UX_CORESTACK_Condition cause : null
+2026-11-01 12:42:37,119 [ERROR] Engine:466 - C:\Users\chdxm\.stm32cubemx\thirdparties\pdsc\STMicroelectronics.FP-SNS-STAIOTCFT.2.0.0.pdsc: PDSC version is not supported
+2026-11-01 12:42:38,201 [ERROR] Engine:466 - C:\Users\chdxm\.stm32cubemx\thirdparties\pdsc\STMicroelectronics.X-CUBE-ST67W61.1.3.0.pdsc: PDSC version is not supported
+2026-11-01 12:42:38,820 [ERROR] Engine:466 - C:\Users\chdxm\.stm32cubemx\thirdparties\pdsc\STMicroelectronics.X-CUBE-BLEMGR.4.2.0.pdsc: PDSC version is not supported
+OK
+get version
+6.15.0
+OK
+get mode active .*
+Mode: active | ADC1 | IN10 | IN10:Set
+Mode: active | RCC | HSE-External-Oscillator | High Speed Clock (HSE):Crystal/Ceramic Resonator
+Mode: active | RCC | Clock-out-1 | Master Clock Output 1:Set
+Mode: active | SDIO | SD_4_bits_Wide_bus | Mode:SD 4 bits Wide bus
+Mode: active | SPI1 | Full_Duplex_Master | Mode:Full-Duplex Master
+Mode: active | SPI2 | Full_Duplex_Master | Mode:Full-Duplex Master
+Mode: active | SYS | Serial_Wire | Debug:Serial Wire
+Mode: active | SYS | SysTick | Timebase Source:SysTick
+Mode: active | TIM2 | Internal | Clock Source   :Internal Clock
+Mode: active | TIM2 | PWM Generation1 CH1 | Channel1:PWM Generation CH1
+Mode: active | TIM2 | OPM_bit | One Pulse Mode:Set
+Mode: active | TIM5 | Internal | Clock Source   :Set
+Mode: active | USART2 | Asynchronous | Mode:Asynchronous
+OK
+isPluginError "Pinout & Configuration"
+Pinout & Configuration Error: false
+OK
+isPluginError "Clock Configuration"
+Clock Configuration Error: false
+OK
+get pinout
+VBAT: Power
+PC13-ANTI_TAMP: Reset_State
+PC14-OSC32_IN: Reset_State
+PC15-OSC32_OUT: Reset_State
+PH0 - OSC_IN: RCC_OSC_INPH0 - OSC_IN: RCC_OSC_IN
+PH1 - OSC_OUT: RCC_OSC_OUTPH1 - OSC_OUT: RCC_OSC_OUT
+NRST: Reset_State
+PC0: ADC1_IN10PC0: ADC1_IN10
+PC1: Reset_State
+PC2: Reset_State
+PC3: Reset_State
+VSSA: Power
+VDDA: Power
+PA0-WKUP: TIM2_CH1PA0-WKUP: TIM2_CH1
+PA1: Reset_State
+PA2: USART2_TXPA2: USART2_TX
+PA3: USART2_RXPA3: USART2_RX
+VSS: Power
+VDD: Power
+PA4: GPIO_OutputPA4: GPIO_Output
+PA5: GPIO_OutputPA5: GPIO_Output
+PA6: GPIO_OutputPA6: GPIO_Output
+PA7: GPIO_OutputPA7: GPIO_Output
+PC4: Reset_State
+PC5: Reset_State
+PB0: Reset_State
+PB1: Reset_State
+PB2: GPIO_OutputPB2: GPIO_Output
+PB10: GPIO_OutputPB10: GPIO_Output
+VCAP1: Power
+VSS: Power
+VDD: Power
+PB12: GPIO_OutputPB12: GPIO_Output
+PB13: SPI2_SCKPB13: SPI2_SCK
+PB14: SPI2_MISOPB14: SPI2_MISO
+PB15: SPI2_MOSIPB15: SPI2_MOSI
+PC6: GPIO_InputPC6: GPIO_Input
+PC7: GPIO_EXTI7PC7: GPIO_EXTI7
+PC8: SDIO_D0PC8: SDIO_D0
+PC9: SDIO_D1PC9: SDIO_D1
+PA8: RCC_MCO_1PA8: RCC_MCO_1
+PA9: GPIO_InputPA9: GPIO_Input
+PA10: Reset_State
+PA11: Reset_State
+PA12: Reset_State
+PA13: SYS_JTMS-SWDIOPA13: SYS_JTMS-SWDIO
+VSS: Power
+VDD: Power
+PA14: SYS_JTCK-SWCLKPA14: SYS_JTCK-SWCLK
+PA15: GPIO_EXTI15PA15: GPIO_EXTI15
+PC10: SDIO_D2PC10: SDIO_D2
+PC11: SDIO_D3PC11: SDIO_D3
+PC12: SDIO_CKPC12: SDIO_CK
+PD2: SDIO_CMDPD2: SDIO_CMD
+PB3: SPI1_SCKPB3: SPI1_SCK
+PB4: SPI1_MISOPB4: SPI1_MISO
+PB5: SPI1_MOSIPB5: SPI1_MOSI
+PB6: GPIO_OutputPB6: GPIO_Output
+PB7: Reset_State
+BOOT0: Reset_State
+PB8: Reset_State
+PB9: Reset_State
+VSS: Power
+VDD: Power
+OK
+config save D:\stm32_project\SwiftThrust\Acquisition\SwiftThrust_Acquisition_Candidate\SwiftThrust_Acquisition_Candidate.ioc
+OK
+exit
+Bye bye
+CUBEMX_PROCESS_EXIT=0

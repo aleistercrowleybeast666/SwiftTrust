@@ -13,7 +13,7 @@ typedef struct
     bool verified;
 } st_sdio_hal;
 /* Caller must initialize SDIO pins/clock/DMA and card, then verify its geometry.
- * PB5 card-detect polarity is supplied by card_present; never guessed here.
+ * PA9 card-detect polarity is supplied by card_present; never guessed here.
  * HAL tick must run; callbacks route to this owner. No hardware is initialized. */
 bool st_sdio_hal_bind(st_sdio_hal *, SD_HandleTypeDef *, void *, bool (*present)(void *),
                       uint32_t (*now_ms)(void *), void (*yield)(void *), bool verified);

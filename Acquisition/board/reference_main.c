@@ -1,4 +1,4 @@
-/* 2026-10-29 F411/ADS1220 board. See Models/REFERENCE_APPLICATION.md.
+/* 2026-11-01 F411/ADS1220 pin assignment. See Models/REFERENCE_APPLICATION.md.
  * PA0 defaults low; explicit R8 authorization and autonomous cutoff are retained. */
 #if defined(ST_REFERENCE_APPLICATION)
 #include "stm32f4xx_hal.h"
@@ -18,6 +18,22 @@
 #include "st_battery.h"
 #include <stdio.h>
 #include <string.h>
+
+#define ACQ_ADC_SPI_PORT GPIOB
+#define ACQ_ADC_SPI_PINS (GPIO_PIN_3 | GPIO_PIN_4 | GPIO_PIN_5)
+#define ACQ_ADC_CS_PORT GPIOB
+#define ACQ_ADC_CS_PIN GPIO_PIN_6
+#define ACQ_ADC_DRDY_PORT GPIOA
+#define ACQ_ADC_DRDY_PIN GPIO_PIN_15
+#define ACQ_ADC_DRDY_IRQ EXTI15_10_IRQn
+#define ACQ_VOLTAGE_LED_PORT GPIOA
+#define ACQ_VOLTAGE_LED1_PIN GPIO_PIN_4
+#define ACQ_VOLTAGE_LED2_PIN GPIO_PIN_5
+#define ACQ_VOLTAGE_LED3_PIN GPIO_PIN_6
+#define ACQ_VOLTAGE_LED4_PIN GPIO_PIN_7
+#define ACQ_VOLTAGE_LED_PINS (ACQ_VOLTAGE_LED1_PIN | ACQ_VOLTAGE_LED2_PIN | ACQ_VOLTAGE_LED3_PIN | ACQ_VOLTAGE_LED4_PIN)
+#define ACQ_TF_DETECT_PORT GPIOA
+#define ACQ_TF_DETECT_PIN GPIO_PIN_9
 
 static SPI_HandleTypeDef ads_spi, rf_spi;
 static DMA_HandleTypeDef ads_rx, ads_tx, sd_rx, sd_tx;
@@ -61,7 +77,9 @@ static st_voltage_view battery_view;
 static const st_voltage_policy supply_policy = {ST_VDDA_DISPLAY_LEVELS_MV, ST_VDDA_HYSTERESIS_MV,
                                                 ST_VDDA_FRESH_MS, true};
 static const st_f4_led_port leds = {
-    {GPIOB, GPIOB, GPIOB, GPIOB}, {GPIO_PIN_6, GPIO_PIN_7, GPIO_PIN_8, GPIO_PIN_9}, true, true};
+    {ACQ_VOLTAGE_LED_PORT, ACQ_VOLTAGE_LED_PORT, ACQ_VOLTAGE_LED_PORT, ACQ_VOLTAGE_LED_PORT},
+    {ACQ_VOLTAGE_LED1_PIN, ACQ_VOLTAGE_LED2_PIN, ACQ_VOLTAGE_LED3_PIN, ACQ_VOLTAGE_LED4_PIN},
+    true, true};
 static volatile bool capture_owner;
 static bool mounted, rate_ok, rate_checked, paired, change_pair, servicing, app_ready, adc_busy;
 static volatile bool source_fault, clock_ready, clock_fault;
@@ -97,7 +115,7 @@ static void emit(void *ctx, const char *s)
 static void fatal(void)
 {
     (void)IgnitionPulse_Stop(NULL);
-    HAL_NVIC_DisableIRQ(EXTI4_IRQn);
+    HAL_NVIC_DisableIRQ(ACQ_ADC_DRDY_IRQ);
     atomic_store(&logger.capture_enabled, false);
     if (uart.verified)
         emit(NULL, "FATAL INIT; RESET / CHECK REFERENCE WIRING\r\n");
@@ -202,7 +220,8 @@ void HAL_SPI_MspInit(SPI_HandleTypeDef *h)
     {
         __HAL_RCC_SPI1_CLK_ENABLE();
         __HAL_RCC_DMA2_CLK_ENABLE();
-        gpio(GPIOA, GPIO_PIN_5 | GPIO_PIN_6 | GPIO_PIN_7, GPIO_MODE_AF_PP, GPIO_NOPULL,
+        /* PB3/PB4 leave JTAG/SWO AF0; PA13/PA14 remain available for SWD. */
+        gpio(ACQ_ADC_SPI_PORT, ACQ_ADC_SPI_PINS, GPIO_MODE_AF_PP, GPIO_NOPULL,
              GPIO_AF5_SPI1);
         dma(&ads_rx, DMA2_Stream0, DMA_CHANNEL_3, DMA_PERIPH_TO_MEMORY, false);
         dma(&ads_tx, DMA2_Stream5, DMA_CHANNEL_3, DMA_MEMORY_TO_PERIPH, false);
@@ -277,19 +296,18 @@ static void board_init(void)
     __HAL_RCC_GPIOB_CLK_ENABLE();
     __HAL_RCC_GPIOC_CLK_ENABLE();
     __HAL_RCC_GPIOD_CLK_ENABLE();
-    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_4, GPIO_PIN_SET);
-    gpio(GPIOA, GPIO_PIN_4, GPIO_MODE_OUTPUT_PP, GPIO_NOPULL, 0);
+    HAL_GPIO_WritePin(ACQ_ADC_CS_PORT, ACQ_ADC_CS_PIN, GPIO_PIN_SET);
+    gpio(ACQ_ADC_CS_PORT, ACQ_ADC_CS_PIN, GPIO_MODE_OUTPUT_PP, GPIO_NOPULL, 0);
     HAL_GPIO_WritePin(GPIOB, GPIO_PIN_12 | GPIO_PIN_2, GPIO_PIN_SET);
     gpio(GPIOB, GPIO_PIN_12 | GPIO_PIN_2, GPIO_MODE_OUTPUT_PP, GPIO_NOPULL, 0);
     gpio(GPIOC, GPIO_PIN_5, GPIO_MODE_ANALOG, GPIO_NOPULL, 0);
-    HAL_GPIO_WritePin(GPIOB, GPIO_PIN_6 | GPIO_PIN_7 | GPIO_PIN_8 | GPIO_PIN_9, GPIO_PIN_RESET);
-    gpio(GPIOB, GPIO_PIN_6 | GPIO_PIN_7 | GPIO_PIN_8 | GPIO_PIN_9, GPIO_MODE_OUTPUT_PP, GPIO_NOPULL,
-         0);
+    HAL_GPIO_WritePin(ACQ_VOLTAGE_LED_PORT, ACQ_VOLTAGE_LED_PINS, GPIO_PIN_RESET);
+    gpio(ACQ_VOLTAGE_LED_PORT, ACQ_VOLTAGE_LED_PINS, GPIO_MODE_OUTPUT_PP, GPIO_NOPULL, 0);
     HAL_GPIO_WritePin(GPIOB, GPIO_PIN_10, GPIO_PIN_RESET);
     gpio(GPIOB, GPIO_PIN_10, GPIO_MODE_OUTPUT_PP, GPIO_NOPULL, 0);
     gpio(GPIOC, GPIO_PIN_6, GPIO_MODE_INPUT, GPIO_NOPULL, 0);
-    gpio(GPIOB, GPIO_PIN_5, GPIO_MODE_INPUT, GPIO_PULLUP, 0);
-    gpio(GPIOC, GPIO_PIN_4, GPIO_MODE_IT_FALLING, GPIO_NOPULL, 0);
+    gpio(ACQ_TF_DETECT_PORT, ACQ_TF_DETECT_PIN, GPIO_MODE_INPUT, GPIO_PULLUP, 0);
+    gpio(ACQ_ADC_DRDY_PORT, ACQ_ADC_DRDY_PIN, GPIO_MODE_IT_FALLING, GPIO_NOPULL, 0);
     gpio(GPIOC, GPIO_PIN_7, GPIO_MODE_IT_RISING, GPIO_NOPULL, 0);
     irq(EXTI9_5_IRQn, 4);
     timer.Instance = TIM5;
@@ -323,7 +341,7 @@ static void board_init(void)
 static bool present(void *ctx)
 {
     (void)ctx;
-    return HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_5) == GPIO_PIN_RESET;
+    return HAL_GPIO_ReadPin(ACQ_TF_DETECT_PORT, ACQ_TF_DETECT_PIN) == GPIO_PIN_RESET;
 }
 static void yield(void *ctx)
 {
@@ -359,7 +377,7 @@ static bool Acquisition_NvIdle(void *ctx)
             return false;
         __WFI();
     }
-    HAL_NVIC_DisableIRQ(EXTI4_IRQn);
+    HAL_NVIC_DisableIRQ(ACQ_ADC_DRDY_IRQ);
     nv_capture_paused = true;
     rate_ok = false;
     rate_checked = false;
@@ -471,9 +489,9 @@ static void fast_service(void)
         rate_time_us = us;
         rate_sequence = capture.drdy_edges;
         seen_version = latest_version;
-        __HAL_GPIO_EXTI_CLEAR_IT(GPIO_PIN_4);
+        __HAL_GPIO_EXTI_CLEAR_IT(ACQ_ADC_DRDY_PIN);
         if (resumed == ADS1220_OK && !clock_fault)
-            HAL_NVIC_EnableIRQ(EXTI4_IRQn);
+            HAL_NVIC_EnableIRQ(ACQ_ADC_DRDY_IRQ);
         __set_PRIMASK(mask);
         if (resumed != ADS1220_OK)
             source_fault = true;
@@ -721,7 +739,8 @@ int main(void)
     storage_init();
     sensor_init();
     server_init();
-    if (!st_ads_hal_bind(&ads_hal, &ads_spi, GPIOA, GPIO_PIN_4, HAL_GetTick, 20, clock_ready))
+    if (!st_ads_hal_bind(&ads_hal, &ads_spi, ACQ_ADC_CS_PORT, ACQ_ADC_CS_PIN, HAL_GetTick, 20,
+                         clock_ready))
         fatal();
     st_ads_config adc_config = sensor.configured ? sensor.adc_config : st_ref_ads_config(clock_ready);
     logger.config.gain_ch0 = adc_config.gain;
@@ -757,7 +776,7 @@ int main(void)
             (logger.state == ST_IDLE || logger.state == ST_FAULT) &&
             Capture_Quiesce(&capture) == ADS1220_OK && ads_spi.State == HAL_SPI_STATE_READY)
         {
-            HAL_NVIC_DisableIRQ(EXTI4_IRQn);
+            HAL_NVIC_DisableIRQ(ACQ_ADC_DRDY_IRQ);
             capture_owner = false;
             if (Ads1220_RequestPowerdown(&ads, (uint32_t)us) != ADS1220_OK)
                 ads.failed = true;
@@ -767,12 +786,13 @@ int main(void)
             st_ads_tick(&ads, (uint32_t)us);
             if (!source_fault && ads.ready && st_ads_hal_idle(&ads_hal))
             {
-                st_f4_capture_init(&capture, &ads_spi, GPIOA, GPIO_PIN_4, &logger, true, us);
+                st_f4_capture_init(&capture, &ads_spi, ACQ_ADC_CS_PORT, ACQ_ADC_CS_PIN, &logger,
+                                   true, us);
                 st_f4_capture_bind_calibration(&capture, &calibration.endpoint.input);
                 capture_owner = true;
                 rate_time_us = us;
-                __HAL_GPIO_EXTI_CLEAR_IT(GPIO_PIN_4);
-                irq(EXTI4_IRQn, 0);
+                __HAL_GPIO_EXTI_CLEAR_IT(ACQ_ADC_DRDY_PIN);
+                irq(ACQ_ADC_DRDY_IRQ, 0);
             }
         }
         change_pair |= AutoLink_TakeChanged(&auto_link);
@@ -830,7 +850,7 @@ void HAL_RCC_CSSCallback(void)
     clock_ready = false;
     source_fault = true;
     IgnitionPulse_FaultIsr();
-    HAL_NVIC_DisableIRQ(EXTI4_IRQn);
+    HAL_NVIC_DisableIRQ(ACQ_ADC_DRDY_IRQ);
     Capture_ClockFaultIsr(&capture);
     atomic_store_explicit(&logger.capture_enabled, false, memory_order_release);
     /* Only pre-failure buffered samples may reach file finalization. Foreground
@@ -857,9 +877,9 @@ void TIM5_IRQHandler(void)
     }
     __set_PRIMASK(mask);
 }
-void EXTI4_IRQHandler(void)
+void EXTI15_10_IRQHandler(void)
 {
-    HAL_GPIO_EXTI_IRQHandler(GPIO_PIN_4);
+    HAL_GPIO_EXTI_IRQHandler(ACQ_ADC_DRDY_PIN);
 }
 void EXTI9_5_IRQHandler(void)
 {
@@ -867,7 +887,7 @@ void EXTI9_5_IRQHandler(void)
 }
 void HAL_GPIO_EXTI_Callback(uint16_t pin)
 {
-    if (pin == GPIO_PIN_4 && capture_owner)
+    if (pin == ACQ_ADC_DRDY_PIN && capture_owner)
         st_f4_capture_drdy(&capture, st_reference_time_us(NULL));
     else if (pin == GPIO_PIN_7)
         st_radio_irq_isr(&radio);
@@ -900,7 +920,7 @@ void ADC_IRQHandler(void)
 {
     HAL_ADC_IRQHandler(&vref_adc);
 }
-void USART1_IRQHandler(void)
+void USART2_IRQHandler(void)
 {
     HAL_UART_IRQHandler(&uart.uart);
 }

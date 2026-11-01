@@ -1,4 +1,10 @@
-"""Offline CAD/clock contract regressions; no board, probe or serial access."""
+"""Historical 2026-10-29 CAD plus unchanged runtime clock regressions.
+
+New acquisition GPIO authority is acquisition_pin_assignment_20261101.json;
+check_acquisition_pinmap.py compares that target with final SCH/PCB evidence.
+These historical snapshots must not be rewritten to match a later assignment.
+No board, probe or serial access.
+"""
 import argparse
 from fractions import Fraction
 import json
@@ -142,6 +148,6 @@ if __name__ == '__main__':
         for board, saved in [('Acquisition',ACQ),('Controller',CTRL)]:
             actual=json.loads(json.dumps(extract(args.source_dir/f'ProDoc_{board}_1_2026-10-29.epro2')))
             if actual != saved:raise AssertionError(f'{board} extraction differs from saved evidence')
-        print('PASS fresh extraction matches both checked-in CAD snapshots and SHA256')
+        print('PASS historical 2026-10-29 extraction matches original snapshots/SHA256; not current acquisition GPIO acceptance')
     result=unittest.TextTestRunner(verbosity=2).run(unittest.defaultTestLoader.loadTestsFromTestCase(HardwareContract))
     raise SystemExit(0 if result.wasSuccessful() else 1)

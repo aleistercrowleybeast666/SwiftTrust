@@ -1,4 +1,4 @@
-2026-10-28T17:39:59.935085+00:00
+2026-11-01T04:46:13.641143+00:00
 Focused RF/protocol runtime regression on software event model only. No radio, GPIO, COM, ADC or card accessed.
 R8 targeted runtime; full host and FatFs suites have separate reports.
 PASS runtime queued/on-air START then newer STOP / TX_DONE ordering / late START ACK ignored / STOP RF timeout retries same ID / RF fault retains uncertainty / no automatic replay

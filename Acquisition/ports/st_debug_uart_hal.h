@@ -20,6 +20,7 @@ void st_debug_uart_tx_complete(st_debug_uart_hal *, UART_HandleTypeDef *);
 void st_debug_uart_rx_complete(st_debug_uart_hal *, UART_HandleTypeDef *);
 void st_debug_uart_error(st_debug_uart_hal *, UART_HandleTypeDef *);
 bool st_debug_uart_read(st_debug_uart_hal *, uint8_t *);
-/* USART1_IRQHandler routes HAL_UART_IRQHandler(&port.uart). Callbacks only
- * publish completion/queue RX. No debug command executes acquisition actions. */
+/* F411 USART2 (PA2/PA3 AF7, APB1), G071 USART1 (logical PA9/PA10 AF1).
+ * The board's matching IRQ routes HAL_UART_IRQHandler(&port.uart). Callbacks
+ * only publish completion/queue RX. No debug command executes acquisition actions. */
 #endif

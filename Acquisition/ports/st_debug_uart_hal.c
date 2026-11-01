@@ -18,19 +18,22 @@ bool st_debug_uart_configure(st_debug_uart_hal *p, bool verified)
     if (!verified)
         return false;
     __HAL_RCC_GPIOA_CLK_ENABLE();
-    __HAL_RCC_USART1_CLK_ENABLE();
     GPIO_InitTypeDef gpio = {0};
-    gpio.Pin = GPIO_PIN_9 | GPIO_PIN_10;
     gpio.Mode = GPIO_MODE_AF_PP;
     gpio.Pull = GPIO_PULLUP;
     gpio.Speed = GPIO_SPEED_FREQ_LOW;
 #if defined(STM32G071xx)
+    __HAL_RCC_USART1_CLK_ENABLE();
+    gpio.Pin = GPIO_PIN_9 | GPIO_PIN_10;
     gpio.Alternate = GPIO_AF1_USART1;
+    p->uart.Instance = USART1;
 #else
-    gpio.Alternate = GPIO_AF7_USART1;
+    __HAL_RCC_USART2_CLK_ENABLE();
+    gpio.Pin = GPIO_PIN_2 | GPIO_PIN_3;
+    gpio.Alternate = GPIO_AF7_USART2;
+    p->uart.Instance = USART2; /* F411 HAL derives BRR from the 48 MHz APB1 clock. */
 #endif
     HAL_GPIO_Init(GPIOA, &gpio);
-    p->uart.Instance = USART1;
     p->uart.Init.BaudRate = 115200;
     p->uart.Init.WordLength = UART_WORDLENGTH_8B;
     p->uart.Init.StopBits = UART_STOPBITS_1;
@@ -45,10 +48,11 @@ bool st_debug_uart_configure(st_debug_uart_hal *p, bool verified)
     }
 #if defined(STM32G071xx)
     HAL_NVIC_SetPriority(USART1_IRQn, 3, 0);
-#else
-    HAL_NVIC_SetPriority(USART1_IRQn, 14, 0);
-#endif
     HAL_NVIC_EnableIRQ(USART1_IRQn);
+#else
+    HAL_NVIC_SetPriority(USART2_IRQn, 14, 0);
+    HAL_NVIC_EnableIRQ(USART2_IRQn);
+#endif
     if (HAL_UART_Receive_IT(&p->uart, &p->rx_byte, 1) != HAL_OK)
     {
         p->verified = false;
@@ -91,7 +95,8 @@ st_debug_port st_debug_uart_port(st_debug_uart_hal *p)
 }
 void st_debug_uart_tx_complete(st_debug_uart_hal *p, UART_HandleTypeDef *u)
 {
-    if (p->verified && u == &p->uart)
+    if (p->verified && u == &p->uart &&
+        atomic_load_explicit(&p->tx_state, memory_order_acquire) == UART_BUSY)
         atomic_store_explicit(&p->tx_state, UART_DONE, memory_order_release);
 }
 void st_debug_uart_rx_complete(st_debug_uart_hal *p, UART_HandleTypeDef *u)

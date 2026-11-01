@@ -1,0 +1,451 @@
+{
+  "revision": "2026-11-01-user-requested-acquisition-pin-assignment",
+  "authority": "Explicit user assignment; not inferred from an older epro2",
+  "board": "STM32F411RCT6",
+  "package": "LQFP64",
+  "hardware_tested": false,
+  "final_epro2_verified": true,
+  "pins": [
+    {
+      "role": "ADC_SCK",
+      "pin": "PB3",
+      "package_position": 55,
+      "signal": "SPI1_SCK",
+      "old_pin": "PA5",
+      "old_package_position": 21,
+      "anchor": [
+        "R36",
+        "2"
+      ],
+      "net_label": null
+    },
+    {
+      "role": "ADC_DOUT",
+      "pin": "PB4",
+      "package_position": 56,
+      "signal": "SPI1_MISO",
+      "old_pin": "PA6",
+      "old_package_position": 22,
+      "anchor": [
+        "R37",
+        "2"
+      ],
+      "net_label": null
+    },
+    {
+      "role": "ADC_DIN",
+      "pin": "PB5",
+      "package_position": 57,
+      "signal": "SPI1_MOSI",
+      "old_pin": "PA7",
+      "old_package_position": 23,
+      "anchor": [
+        "R38",
+        "2"
+      ],
+      "net_label": null
+    },
+    {
+      "role": "ADC_CS",
+      "pin": "PB6",
+      "package_position": 58,
+      "signal": "GPIO_Output",
+      "old_pin": "PA4",
+      "old_package_position": 20,
+      "anchor": [
+        "R35",
+        "2"
+      ],
+      "net_label": null
+    },
+    {
+      "role": "ADC_DRDY",
+      "pin": "PA15",
+      "package_position": 50,
+      "signal": "GPIO_EXTI15",
+      "old_pin": "PC4",
+      "old_package_position": 24,
+      "anchor": [
+        "R39",
+        "2"
+      ],
+      "net_label": null
+    },
+    {
+      "role": "ADC_CLK",
+      "pin": "PA8",
+      "package_position": 41,
+      "signal": "RCC_MCO_1",
+      "old_pin": "PA8",
+      "old_package_position": 41,
+      "anchor": [
+        "R16",
+        "1"
+      ],
+      "net_label": null
+    },
+    {
+      "role": "TF_CARD_DETECT",
+      "pin": "PA9",
+      "package_position": 42,
+      "signal": "GPIO_Input",
+      "old_pin": "PB5",
+      "old_package_position": 57,
+      "anchor": [
+        "TF_CARD",
+        "9"
+      ],
+      "net_label": "TF_DETECT"
+    },
+    {
+      "role": "DEBUG_UART_TX",
+      "pin": "PA2",
+      "package_position": 16,
+      "signal": "USART2_TX",
+      "old_pin": "PA9",
+      "old_package_position": 42,
+      "anchor": [
+        "UART",
+        "4"
+      ],
+      "net_label": "DBG_MT"
+    },
+    {
+      "role": "DEBUG_UART_RX",
+      "pin": "PA3",
+      "package_position": 17,
+      "signal": "USART2_RX",
+      "old_pin": "PA10",
+      "old_package_position": 43,
+      "anchor": [
+        "UART",
+        "3"
+      ],
+      "net_label": "DBG_MR"
+    },
+    {
+      "role": "RADIO_CS",
+      "pin": "PB12",
+      "package_position": 33,
+      "signal": "GPIO_Output",
+      "old_pin": "PB12",
+      "old_package_position": 33,
+      "anchor": [
+        "LORA",
+        "6"
+      ],
+      "net_label": "LORA_NCS"
+    },
+    {
+      "role": "RADIO_SCK",
+      "pin": "PB13",
+      "package_position": 34,
+      "signal": "SPI2_SCK",
+      "old_pin": "PB13",
+      "old_package_position": 34,
+      "anchor": [
+        "LORA",
+        "5"
+      ],
+      "net_label": "LORA_SCK"
+    },
+    {
+      "role": "RADIO_MISO",
+      "pin": "PB14",
+      "package_position": 35,
+      "signal": "SPI2_MISO",
+      "old_pin": "PB14",
+      "old_package_position": 35,
+      "anchor": [
+        "LORA",
+        "3"
+      ],
+      "net_label": "LORA_MISO"
+    },
+    {
+      "role": "RADIO_MOSI",
+      "pin": "PB15",
+      "package_position": 36,
+      "signal": "SPI2_MOSI",
+      "old_pin": "PB15",
+      "old_package_position": 36,
+      "anchor": [
+        "LORA",
+        "4"
+      ],
+      "net_label": "LORA_MOSI"
+    },
+    {
+      "role": "RADIO_BUSY",
+      "pin": "PC6",
+      "package_position": 37,
+      "signal": "GPIO_Input",
+      "old_pin": "PC6",
+      "old_package_position": 37,
+      "anchor": [
+        "LORA",
+        "10"
+      ],
+      "net_label": "LORA_BUSY"
+    },
+    {
+      "role": "RADIO_DIO1",
+      "pin": "PC7",
+      "package_position": 38,
+      "signal": "GPIO_EXTI7",
+      "old_pin": "PC7",
+      "old_package_position": 38,
+      "anchor": [
+        "LORA",
+        "11"
+      ],
+      "net_label": "LORA_IT"
+    },
+    {
+      "role": "RADIO_NRESET",
+      "pin": "PB2",
+      "package_position": 28,
+      "signal": "GPIO_Output",
+      "old_pin": "PB2",
+      "old_package_position": 28,
+      "anchor": [
+        "LORA",
+        "9"
+      ],
+      "net_label": "LORA_NRST"
+    },
+    {
+      "role": "TF_D0",
+      "pin": "PC8",
+      "package_position": 39,
+      "signal": "SDIO_D0",
+      "old_pin": "PC8",
+      "old_package_position": 39,
+      "anchor": [
+        "TF_CARD",
+        "7"
+      ],
+      "net_label": "TF_DAT0"
+    },
+    {
+      "role": "TF_D1",
+      "pin": "PC9",
+      "package_position": 40,
+      "signal": "SDIO_D1",
+      "old_pin": "PC9",
+      "old_package_position": 40,
+      "anchor": [
+        "TF_CARD",
+        "8"
+      ],
+      "net_label": "TF_DAT1"
+    },
+    {
+      "role": "TF_D2",
+      "pin": "PC10",
+      "package_position": 51,
+      "signal": "SDIO_D2",
+      "old_pin": "PC10",
+      "old_package_position": 51,
+      "anchor": [
+        "TF_CARD",
+        "1"
+      ],
+      "net_label": "TF_DAT2"
+    },
+    {
+      "role": "TF_D3",
+      "pin": "PC11",
+      "package_position": 52,
+      "signal": "SDIO_D3",
+      "old_pin": "PC11",
+      "old_package_position": 52,
+      "anchor": [
+        "TF_CARD",
+        "2"
+      ],
+      "net_label": "TF_DAT3"
+    },
+    {
+      "role": "TF_CLK",
+      "pin": "PC12",
+      "package_position": 53,
+      "signal": "SDIO_CK",
+      "old_pin": "PC12",
+      "old_package_position": 53,
+      "anchor": [
+        "R32",
+        "1"
+      ],
+      "net_label": null
+    },
+    {
+      "role": "TF_CMD",
+      "pin": "PD2",
+      "package_position": 54,
+      "signal": "SDIO_CMD",
+      "old_pin": "PD2",
+      "old_package_position": 54,
+      "anchor": [
+        "TF_CARD",
+        "3"
+      ],
+      "net_label": "TF_CMD"
+    },
+    {
+      "role": "ACQUISITION_BATTERY",
+      "pin": "PC0",
+      "package_position": 8,
+      "signal": "ADC1_IN10",
+      "old_pin": "PC0",
+      "old_package_position": 8,
+      "anchor": [
+        "R14",
+        "1"
+      ],
+      "net_label": null
+    },
+    {
+      "role": "LINK_LED",
+      "pin": "PB10",
+      "package_position": 29,
+      "signal": "GPIO_Output",
+      "old_pin": "PB10",
+      "old_package_position": 29,
+      "anchor": [
+        "R9",
+        "2"
+      ],
+      "net_label": "LED_LINK"
+    },
+    {
+      "role": "IGNITION_SIGNAL",
+      "pin": "PA0",
+      "package_position": 14,
+      "signal": "TIM2_CH1",
+      "old_pin": "PA0",
+      "old_package_position": 14,
+      "anchor": [
+        "R33",
+        "1"
+      ],
+      "net_label": "PWR_O_CFG"
+    },
+    {
+      "role": "SWDIO",
+      "pin": "PA13",
+      "package_position": 46,
+      "signal": "SYS_JTMS-SWDIO",
+      "old_pin": "PA13",
+      "old_package_position": 46,
+      "anchor": [
+        "SWD",
+        "5"
+      ],
+      "net_label": "DIO"
+    },
+    {
+      "role": "SWCLK",
+      "pin": "PA14",
+      "package_position": 49,
+      "signal": "SYS_JTCK-SWCLK",
+      "old_pin": "PA14",
+      "old_package_position": 49,
+      "anchor": [
+        "SWD",
+        "4"
+      ],
+      "net_label": "CLK"
+    },
+    {
+      "role": "HSE_IN",
+      "pin": "PH0",
+      "package_position": 5,
+      "signal": "RCC_OSC_IN",
+      "old_pin": "PH0",
+      "old_package_position": 5,
+      "anchor": [
+        "X1",
+        "1"
+      ],
+      "net_label": null
+    },
+    {
+      "role": "HSE_OUT",
+      "pin": "PH1",
+      "package_position": 6,
+      "signal": "RCC_OSC_OUT",
+      "old_pin": "PH1",
+      "old_package_position": 6,
+      "anchor": [
+        "X1",
+        "2"
+      ],
+      "net_label": null
+    },
+    {
+      "role": "LED_VOLT_1",
+      "pin": "PA4",
+      "package_position": 20,
+      "signal": "GPIO_Output",
+      "old_pin": "PB6",
+      "old_package_position": 58,
+      "anchor": null,
+      "net_label": "LED_V1"
+    },
+    {
+      "role": "LED_VOLT_2",
+      "pin": "PA5",
+      "package_position": 21,
+      "signal": "GPIO_Output",
+      "old_pin": "PB7",
+      "old_package_position": 59,
+      "anchor": null,
+      "net_label": "LED_V2"
+    },
+    {
+      "role": "LED_VOLT_3",
+      "pin": "PA6",
+      "package_position": 22,
+      "signal": "GPIO_Output",
+      "old_pin": "PB8",
+      "old_package_position": 61,
+      "anchor": null,
+      "net_label": "LED_V3"
+    },
+    {
+      "role": "LED_VOLT_4",
+      "pin": "PA7",
+      "package_position": 23,
+      "signal": "GPIO_Output",
+      "old_pin": "PB9",
+      "old_package_position": 62,
+      "anchor": null,
+      "net_label": "LED_V4"
+    }
+  ],
+  "released_pins": [
+    {
+      "pin": "PC4",
+      "package_position": 24
+    },
+    {
+      "pin": "PA10",
+      "package_position": 43
+    },
+    {
+      "pin": "PB7",
+      "package_position": 59
+    },
+    {
+      "pin": "PB8",
+      "package_position": 61
+    },
+    {
+      "pin": "PB9",
+      "package_position": 62
+    }
+  ],
+  "final_epro2_source": "ProDoc_Acquisition_1_2026-11-01.epro2",
+  "final_epro2_sha256": "839d88fe635155fbf0e7a4a1c8594dda41facc43cd6e28ba2d72c761692ddfb4"
+}

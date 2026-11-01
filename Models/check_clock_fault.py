@@ -5,6 +5,7 @@ The actual pulse/capture helpers are executed separately by their driver models.
 """
 import subprocess
 import tempfile
+import re
 from pathlib import Path
 
 from local_tools import executable
@@ -27,6 +28,9 @@ def main():
     source = (ROOT / "Acquisition/board/reference_main.c").read_text()
     callbacks = "\n".join(extract_function(source, signature) for signature in (
         "void HAL_RCC_CSSCallback(void)", "void NMI_Handler(void)"))
+    irq_alias = re.search(r"^#define ACQ_ADC_DRDY_IRQ[^\r\n]+", source, re.MULTILINE)
+    assert irq_alias, "Missing board DRDY IRQ alias"
+    callbacks = irq_alias.group(0) + "\n" + callbacks
     harness = r'''
 #include <stdbool.h>
 #include <stdint.h>
@@ -38,10 +42,10 @@ static struct { _Atomic(bool) capture_enabled; } logger;
 static int capture;
 static unsigned checks, cutoffs, fences, errors, irq_disables, dispatches;
 static bool css_pending;
-#define EXTI4_IRQn 10
+#define EXTI15_10_IRQn 40
 #define C(x) do { ++checks; if (!(x)) { fprintf(stderr, "CSS line%d: %s\n", __LINE__, #x); exit(1); } } while (0)
 void IgnitionPulse_FaultIsr(void) { ++cutoffs; }
-void HAL_NVIC_DisableIRQ(int irq) { C(irq == EXTI4_IRQn); ++irq_disables; }
+void HAL_NVIC_DisableIRQ(int irq) { C(irq == EXTI15_10_IRQn); ++irq_disables; }
 void Capture_ClockFaultIsr(void *port) { C(port == &capture); ++fences; }
 void st_logger_source_error_isr(void *owner) { C(owner == &logger); ++errors; }
 void HAL_RCC_CSSCallback(void);

@@ -1,9 +1,9 @@
 pin,package_position,signal,role,zone,status
-PA5,21,SPI1_SCK,ADC_SCK,ADC digital,candidate
-PA6,22,SPI1_MISO,ADC_DOUT,ADC digital,candidate
-PA7,23,SPI1_MOSI,ADC_DIN,ADC digital,candidate
-PA4,20,GPIO_Output,ADC_CS,ADC digital,idle_high_candidate
-PC4,24,GPIO_EXTI4,ADC_DRDY,ADC digital,falling_edge_candidate
+PB3,55,SPI1_SCK,ADC_SCK,ADC digital,SPI1_AF5
+PB4,56,SPI1_MISO,ADC_DOUT,ADC digital,SPI1_AF5
+PB5,57,SPI1_MOSI,ADC_DIN,ADC digital,SPI1_AF5
+PB6,58,GPIO_Output,ADC_CS,ADC digital,idle_high_candidate
+PA15,50,GPIO_EXTI15,ADC_DRDY,ADC digital,falling_edge_candidate
 PC5,25,RESERVED,UNUSED_PC5,ADC digital,not_connected
 PA8,41,RCC_MCO_1,ADC_CLK,clock,HSE_div2_4096000Hz
 PC8,39,SDIO_D0,TF_D0,TF,candidate
@@ -12,7 +12,7 @@ PC10,51,SDIO_D2,TF_D2,TF,candidate
 PC11,52,SDIO_D3,TF_D3,TF,candidate
 PC12,53,SDIO_CK,TF_CLK,TF,candidate
 PD2,54,SDIO_CMD,TF_CMD,TF,candidate
-PB5,57,GPIO_Input,TF_CARD_DETECT,TF,polarity_unbound
+PA9,42,GPIO_Input,TF_CARD_DETECT,TF,active_low_pullup
 PB13,34,SPI2_SCK,RADIO_SCK,radio,candidate
 PB14,35,SPI2_MISO,RADIO_MISO,radio,candidate
 PB15,36,SPI2_MOSI,RADIO_MOSI,radio,candidate
@@ -21,14 +21,14 @@ PC6,37,GPIO_Input,RADIO_BUSY,radio,candidate
 PC7,38,GPIO_EXTI7,RADIO_DIO1,radio,rising_edge_candidate
 PB2,28,GPIO_Output,RADIO_NRESET,radio,idle_high_candidate
 PC0,8,ADC1_IN10,ACQUISITION_BATTERY,power,divider_10k_10k_candidate
-PB6,58,GPIO_Output,LED_VOLT_1,voltage indicators,idle_low_candidate
-PB7,59,GPIO_Output,LED_VOLT_2,voltage indicators,idle_low_candidate
-PB8,61,GPIO_Output,LED_VOLT_3,voltage indicators,idle_low_candidate
-PB9,62,GPIO_Output,LED_VOLT_4,voltage indicators,idle_low_candidate
+PA4,20,GPIO_Output,LED_VOLT_1,voltage indicators,idle_low_candidate
+PA5,21,GPIO_Output,LED_VOLT_2,voltage indicators,idle_low_candidate
+PA6,22,GPIO_Output,LED_VOLT_3,voltage indicators,idle_low_candidate
+PA7,23,GPIO_Output,LED_VOLT_4,voltage indicators,idle_low_candidate
 PA13,46,SYS_JTMS-SWDIO,SWDIO,debug,reserved_debug
 PA14,49,SYS_JTCK-SWCLK,SWCLK,debug,reserved_debug
-PA9,42,USART1_TX,DEBUG_UART_TX,debug serial,3v3_logic_candidate_not_bound
-PA10,43,USART1_RX,DEBUG_UART_RX,debug serial,3v3_logic_candidate_not_bound
+PA2,16,USART2_TX,DEBUG_UART_TX,debug serial,USART2_AF7_115200_8N1
+PA3,17,USART2_RX,DEBUG_UART_RX,debug serial,USART2_AF7_115200_8N1
 PA0-WKUP,14,TIM2_CH1,IGNITION_SIGNAL,logic output,explicit_ARM_FIRE_1000ms_cutoff
 PB10,29,GPIO_Output,LINK_LED,link indication,idle_low_candidate
 PH0 - OSC_IN,5,RCC_OSC_IN,HSE_IN,clock,8192000Hz_crystal

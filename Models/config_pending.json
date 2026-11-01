@@ -1,5 +1,5 @@
 {
-  "revision": "R8-2026-10-29-ADS1220-CAD-contract",
+  "revision": "R8-2026-11-01-acquisition-user-pin-assignment-CAD-confirmed",
   "board_bound": true,
   "acquisition": {
     "part": "STM32F411RCT6",
@@ -27,10 +27,10 @@
     "voltage_leds": {
       "count": 4,
       "pins_candidate": [
-        "PB6",
-        "PB7",
-        "PB8",
-        "PB9"
+        "PA4",
+        "PA5",
+        "PA6",
+        "PA7"
       ],
       "purpose": "acquisition_battery_voltage_estimate",
       "thresholds_mv": [
@@ -47,16 +47,20 @@
       "software_policy": "PC0_VREFINT_compensated_IIR_filter"
     },
     "debug_uart": {
-      "instance": "USART1",
-      "tx_candidate": "PA9",
-      "rx_candidate": "PA10",
+      "instance": "USART2",
+      "tx_candidate": "PA2",
+      "rx_candidate": "PA3",
       "logic_voltage_v": 3.3,
       "baud_candidate": 115200,
       "board_verified": false,
       "GND_required": true,
       "3v3_pin_means": "VTREF_only_no_external_supply",
       "SWD_independent": true,
-      "printing": "bounded_interrupt_TX_buffer_drop_on_full_rate_limited_not_in_ADC_ISR"
+      "printing": "bounded_interrupt_TX_buffer_drop_on_full_rate_limited_not_in_ADC_ISR",
+      "alternate_function": "GPIO_AF7_USART2",
+      "physical_tx": 16,
+      "physical_rx": 17,
+      "frame": "8N1"
     },
     "channel_count": 1,
     "bridge_excitation_v": 5.0,
@@ -65,7 +69,31 @@
     "nominal_rate_sps": 2000,
     "conversion_cycles": 2072,
     "theoretical_rate_sps": 1976.8339768339767,
-    "pga_selection": "SENSOR.CFG electrical ranges required for configured gain; default gain1 bypass raw only"
+    "pga_selection": "SENSOR.CFG electrical ranges required for configured gain; default gain1 bypass raw only",
+    "source": "user_requested_pin_assignment",
+    "pin_assignment_date": "2026-11-01",
+    "final_cad_match": true,
+    "final_cad_status": "matched_schematic_and_PCB_PAD_NET_not_copper_or_bench_validation",
+    "adc_pins": {
+      "spi": "SPI1",
+      "sck": "PB3",
+      "miso": "PB4",
+      "mosi": "PB5",
+      "alternate_function": "GPIO_AF5_SPI1",
+      "cs": "PB6",
+      "drdy": "PA15",
+      "drdy_exti": 15,
+      "drdy_irq": "EXTI15_10_IRQn",
+      "drdy_edge": "falling",
+      "clock": "PA8"
+    },
+    "tf_card_detect": {
+      "pin": "PA9",
+      "active_level": "low",
+      "pull": "up"
+    },
+    "final_cad_source": "ProDoc_Acquisition_1_2026-11-01.epro2",
+    "final_cad_sha256": "839d88fe635155fbf0e7a4a1c8594dda41facc43cd6e28ba2d72c761692ddfb4"
   },
   "controller": {
     "part": "STM32G071KBT6",
@@ -160,7 +188,7 @@
     "preferred_passive_package": "0805 where electrically and mechanically suitable"
   },
   "hardware_candidate": {
-    "status": "20261029_epro2_contract_not_bench_verified",
+    "status": "20261101_acquisition_user_pin_assignment_final_CAD_matched_controller_20261029_CAD",
     "controller_exact_part": "STM32G071KBT6",
     "controller_variant": "GP_without_N",
     "adc_avdd_v": 5.0,
@@ -327,8 +355,17 @@
         "PA4"
       ]
     },
-    "cad_contract_bound": true
+    "cad_contract_bound": true,
+    "acquisition_user_contract_bound": true
   },
   "runtime_configuration_source": "Common/Inc/st_project_config.h",
-  "binding_scope": "latest_epro2_electrical_contract_not_bench_validation"
+  "binding_scope": "acquisition_user_requested_pin_assignment_confirmed_by_20261101_CAD_controller_20261029_CAD_not_bench_validation",
+  "hardware_sources": {
+    "acquisition": "user_requested_pin_assignment_20261101",
+    "controller": "ProDoc_Controller_1_2026-10-29.epro2",
+    "acquisition_previous_snapshot": "Models/hardware_acquisition_20261029.json",
+    "acquisition_final_cad": "ProDoc_Acquisition_1_2026-11-01.epro2",
+    "acquisition_final_snapshot": "Models/hardware_acquisition_20261101_final.json",
+    "acquisition_final_comparison": "Models/acquisition_pinmap_cad_comparison_20261101.json"
+  }
 }

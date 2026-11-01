@@ -1,33 +1,35 @@
-# SwiftThrust R8 双板应用：2026-10-29 硬件契约
+# SwiftThrust R8 双板应用：2026-11-01 采集端引脚契约
 
-当前运行目标为两端 EIDE **ReferenceApp**，初始化入口为各自 `board/reference_main.c`。硬件依据用户提供的两份 2026-10-29 epro2，固件直接适配这些原理图。候选 IOC 已同步用于资源检查，不是运行代码的生成入口。LinkCheck 是历史组件链接目标，不能烧录为应用。
+当前运行目标为两端 EIDE **ReferenceApp**，初始化入口为各自 `board/reference_main.c`。采集端按2026-11-01用户明确的新引脚分配运行，遥控端保持2026-10-29硬件契约。最终`ProDoc_Acquisition_1_2026-11-01.epro2`的原理图与PCB焊盘网络已核对一致。候选 IOC 已同步用于资源检查，不是运行代码的生成入口。LinkCheck 是历史组件链接目标，不能烧录为应用。
 
 本次只进行了源码修改、CAD 解析、离线模型测试和目标编译。没有访问探针、串口、实板或执行负载；CAD 接线确认不表示电气、噪声、吞吐或输出安全测试通过。
 
 ## 硬件来源与 GPIO
 
-`hardware_acquisition_20261029.json`、`hardware_controller_20261029.json` 保存文件 SHA256、器件、供电和引脚网络；`extract_epro_contract.py` 读取 EPRU 最新票据，排除删除图元和失效导线组，按符号引脚连接端、旋转、镜像、导线端点和网络名解析，不因线段内部交叉判断连接。`check_hardware_contract.py --source-dir <下载目录>` 可重放来源核对。两块 PCB 文档仅含元数据，本次依据原理图，不声称核验了铜皮布线。
+`acquisition_pin_assignment_20261101.json`保存用户明确的新设计目标；`hardware_*_20261029.json`保持原样作为历史事实。`hardware_acquisition_20261031_observed.json`保留迁移前实际读取的旧接线；最终快照为`hardware_acquisition_20261101_final.json`，源文件SHA256为`839d88fe635155fbf0e7a4a1c8594dda41facc43cd6e28ba2d72c761692ddfb4`。
+
+`check_acquisition_pinmap.py --source <最终epro2> --snapshot <新的快照路径> --report <比较结果JSON>`会重新解析并同时检查原理图及PCB焊盘网络，不匹配返回非零状态。最终文件的84项比较全部匹配（原理图与PCB各42项，覆盖活动信号、释放脚和UART连接器针序），明细见`acquisition_pinmap_cad_comparison_20261101.json`。解析处理旋转、镜像、删除票据、有效导线组、网络标签和PCB键式PAD_NET，不因视觉交叉推定短接，不声称铜皮/DRC或实物验证通过。
 
 | 功能 | 采集 STM32F411RCT6 | 遥控 STM32G071KBT6 |
 |---|---|---|
-| ADC SPI | PA4 CS；PA5 SCK / PA6 MISO / PA7 MOSI，SPI1 AF5 mode1 | PA3 / ADC1_IN3 为电池检测 |
-| ADC DRDY / CLK | PC4 EXTI4 下降沿；PA8 AF0 MCO1 HSE/2 | — |
-| PC5 | 未连接，保持模拟输入；不是 ADC RESET/SYNC | — |
+| ADC SPI | PB6 CS；PB3 SCK / PB4 MISO / PB5 MOSI，SPI1 AF5 mode1 | PA3 / ADC1_IN3 为电池检测 |
+| ADC DRDY / CLK | PA15 EXTI15_10 下降沿；PA8 AF0 MCO1 HSE/2 | — |
+| 释放脚 | PC4/PC5、PA10、PB7/PB8/PB9无外设功能；PC5不是ADC RESET/SYNC | — |
 | LoRa SPI | PB12 CS；PB13 SCK / PB14 MISO / PB15 MOSI，SPI2 AF5 | PA15 CS；PB3 SCK / PB4 MISO / PB5 MOSI，SPI1 AF0 |
 | LoRa BUSY / DIO1 / NRESET | PC6 / PC7 EXTI7 上升沿 / PB2 | PB7 / PB6 EXTI6 上升沿 / PA8 |
 | TF SDIO | PC8..PC11 DAT0..3 / PC12 CLK / PD2 CMD，AF12 | — |
-| TF 卡检测 | PB5，低有效、内部上拉 | — |
+| TF 卡检测 | PA9，低有效、内部上拉 | — |
 | 电池 | PC0 ADC1_IN10；R14/R15=10k/10k、C19=100nF | PA3 ADC1_IN3；R7/R8=10k/10k、C7=100nF |
-| 电量 LED | PB6..PB9，高有效；D5 是硬件电源灯 | GUI 显示本地电池电压 |
+| 电量 LED | PA4..PA7，高有效；D5 是硬件电源灯 | GUI 显示本地电池电压 |
 | 链路 LED | PB10，高有效 | PB0，高有效 |
 | 外部执行输出 | PA0 AF1 TIM2_CH1；高有效、上电低 | — |
-| USART1 115200 8N1 | PA9 TX / PA10 RX，AF7 | 逻辑 PA9 TX / PA10 RX AF1；SYSCFG PA11_RMP/PA12_RMP 置位，映射到物理22/23脚 PA11[PA9]/PA12[PA10] |
+| 调试UART 115200 8N1 | USART2 PA2 TX / PA3 RX，AF7 | 逻辑 PA9 TX / PA10 RX AF1；SYSCFG PA11_RMP/PA12_RMP 置位，映射到物理22/23脚 PA11[PA9]/PA12[PA10] |
 | SWD | PA13 / PA14 | PA13 / PA14 |
 | OLED SSD1306 128×64 | — | PB8 SCL / PB9 SDA，I2C1 AF6 开漏，无内部上拉，模块外部上拉 |
 | 编码器 | — | PA0/PA1 TIM2 AF2；PA2按键低有效，30ms去抖/800ms长按 |
 | HSE | PH0/PH1，8.192MHz无源晶振 | HSI16内部16MHz |
 
-精确封装位置和未使用脚见 `reference_pins.csv`。采集 ADC SPI/DRDY 的 R35..R39 为47Ω，PA8串联R16为33Ω。桥式传感器激励、ADS1220 AVDD和REFP0同源5V，AVSS/REFN0接地，DVDD=3.3V。桥信号经滤波接 AIN1正 / AIN2负；AIN0/AIN3未用于第二路测量。供电器件包括 LTC3440 3.3V、采集端 TPS61040 5.4V及TPS7A2050 5V；这些是器件/网络事实，不是电源性能验证。
+精确封装位置和未使用脚见 `reference_pins.csv`。PB3/PB4切到SPI1 AF5，PA15切为GPIO EXTI15；F411按GPIO复用控制释放JTAG/SWO用途，保留PA13/PA14的Serial_Wire调试。USART2不会再初始化PA9/PA10，因此PA9卡检测不会被串口覆盖。采集 ADC SPI/DRDY 的 R35..R39 为47Ω，PA8串联R16为33Ω。桥式传感器激励、ADS1220 AVDD和REFP0同源5V，AVSS/REFN0接地，DVDD=3.3V。桥信号经滤波接 AIN1正 / AIN2负；AIN0/AIN3未用于第二路测量。供电器件包括 LTC3440 3.3V、采集端 TPS61040 5.4V及TPS7A2050 5V；这些是器件/网络事实，不是电源性能验证。
 
 ## F411 时钟树
 
@@ -43,7 +45,7 @@
 | SPI1 ADC / SPI2 LoRa | 96MHz/32=3MHz / 48MHz/16=3MHz |
 | ADC1内部电池/VDDA | PCLK2/4=24MHz，480周期采样约20µs |
 | SDIO PLLQ域 | 48MHz；识别400kHz，数据48MHz/(2+2)=12MHz，四位 |
-| USART1 | PCLK2=96MHz，HAL按115200 8N1计算BRR |
+| USART2 | PCLK1=48MHz，HAL按115200 8N1计算BRR |
 | 电压调节 / Flash | Scale1 / 3等待周期，板级3.3V供电 |
 
 核对依据：[STM32F411 RM0383](https://www.st.com/resource/en/reference_manual/dm00119316.pdf) 的Flash等待周期表、RCC PLL/总线/MCO和SDIO分频规则，以及[DS10314](https://www.st.com/resource/en/datasheet/stm32f411ce.pdf)的电气条件。1.024MHz PLL输入、384MHz VCO、96MHz内核和48/96MHz总线均在允许范围；96MHz不可沿用Scale2或2WS。初始化检查HSE/PLL就绪、实际HAL频率及MCO寄存器，失败进入关闭执行输出的故障状态，不启动ADC。运行期间开启CSS；HSE丢失由NMI立即将PA0切回GPIO低、丢弃在途ADC样本并锁定时钟故障，前台尽可能排空既有有效记录，禁止新的START、执行授权或NV写入。VOSRDY确认后才切换96MHz。TIM5仅提供时间戳，ADC转换时钟来自MCO，二者不能混用。
@@ -89,6 +91,6 @@ PA0保留上电低、ARM许可10s、独立FIRE确认、单次1000ms TIM2 PWM2/OP
 
 ## 构建与检查
 
-环境使用现有SDK_ROOT、ARM_GCC_ROOT、HOST_CC及EIDE扩展，不复制SDK。执行：`run_host_tests.py`（另加 `--english`）、`check_link_runtime.py`、`check_reference.py`、`check_ignition_f4.py`、`check_ads1220_capture.py`、`check_clock_fault.py`、`check_hardware_contract.py`、`validate_candidates.py`、`build_reference.py --artifacts`。均在Models目录，建议 `python -X utf8 -B`。
+环境使用现有SDK_ROOT、ARM_GCC_ROOT、HOST_CC及EIDE扩展，不复制SDK。执行：`run_host_tests.py`（另加 `--english`）、`check_link_runtime.py`、`check_reference.py`、`check_ignition_f4.py`、`check_ads1220_capture.py`、`check_clock_fault.py`、`check_hardware_contract.py`（历史CAD）、`check_acquisition_pinmap.py`、`validate_candidates.py`、`build_reference.py --artifacts`。均在Models目录，建议 `python -X utf8 -B`。
 
-测试结果与交付范围见 `R8_HARDWARE_ADAPTATION_20261029.md`。上板仍须测HSE/MCO/DRDY/SPI波形、实际持续记录率与TF最坏延迟、传感器共模/噪声/饱和与真实载荷标定、双端电池误差、OLED/编码器/UART、射频丢包/重连、STOP文件收尾、掉电NV保护和PA0启动/截止波形。
+本轮引脚迁移和验证结果见 `ACQUISITION_PIN_REMAP_20261101.md`；上次ADC迁移历史见 `R8_HARDWARE_ADAPTATION_20261029.md`。上板仍须测HSE/MCO/DRDY/SPI波形、实际持续记录率与TF最坏延迟、传感器共模/噪声/饱和与真实载荷标定、双端电池误差、OLED/编码器/UART、射频丢包/重连、STOP文件收尾、掉电NV保护和PA0启动/截止波形。

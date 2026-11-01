@@ -167,6 +167,6 @@ R7与R8无线不互通，必须同时升级两端；不加入自动降级。保�
 
 2026-10-29硬件：链路灯采集端PB10（F411 LQFP64物理29脚）、遥控端PB0（G071 LQFP32物理15脚），均默认低、高有效。ADC DMA、SDIO/FatFs及协议不受此GPIO迁移影响。遥控PA11/PA12物理22/23脚通过SYSCFG映射为PA9/PA10 USART1；不再是预留脚。完整引脚与时钟见[当前硬件契约](REFERENCE_APPLICATION.md)。
 
-采集电池沿用PC0/ADC1_IN10/物理8脚的1:2分压，满电4.2V在ADC端约2.1V；禁止电池直接进ADC。PB6～9四颗绿色LED门限沿用3.90/3.70/3.50V、30mV回差，低于3.30V末灯1Hz闪，未知/过期熄灭。这是电压档位，不是精密SOC或电池保护。
+采集电池沿用PC0/ADC1_IN10/物理8脚的1:2分压，满电4.2V在ADC端约2.1V；禁止电池直接进ADC。PA4～7四颗绿色LED（2026-11-01引脚迁移）门限沿用3.90/3.70/3.50V、30mV回差，低于3.30V末灯1Hz闪，未知/过期熄灭。这是电压档位，不是精密SOC或电池保护。
 
 验证入口：`run_host_tests.py`（默认中文，`--english`英文）、`check_link_runtime.py`、`check_reference.py`、`check_ignition_f4.py`、`validate_candidates.py`、`build_reference.py --artifacts`。模型覆盖去重、顺序、恢复、TF收尾、永久标定恢复、会话零点、中英文四行与有限模拟输出；不代表无线距离、硬件、电气或点火安全验收。完整交付清单见 `R8_DELIVERY.md`。

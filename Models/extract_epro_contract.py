@@ -140,9 +140,53 @@ def extract(path):
             'hardware_tested': False, 'components': components, 'pins': pins}
 
 
+def extract_pcb(path):
+    """Read explicit PCB PAD_NET assignments, not copper connectivity or DRC.
+
+    EasyEDA keyed ids carry component/pad identifiers outside the payload.
+    Empty network names mean unassigned and must never join unrelated pads.
+    """
+    boards = []
+    for page_id, doc in documents(path).items():
+        if doc['header']['docType'] != 'PCB':
+            continue
+        properties = attrs(doc)
+        components = {}
+        for (kind, ident), value in doc['rows'].items():
+            if kind == 'COMPONENT':
+                components[ident] = {'id': ident,
+                    'reference': properties[ident].get('Designator') or ident,
+                    'x_mil': value['x'], 'y_mil': value['y'],
+                    'angle': value.get('angle', 0)}
+        pads, members = [], defaultdict(list)
+        for (kind, ident), value in doc['rows'].items():
+            if kind != 'PAD_NET':
+                continue
+            key = json.loads(ident)
+            if len(key) != 4 or key[0] != 'PAD_NET':
+                raise ValueError('Invalid PCB PAD_NET key')
+            _, component, number, pad_id = key
+            if component not in components:
+                continue  # Deleted component: a stale PAD_NET cannot connect it.
+            pin = {'reference': components[component]['reference'],
+                   'number': str(number), 'pad_id': pad_id, 'net': value['padNet']}
+            pads.append(pin)
+            if pin['net']:
+                members[pin['net']].append(f"{pin['reference']}.{pin['number']}")
+        for pin in pads:
+            pin['connected_pins'] = sorted(members[pin['net']]) if pin['net'] else []
+        boards.append({'uuid': page_id, 'components': list(components.values()), 'pads': pads})
+    return {'method': 'PCB explicit keyed PAD_NET assignments; no copper/DRC validation',
+            'boards': boards}
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('source', type=Path)
     parser.add_argument('output', type=Path)
+    parser.add_argument('--pcb', action='store_true', help='Include explicit PCB pad networks')
     args = parser.parse_args()
-    args.output.write_text(json.dumps(extract(args.source), ensure_ascii=False, indent=2)+'\n', encoding='utf-8')
+    snapshot = extract(args.source)
+    if args.pcb:
+        snapshot['pcb'] = extract_pcb(args.source)
+    args.output.write_text(json.dumps(snapshot, ensure_ascii=False, indent=2)+'\n', encoding='utf-8')
