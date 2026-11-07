@@ -1,13 +1,13 @@
 # Controller ReferenceApp（STM32G071KBT6）
 
-当前可执行入口是 `board/reference_main.c`，EIDE 选择 `ReferenceApp`。硬件契约来自 2026-10-29 的 Controller epro2。内部 HSI16 提供 16 MHz SYSCLK/HCLK/PCLK；SPI1 分频 4，4 MHz；USART1 为 115200 8N1；I²C1 使用 HSI16 和 `0x00303D5B`，标称约 100 kHz，实际边沿/频率须上板测量。
+当前可执行入口是 `board/reference_main.c`，EIDE 选择 `ReferenceApp`。硬件契约以2026-10-29的Controller epro2为历史基础，编码器A按2026-11-08用户指定分配迁至PA5；旧CAD快照不改写。内部 HSI16 提供 16 MHz SYSCLK/HCLK/PCLK；SPI1 分频 4，4 MHz；USART1 为 115200 8N1；I²C1 使用 HSI16 和 `0x00303D5B`，标称约 100 kHz，实际边沿/频率须上板测量。
 
 | 功能 | GPIO / 外设 |
 |---|---|
 | LoRa SCK/MISO/MOSI | PB3/PB4/PB5，SPI1 AF0 |
 | LoRa CS/BUSY/DIO1/NRESET | PA15/PB7/PB6/PA8 |
 | OLED SCL/SDA | PB8/PB9，I²C1 AF6，开漏，无内部上拉；模块外部上拉 |
-| 编码器 A/B/按下 | PA0/PA1，TIM2 AF2；PA2 低有效，消抖与长短按保留 |
+| 编码器 A/B/按下 | PA5（12脚）/PA1（8脚），TIM2_CH1/CH2 AF2；PA2 低有效，消抖与长短按保留；PA0释放 |
 | 本地电池 | PA3 / ADC1_IN3，10kΩ + 10kΩ，100nF |
 | 链路灯 | PB0，高有效 |
 | USART1 TX/RX | 实体 PA11[PA9] / PA12[PA10]，22/23 脚；逻辑 PA9/PA10 AF1 |
@@ -19,6 +19,6 @@ ADC 每 100 ms 先测 VREFINT 算出 VDDA，再测 PA3。ADC 时钟 PCLK/2 = 8 M
 
 GUI 状态页显示“遥控电池”和“采集电池”；本地 VDDA 只用于 NV 写入安全检查，并在 UART STATUS 单独显示，不能当作电池电压。电量档位是负载电压估计，不宣称精确 SOC。四行菜单、R8 协议、重试/重连、标定与 ARM/FIRE/DISARM 保留。
 
-候选 IOC 同步 PA3 与 PA11/12 重映射；真实固件来源仍为 ReferenceApp。`include/st_controller_bsp.h` 是历史未绑定接口草案，不参与 ReferenceApp。NV page62/page63 和升级边界不变。
+候选 IOC 同步 PA5/PA1 编码器、PA3 与 PA11/12 重映射；真实固件来源仍为 ReferenceApp。编码器保持TIM2硬件TI12、Prescaler=0、Period=65535、双通道上拉/上升沿/直接输入/不分频、IC1Filter=IC2Filter=8；按键仍为30ms去抖/800ms长按。`include/st_controller_bsp.h` 是历史未绑定接口草案，不参与 ReferenceApp。NV page62/page63 和升级边界不变。验证记录见[编码器迁移报告](../Models/CONTROLLER_ENCODER_REMAP_20261108.md)。
 
 离线测试不能替代上板检查：核对串口 22/23 脚收发、PA3 与实际电池/VDDA 电压、OLED SCL/SDA 上拉和时序、编码器方向/机械消抖、无线收发与 PB0 指示。未进行烧录或实物负载测试。

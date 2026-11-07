@@ -1,9 +1,9 @@
-2026-11-07T11:49:19.044232+00:00
+2026-11-07T17:10:38.966552+00:00
 Actual EIDE ReferenceApp application targets; complete main/HAL/IRQ integration, offline build only.
 No hardware access. Objects in auto-removed temp directories; optional sparse HEX/ELF retained.
 PASS 155 official SDK inputs match checked-in manifest SHA256.
 BOARD Acquisition
-[ INFO ] start building at 2026-11-07 19:49:19
+[ INFO ] start building at 2026-11-08 01:10:39
 
 [ TOOL ] arm-none-eabi-gcc.exe (Arm GNU Toolchain 14.3.Rel1 (Build arm-14.174)) 14.3.1 20250623
 
@@ -52,30 +52,30 @@ BOARD Acquisition
 >> [ 33%] CC 'stm32f4xx_hal_gpio.c'
 >> [ 35%] CC 'stm32f4xx_hal_pwr.c'
 >> [ 37%] CC 'stm32f4xx_hal_pwr_ex.c'
->> [ 38%] CC 'stm32f4xx_hal_rcc.c'
->> [ 40%] CC 'stm32f4xx_hal_rcc_ex.c'
+>> [ 38%] CC 'stm32f4xx_hal_rcc_ex.c'
+>> [ 40%] CC 'stm32f4xx_hal_rcc.c'
 >> [ 41%] CC 'stm32f4xx_hal_sd.c'
 >> [ 43%] CC 'stm32f4xx_hal_spi.c'
 >> [ 45%] CC 'stm32f4xx_hal_tim_ex.c'
 >> [ 46%] CC 'stm32f4xx_hal_tim.c'
->> [ 48%] CC 'stm32f4xx_ll_sdmmc.c'
->> [ 50%] CC 'stm32f4xx_hal_uart.c'
->> [ 51%] CC 'system_stm32f4xx.c'
+>> [ 48%] CC 'stm32f4xx_hal_uart.c'
+>> [ 50%] CC 'system_stm32f4xx.c'
+>> [ 51%] CC 'stm32f4xx_ll_sdmmc.c'
 >> [ 53%] AS 'startup_stm32f411xe.s'
 >> [ 54%] CC 'st_block.c'
 >> [ 56%] CC 'st_link2.c'
->> [ 58%] CC 'st_diskio.c'
->> [ 59%] CC 'st_nv.c'
+>> [ 58%] CC 'st_nv.c'
+>> [ 59%] CC 'st_diskio.c'
 >> [ 61%] CC 'st_sdio_hal.c'
 >> [ 62%] CC 'st_ads_hal.c'
 >> [ 64%] CC 'st_radio_hal.c'
->> [ 66%] CC 'st_cal.c'
->> [ 67%] CC 'st_cal_service.c'
+>> [ 66%] CC 'st_cal_service.c'
+>> [ 67%] CC 'st_cal.c'
 >> [ 69%] CC 'st_cal_input.c'
 >> [ 70%] CC 'st_cal_view.c'
 >> [ 72%] CC 'st_cal_endpoint.c'
->> [ 74%] CC 'st_cal_system.c'
->> [ 75%] CC 'st_cal_fatfs.c'
+>> [ 74%] CC 'st_cal_fatfs.c'
+>> [ 75%] CC 'st_cal_system.c'
 >> [ 77%] CC 'st_link_runtime.c'
 >> [ 79%] CC 'st_reference.c'
 >> [ 80%] CC 'reference_main.c'
@@ -83,13 +83,13 @@ BOARD Acquisition
 >> [ 83%] CC 'st_journal.c'
 >> [ 85%] CC 'st_console.c'
 >> [ 87%] CC 'st_flash_journal.c'
->> [ 88%] CC 'st_ignition.c'
->> [ 90%] CC 'aes.c'
+>> [ 88%] CC 'aes.c'
+>> [ 90%] CC 'st_ignition.c'
 >> [ 91%] CC 'st_auto_link.c'
 >> [ 93%] CC 'st_ignition_f4.c'
 >> [ 95%] CC 'st_battery.c'
->> [ 96%] CC 'st_frame.c'
->> [ 98%] CC 'st_task.c'
+>> [ 96%] CC 'st_task.c'
+>> [ 98%] CC 'st_frame.c'
 >> [100%] CC 'st_session_zero.c'
 
 [ INFO ] start linking ...
@@ -109,7 +109,7 @@ file path: "<TEMP>\Acquisition\SwiftThrust_Acquisition.hex"
 
 file path: "<TEMP>\Acquisition\SwiftThrust_Acquisition.bin"
 
-[ DONE ] build successfully !, elapsed time 0:0:30
+[ DONE ] build successfully !, elapsed time 0:0:15
 
 
    text	   data	    bss	    dec	    hex	filename
@@ -203,7 +203,7 @@ SHA256 Controller/include/st_controller_bsp.h 363e2672f6563b39813364cb96dd76a53d
 SHA256 Controller/include/st_ui.h 271053b0a615626fc1589f663cd293aeebfbf6d294ea2e895248c47635b36b76
 SHA256 Controller/ports/st_g0_oled.h 4df686d9b35d953204b1ed779c9c26abd41d5942586ce58527eafcfa5093b091
 BOARD Controller
-[ INFO ] start building at 2026-11-07 19:49:52
+[ INFO ] start building at 2026-11-08 01:10:56
 
 [ TOOL ] arm-none-eabi-gcc.exe (Arm GNU Toolchain 14.3.Rel1 (Build arm-14.174)) 14.3.1 20250623
 
@@ -260,8 +260,8 @@ BOARD Controller
 >> [ 73%] CC 'st_cal_ui.c'
 >> [ 75%] CC 'st_cal_remote.c'
 >> [ 76%] CC 'st_link_runtime.c'
->> [ 78%] CC 'reference_main.c'
->> [ 80%] CC 'st_reference.c'
+>> [ 78%] CC 'st_reference.c'
+>> [ 80%] CC 'reference_main.c'
 >> [ 82%] CC 'st_pairing.c'
 >> [ 83%] CC 'st_journal.c'
 >> [ 85%] CC 'st_console.c'
@@ -290,7 +290,7 @@ file path: "<TEMP>\Controller\SwiftThrust_Controller.hex"
 
 file path: "<TEMP>\Controller\SwiftThrust_Controller.bin"
 
-[ DONE ] build successfully !, elapsed time 0:0:18
+[ DONE ] build successfully !, elapsed time 0:0:13
 
 
    text	   data	    bss	    dec	    hex	filename
@@ -321,7 +321,7 @@ SHA256 Controller/src/st_cal_ui.c ccfb2ae7e61d2e54776ac8f906fcf2dd8f3b08081dd7ee
 SHA256 Acquisition/src/st_cal_view.c 7890a758ab3add4fa5d3eefd7442cbd3f0c8c81d9c4e2353e3aa15d292bb2055
 SHA256 Controller/src/st_cal_remote.c 55aa38ad94a91d5db562c07e8e116a4b602a3f2707eff2f4ff89c4efd81121d5
 SHA256 Acquisition/src/st_link_runtime.c 4220f26a50a181659fa08ea14b1c2c2ace2170e8b1630a41c0a12963efd7e008
-SHA256 Controller/board/reference_main.c 5c2f204d828484354d354f35e62b5cbb87fd7f220e93700db41e7c48f1a9191a
+SHA256 Controller/board/reference_main.c 77367fcf7eeaeb696faa23275f92262f6431fbad5f8a4dea06213b85a2d6f98a
 SHA256 Acquisition/src/st_reference.c 5ab07f909e1adcbbaac75109bf0b04b7ef865670cc38525c9fc3d73e87811950
 SHA256 Acquisition/src/st_pairing.c cc563ab4618ab53c6b2a2bdb928217a1f310f630cf80a0cc1d3069aab88b7ef4
 SHA256 Acquisition/src/st_journal.c aa19671b7c7a0206c6c14c027661043bbe88b3ec5ef4ce06042238fd718d8b1c

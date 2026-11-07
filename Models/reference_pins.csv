@@ -40,7 +40,7 @@ Controller,PB6,30,GPIO_EXTI6,RADIO_DIO1,radio,reference_contract_hardware_unveri
 Controller,PA8,18,GPIO_Output,RADIO_NRESET,radio,reference_contract_hardware_unverified
 Controller,PB8,32,I2C1_SCL,OLED_SCL,OLED,reference_contract_hardware_unverified
 Controller,PB9,1,I2C1_SDA,OLED_SDA,OLED,reference_contract_hardware_unverified
-Controller,PA0,7,TIM2_CH1,ENCODER_A,input,reference_contract_hardware_unverified
+Controller,PA5,12,TIM2_CH1,ENCODER_A,input,reference_contract_hardware_unverified
 Controller,PA1,8,TIM2_CH2,ENCODER_B,input,reference_contract_hardware_unverified
 Controller,PA2,9,GPIO_Input,ENCODER_PRESS,input,reference_active_low_pullup_30ms
 Controller,PA3,10,ADC1_IN3,CONTROLLER_BATTERY,input,divider_10k_10k_100nF

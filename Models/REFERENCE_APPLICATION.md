@@ -1,6 +1,6 @@
 # SwiftThrust R8 双板应用：2026-11-01 采集端引脚契约
 
-当前运行目标为两端 EIDE **ReferenceApp**，初始化入口为各自 `board/reference_main.c`。采集端按2026-11-01用户明确的新引脚分配运行，遥控端保持2026-10-29硬件契约。11-01及最新完成的`ProDoc_Acquisition_1_2026-11-07.epro2`均已核对原理图与PCB焊盘网络；最新合并前复核见[2026-11-07报告](MERGE_REVIEW_20261107.md)。候选 IOC 已同步用于资源检查，不是运行代码的生成入口。LinkCheck 是历史组件链接目标，不能烧录为应用。
+当前运行目标为两端 EIDE **ReferenceApp**，初始化入口为各自 `board/reference_main.c`。采集端按2026-11-01用户明确的新引脚分配运行；遥控端编码器A按2026-11-08用户要求迁至PA5，其余沿用2026-10-29硬件契约，详见[编码器迁移报告](CONTROLLER_ENCODER_REMAP_20261108.md)。11-01及最新完成的`ProDoc_Acquisition_1_2026-11-07.epro2`均已核对原理图与PCB焊盘网络；最新合并前复核见[2026-11-07报告](MERGE_REVIEW_20261107.md)。候选 IOC 已同步用于资源检查，不是运行代码的生成入口。LinkCheck 是历史组件链接目标，不能烧录为应用。
 
 本次只进行了源码修改、CAD 解析、离线模型测试和目标编译。没有访问探针、串口、实板或执行负载；CAD 接线确认不表示电气、噪声、吞吐或输出安全测试通过。
 
@@ -28,7 +28,7 @@
 | 调试UART 115200 8N1 | USART2 PA2 TX / PA3 RX，AF7 | 逻辑 PA9 TX / PA10 RX AF1；SYSCFG PA11_RMP/PA12_RMP 置位，映射到物理22/23脚 PA11[PA9]/PA12[PA10] |
 | SWD | PA13 / PA14 | PA13 / PA14 |
 | OLED SSD1306 128×64 | — | PB8 SCL / PB9 SDA，I2C1 AF6 开漏，无内部上拉，模块外部上拉 |
-| 编码器 | — | PA0/PA1 TIM2 AF2；PA2按键低有效，30ms去抖/800ms长按 |
+| 编码器 | — | PA5（12脚）/PA1（8脚），TIM2_CH1/CH2 AF2；PA0释放，PA2按键低有效，30ms去抖/800ms长按 |
 | HSE | PH0/PH1，8.192MHz无源晶振 | HSI16内部16MHz |
 
 精确封装位置和未使用脚见 `reference_pins.csv`。PB3/PB4切到SPI1 AF5，PA15切为GPIO EXTI15；F411按GPIO复用控制释放JTAG/SWO用途，保留PA13/PA14的Serial_Wire调试。USART2不会再初始化PA9/PA10，因此PA9卡检测不会被串口覆盖。采集 ADC SPI/DRDY 的 R35..R39 为47Ω，PA8串联R16为33Ω。桥式传感器激励、ADS1220 AVDD和REFP0同源5V，AVSS/REFN0接地，DVDD=3.3V。桥信号经滤波接 AIN1正 / AIN2负；AIN0/AIN3未用于第二路测量。供电器件包括 LTC3440 3.3V、采集端 TPS61040 5.4V及TPS7A2050 5V；这些是器件/网络事实，不是电源性能验证。

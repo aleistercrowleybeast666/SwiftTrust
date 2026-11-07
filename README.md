@@ -6,6 +6,7 @@ R8统一四行菜单、基础任务状态、Pair/UID/会话/32位事务和七类
 
 **PA0保留已确认的1000ms阻性负载配置与独立ARM/FIRE确认、故障截止。** 本次仅验证代码和离线模型。未烧录、未接入硬件测试，无无线距离或点火安全验收结论。
 
+- [2026-11-08遥控端编码器PA5迁移](Models/CONTROLLER_ENCODER_REMAP_20261108.md)
 - [2026-11-07完成PCB与合并前复核](Models/MERGE_REVIEW_20261107.md)
 - [2026-11-01采集端引脚迁移](Models/ACQUISITION_PIN_REMAP_20261101.md)
 - [2026-10-29硬件适配历史](Models/R8_HARDWARE_ADAPTATION_20261029.md)

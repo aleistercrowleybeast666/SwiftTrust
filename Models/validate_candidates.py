@@ -45,8 +45,8 @@ def pin_db(filename):
             for p in root.findall("m:Pin", NS)}
 
 
-def gpio_af_db():
-    root = ET.parse(DB / "IP/GPIO-STM32F411_gpio_v1_0_Modes.xml").getroot()
+def gpio_af_db(filename="GPIO-STM32F411_gpio_v1_0_Modes.xml"):
+    root = ET.parse(DB / "IP" / filename).getroot()
     return {(pin.get("Name"), signal.get("Name")): {
                 value.text for value in signal.findall(
                     "m:SpecificParameter[@Name='GPIO_AF']/m:PossibleValue", NS)}
@@ -217,6 +217,21 @@ def validate_ioc(board, rows):
             if values.get(f"{pin}.Mode") != "SD_4_bits_Wide_bus":
                 raise ValueError("SDIO four-bit mode missing")
     if board == "Controller":
+        by_role = {row["role"]: row for row in rows}
+        for role, expected in (("ENCODER_A", ("PA5", "12", "TIM2_CH1")),
+                               ("ENCODER_B", ("PA1", "8", "TIM2_CH2"))):
+            actual = tuple(by_role.get(role, {}).get(key) for key in
+                           ("pin", "package_position", "signal"))
+            if actual != expected:
+                raise ValueError("Controller 2026-11-08 encoder assignment mismatch: " + role)
+        if values.get("PA0.Signal"):
+            raise ValueError("Controller encoder must release PA0")
+        for key, expected in {"TIM2.EncoderMode": "TIM_ENCODERMODE_TI12",
+                              "TIM2.Period": "65535", "TIM2.IC1Filter": "8",
+                              "TIM2.IC2Filter": "8", "PA5.GPIO_PuPd": "GPIO_PULLUP",
+                              "PA1.GPIO_PuPd": "GPIO_PULLUP"}.items():
+            if values.get(key) != expected:
+                raise ValueError("Controller encoder configuration differs: " + key)
         for signal in ["TIM2_CH1", "TIM2_CH2"]:
             if not any(v == signal + ",Encoder_Interface" for k, v in values.items() if k.startswith("SH.")):
                 raise ValueError("Encoder pins are not assigned to Encoder_Interface")
@@ -225,8 +240,17 @@ def validate_ioc(board, rows):
                 raise ValueError("USART1 PA11/PA12 package-pad remap missing")
         if values.get("PA3.Signal") != "ADC1_IN3" or values.get("PA4.Signal"):
             raise ValueError("Controller battery must use PA3, not obsolete PA4")
-        if values.get("ADC1.ClockPrescaler") != "ADC_CLOCK_SYNC_PCLK_DIV2":
+        # CubeMX 6.15.0 omits these effective defaults on save for this exact
+        # HSI16/single-conversion setup. Both Controller CLI scripts query the
+        # live values as well; explicit different values must still fail.
+        if any(values.get("RCC." + key) != "16000000" for key in
+               ("SYSCLKFreq_VALUE", "AHBFreq_Value", "APBFreq_Value")):
+            raise ValueError("Controller must retain the 16 MHz clock tree")
+        if values.get("ADC1.ClockPrescaler", "ADC_CLOCK_SYNC_PCLK_DIV2") != "ADC_CLOCK_SYNC_PCLK_DIV2":
             raise ValueError("Controller ADC clock must be HSI16/PCLK divided by two")
+        if (values.get("ADC1.ScanConvMode", "ADC_SCAN_DISABLE") != "ADC_SCAN_DISABLE"
+                or values.get("ADC1.NbrOfConversion", "1") != "1"):
+            raise ValueError("Controller ADC must retain single-conversion mode")
         if values.get("ADC1.SamplingTimeCommon1") != "ADC_SAMPLETIME_160CYCLES_5":
             raise ValueError("VREFINT and divided battery need long sampling time")
     return path
@@ -404,6 +428,43 @@ class Regression(unittest.TestCase):
     def test_actual_cube_saved_pinout_matches_plan(self):
         for board in PARTS:
             validate_ioc(board, read_csv(ROOT / board / "pin_candidates.csv"))
+
+    def test_controller_encoder_pa5_af_and_both_pin_tables(self):
+        mapping = gpio_af_db("GPIO-STM32G07x_gpio_v1_0_Modes.xml")
+        for pin, signal in (("PA5", "TIM2_CH1"), ("PA1", "TIM2_CH2")):
+            self.assertEqual(mapping[pin, signal], {"GPIO_AF2_TIM2"})
+        rows = [row for row in read_csv(ROOT / "Models/reference_pins.csv")
+                if row["board"] == "Controller"]
+        validate_ioc("Controller", rows)
+        self.assertNotIn("PA0", {row["pin"] for row in rows})
+
+    def test_controller_old_encoder_pin_and_filter_changes_rejected(self):
+        path = ROOT / "Controller/SwiftThrust_Controller_Candidate/SwiftThrust_Controller_Candidate.ioc"
+        rows = read_csv(ROOT / "Controller/pin_candidates.csv")
+        for key, wrong in (("PA0.Signal", "S_TIM2_CH1_ETR"),
+                           ("PA5.Signal", "SPI1_SCK"),
+                           ("PA5.GPIO_PuPd", "GPIO_NOPULL"),
+                           ("TIM2.EncoderMode", "TIM_ENCODERMODE_TI1"),
+                           ("TIM2.Period", "4294967295"),
+                           ("TIM2.IC1Filter", "0"), ("TIM2.IC2Filter", "0"),
+                           ("RCC.APBFreq_Value", "8000000"),
+                           ("ADC1.ClockPrescaler", "ADC_CLOCK_SYNC_PCLK_DIV1"),
+                           ("ADC1.ScanConvMode", "ADC_SCAN_ENABLE")):
+            with self.subTest(key=key):
+                values = read_ioc(path)
+                values[key] = wrong
+                with patch(__name__ + ".read_ioc", return_value=values):
+                    with self.assertRaises(ValueError):
+                        validate_ioc("Controller", rows)
+        old_rows = [dict(row) for row in rows]
+        next(row for row in old_rows if row["role"] == "ENCODER_A").update(
+            pin="PA0", package_position="7")
+        values = read_ioc(path)
+        for suffix in ("Signal", "GPIO_Label", "GPIO_PuPd"):
+            values["PA0." + suffix] = values.pop("PA5." + suffix)
+        with patch(__name__ + ".read_ioc", return_value=values):
+            with self.assertRaises(ValueError):
+                validate_ioc("Controller", old_rows)
 
     def test_old_clock_and_missing_remap_rejected(self):
         for board, key, wrong in (("Acquisition", "RCC.HSE_VALUE", "8000000"),

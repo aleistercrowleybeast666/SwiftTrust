@@ -34,7 +34,8 @@ def main():
     language='en' if '--english' in sys.argv else 'zh'
     reports=[datetime.datetime.now(datetime.timezone.utc).isoformat(), 'Host-only synthetic regression. No MCU/RF/SD/OLED hardware accessed.']
     for model in ('check_ads1220_capture.py', 'check_debug_uart_hal.py',
-                  'check_acquisition_board.py', 'check_clock_fault.py'):
+                  'check_acquisition_board.py', 'check_clock_fault.py',
+                  'check_controller_encoder.py'):
         model_run=subprocess.run([sys.executable,'-B',str(ROOT/'Models'/model)],
                                  capture_output=True,text=True,encoding='utf-8',errors='replace',timeout=90)
         reports += [model_run.stdout,model_run.stderr]

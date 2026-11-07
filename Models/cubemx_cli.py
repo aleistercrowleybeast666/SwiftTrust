@@ -34,6 +34,17 @@ def run(script, log):
     from validate_candidates import PARTS, ROOT, read_csv, validate_ioc
     if script.parent.name in PARTS:
         board = script.parent.name
+        if board == "Controller":
+            # Query effective values: CubeMX can omit default ADC parameters
+            # from the saved IOC even after accepting an explicit set command.
+            expected = {"TIM2": {"EncoderMode": "TIM_ENCODERMODE_TI12", "Prescaler": "0",
+                                  "Period": "65535", "IC1Filter": "8", "IC2Filter": "8"},
+                        "ADC1": {"ClockPrescaler": "ADC_CLOCK_SYNC_PCLK_DIV2",
+                                 "ScanConvMode": "ADC_SCAN_DISABLE"}}
+            for peripheral, parameters in expected.items():
+                for key, value in parameters.items():
+                    if f'{peripheral}: {key}="{value}"' not in kept:
+                        raise SystemExit(f"CubeMX effective parameter mismatch: {peripheral}.{key}")
         actual = validate_ioc(board, read_csv(ROOT / board / "pin_candidates.csv"))
         print(f"SAVED_IOC_MATCHES_PLAN={actual}")
 

@@ -8,8 +8,8 @@ PB6,30,GPIO_EXTI6,RADIO_DIO1,radio,rising_edge_candidate
 PA8,18,GPIO_Output,RADIO_NRESET,radio,idle_high_candidate
 PB8,32,I2C1_SCL,OLED_SCL,OLED,external_module_pullups
 PB9,1,I2C1_SDA,OLED_SDA,OLED,external_module_pullups
-PA0,7,TIM2_CH1,ENCODER_A,input,filter_unbound
-PA1,8,TIM2_CH2,ENCODER_B,input,filter_unbound
+PA5,12,TIM2_CH1,ENCODER_A,input,pullup_ic_filter_8
+PA1,8,TIM2_CH2,ENCODER_B,input,pullup_ic_filter_8
 PA2,9,GPIO_Input,ENCODER_PRESS,input,active_low_pullup_debounce
 PA3,10,ADC1_IN3,CONTROLLER_BATTERY,power,10k_10k_divider_100nF
 PA13,24,SYS_SWDIO,SWDIO,debug,reserved_debug

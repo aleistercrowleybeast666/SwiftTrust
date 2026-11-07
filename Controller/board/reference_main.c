@@ -1,4 +1,4 @@
-/* Executable G071KBT6 board contract, ProDoc_Controller 2026-10-29. */
+/* Executable G071KBT6 board contract; encoder A moves to PA5 on 2026-11-08. */
 #if defined(ST_REFERENCE_APPLICATION)
 #include "stm32g0xx_hal.h"
 #include "stm32g0xx_ll_adc.h"
@@ -146,7 +146,7 @@ void HAL_TIM_Encoder_MspInit(TIM_HandleTypeDef *h)
     if (h->Instance == TIM2)
     {
         __HAL_RCC_TIM2_CLK_ENABLE();
-        gpio(GPIOA, GPIO_PIN_0 | GPIO_PIN_1, GPIO_MODE_AF_PP, GPIO_PULLUP, GPIO_AF2_TIM2);
+        gpio(GPIOA, GPIO_PIN_5 | GPIO_PIN_1, GPIO_MODE_AF_PP, GPIO_PULLUP, GPIO_AF2_TIM2);
     }
 }
 void HAL_ADC_MspInit(ADC_HandleTypeDef *h)

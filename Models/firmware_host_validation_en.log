@@ -1,4 +1,4 @@
-2026-11-07T11:49:19.028850+00:00
+2026-11-07T17:10:37.333439+00:00
 Host-only synthetic regression. No MCU/RF/SD/OLED hardware accessed.
 PASS ADS1220 actual capture/HAL model: 189 assertions; 3-byte DMA, IRQ identity, timestamps, gaps, idle faults, abort, generation/STOP fencing, SPI/CS timing, CSS discard/calibration invalidation, HAL rebind. No hardware accessed.
 
@@ -8,6 +8,8 @@ PASS actual debug UART HAL + board IRQ (G071 USART1 PA9/PA10 AF1): 661 assertion
 PASS actual acquisition board GPIO/SPI/EXTI/NV functions: 137 assertions; PB3/4/5 SPI1, PB6 CS, PA4..7 LEDs, PA9 card detect, PA15 DRDY, pause/resume and clock-fault IRQ fence. Host interface model only.
 
 PASS actual board CSS/NMI callbacks: 13 assertions; dispatch, immediate cutoff request, ADC fence, sticky source fault, capture disabled, one source error. Host interfaces only.
+
+PASS actual G071 encoder MSP: 11 checks; PA5/PA1 AF2 pullups, PA0 released, unrelated pins untouched, non-TIM2 handle ignored. Host HAL calls only.
 
 Official vendor source compiled separately with -Wall -Wextra -Werror; project code retains conversion/shadow checks; vendor remains unmodified.
 Compiler: gcc.EXE (Rev5, Built by MSYS2 project) 16.1.0

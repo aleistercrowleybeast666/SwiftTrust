@@ -1,0 +1,95 @@
+log4j user configuration file not found: C:\Users\chdxm/.stm32cubemx/log4j2.xml
+Configure log4j with default settings from jar:file:/C:/Program%20Files/STMicroelectronics/STM32Cube/STM32CubeMX/STM32CubeMX.exe!/log4j/log4j2.stm32cubemx.xml
+config load D:\stm32_project\SwiftThrust\Controller\SwiftThrust_Controller_Candidate\SwiftThrust_Controller_Candidate.ioc
+2026-11-08 01:13:06,120 [ERROR] Engine:466 - C:\Users\chdxm\.stm32cubemx\thirdparties\pdsc\STMicroelectronics.X-CUBE-SMBUS.2.1.1.pdsc: PDSC version is not supported
+2026-11-08 01:13:06,685 [ERROR] Engine:466 - C:\Users\chdxm\.stm32cubemx\thirdparties\pdsc\STMicroelectronics.X-CUBE-WBA.1.1.0.pdsc: PDSC version is not supported
+1 : Invalid condition id : UX_CORESTACK_Condition cause : null
+1 : Invalid condition id : UX_CORESTACK_Condition cause : null
+1 : Invalid condition id : UX_CORESTACK_Condition cause : null
+1 : Invalid condition id : UX_CORESTACK_Condition cause : null
+1 : Invalid condition id : UX_CORESTACK_Condition cause : null
+2026-11-08 01:13:08,423 [ERROR] Engine:466 - C:\Users\chdxm\.stm32cubemx\thirdparties\pdsc\STMicroelectronics.FP-SNS-STAIOTCFT.2.0.0.pdsc: PDSC version is not supported
+2026-11-08 01:13:08,870 [ERROR] Engine:466 - C:\Users\chdxm\.stm32cubemx\thirdparties\pdsc\STMicroelectronics.X-CUBE-ST67W61.1.3.0.pdsc: PDSC version is not supported
+2026-11-08 01:13:09,257 [ERROR] Engine:466 - C:\Users\chdxm\.stm32cubemx\thirdparties\pdsc\STMicroelectronics.X-CUBE-BLEMGR.4.2.0.pdsc: PDSC version is not supported
+OK
+get version
+6.15.0
+OK
+get mode active .*
+Mode: active | ADC1 | IN3 | IN3:Set
+Mode: active | ADC1 | IN-Vrefint | Vrefint Channel:Set
+Mode: active | I2C1 | I2C | I2C:I2C
+Mode: active | SPI1 | Full_Duplex_Master | Mode:Full-Duplex Master
+Mode: active | SYS | Serial_Wire | Debug:Set
+Mode: active | SYS | PINREMAP | Pin PA9 instead of pin PA11:Set
+Mode: active | SYS | PINREMAP_10_12 | Pin PA10 instead of pin PA12:Set
+Mode: active | SYS | SysTick | Timebase Source:SysTick
+Mode: active | TIM2 | Encoder_Interface | Combined Channels:Encoder Mode
+Mode: active | USART1 | Asynchronous | Mode:Asynchronous
+OK
+get ip parameters TIM2 EncoderMode
+TIM2: EncoderMode="TIM_ENCODERMODE_TI12"
+OK
+get ip parameters TIM2 Prescaler
+TIM2: Prescaler="0"
+OK
+get ip parameters TIM2 Period
+TIM2: Period="65535"
+OK
+get ip parameters TIM2 IC1Filter
+TIM2: IC1Filter="8"
+OK
+get ip parameters TIM2 IC2Filter
+TIM2: IC2Filter="8"
+OK
+get ip parameters ADC1 ClockPrescaler
+ADC1: ClockPrescaler="ADC_CLOCK_SYNC_PCLK_DIV2"
+OK
+get ip parameters ADC1 ScanConvMode
+ADC1: ScanConvMode="ADC_SCAN_DISABLE"
+OK
+isPluginError "Pinout & Configuration"
+Pinout & Configuration Error: false
+OK
+isPluginError "Clock Configuration"
+Clock Configuration Error: false
+OK
+get pinout
+PB9: I2C1_SDAPB9: I2C1_SDA
+PC14-OSC32_IN (PC14): Reset_State
+PC15-OSC32_OUT (PC15): Reset_State
+VDD: Power
+VSS: Power
+PF2 - NRST: Reset_State
+PA0: Reset_State
+PA1: TIM2_CH2PA1: TIM2_CH2
+PA2: GPIO_InputPA2: GPIO_Input
+PA3: ADC1_IN3PA3: ADC1_IN3
+PA4: Reset_State
+PA5: TIM2_CH1PA5: TIM2_CH1
+PA6: Reset_State
+PA7: Reset_State
+PB0: GPIO_OutputPB0: GPIO_Output
+PB1: Reset_State
+PB2: Reset_State
+PA8: GPIO_OutputPA8: GPIO_Output
+UCPD1_DBCC1: Reset_State
+PC6: Reset_State
+UCPD1_DBCC2: Reset_State
+PA9 [PA11]: USART1_TXPA9 [PA11]: USART1_TX
+PA10 [PA12]: USART1_RXPA10 [PA12]: USART1_RX
+PA13: SYS_SWDIOPA13: SYS_SWDIO
+PA14-BOOT0: SYS_SWCLKPA14-BOOT0: SYS_SWCLK
+PA15: GPIO_OutputPA15: GPIO_Output
+PB3: SPI1_SCKPB3: SPI1_SCK
+PB4: SPI1_MISOPB4: SPI1_MISO
+PB5: SPI1_MOSIPB5: SPI1_MOSI
+PB6: GPIO_EXTI6PB6: GPIO_EXTI6
+PB7: GPIO_InputPB7: GPIO_Input
+PB8: I2C1_SCLPB8: I2C1_SCL
+OK
+config save D:\stm32_project\SwiftThrust\Controller\SwiftThrust_Controller_Candidate\SwiftThrust_Controller_Candidate.ioc
+OK
+exit
+Bye bye
+CUBEMX_PROCESS_EXIT=0

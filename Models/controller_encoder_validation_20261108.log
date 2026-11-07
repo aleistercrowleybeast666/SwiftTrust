@@ -1,0 +1,54 @@
+$ python -X utf8 -B Models/check_controller_encoder.py
+PASS actual G071 encoder MSP: 11 checks; PA5/PA1 AF2 pullups, PA0 released, unrelated pins untouched, non-TIM2 handle ignored. Host HAL calls only.
+
+EXIT=0
+
+$ python -X utf8 -B Models/validate_candidates.py
+test_5v_nominal_bridge_math_only (__main__.Regression.test_5v_nominal_bridge_math_only) ... ok
+test_acquisition_new_pin_assignment_and_official_af_numbers (__main__.Regression.test_acquisition_new_pin_assignment_and_official_af_numbers) ... ok
+test_actual_cube_saved_pinout_matches_plan (__main__.Regression.test_actual_cube_saved_pinout_matches_plan) ... ok
+test_all_exact_package_pins (__main__.Regression.test_all_exact_package_pins) ... ok
+test_analog_cad_contract_stays_physically_unverified (__main__.Regression.test_analog_cad_contract_stays_physically_unverified) ... ok
+test_avdd_out_of_ads1220_range_rejected (__main__.Regression.test_avdd_out_of_ads1220_range_rejected) ... ok
+test_bsp_host_syntax_and_target_rejection (__main__.Regression.test_bsp_host_syntax_and_target_rejection) ... ok
+test_bypass_gain_and_rail_limits (__main__.Regression.test_bypass_gain_and_rail_limits) ... ok
+test_candidate_tolerance_budget_example (__main__.Regression.test_candidate_tolerance_budget_example) ... ok
+test_controller_encoder_pa5_af_and_both_pin_tables (__main__.Regression.test_controller_encoder_pa5_af_and_both_pin_tables) ... ok
+test_controller_old_encoder_pin_and_filter_changes_rejected (__main__.Regression.test_controller_old_encoder_pin_and_filter_changes_rejected) ... ok
+test_differential_full_scale_still_limits (__main__.Regression.test_differential_full_scale_still_limits) ... ok
+test_dma_plan_in_official_database (__main__.Regression.test_dma_plan_in_official_database) ... ok
+test_dma_stream_conflict_even_when_channel_differs (__main__.Regression.test_dma_stream_conflict_even_when_channel_differs) ... ok
+test_dma_wrong_channel_rejected (__main__.Regression.test_dma_wrong_channel_rejected) ... ok
+test_duplicate_physical_pin_rejected (__main__.Regression.test_duplicate_physical_pin_rejected) ... ok
+test_excitation_direct_input_fails (__main__.Regression.test_excitation_direct_input_fails) ... ok
+test_executable_reference_pinout_and_reserved_pins (__main__.Regression.test_executable_reference_pinout_and_reserved_pins) ... ok
+test_gp_pinout_rejects_n_substitution (__main__.Regression.test_gp_pinout_rejects_n_substitution) ... ok
+test_high_gain_bridge_common_mode_fails (__main__.Regression.test_high_gain_bridge_common_mode_fails) ... ok
+test_ignition_single_pulse_saved_in_cube (__main__.Regression.test_ignition_single_pulse_saved_in_cube) ... ok
+test_invalid_alternate_function_rejected (__main__.Regression.test_invalid_alternate_function_rejected) ... ok
+test_old_acquisition_roles_and_drdy_polarity_rejected (__main__.Regression.test_old_acquisition_roles_and_drdy_polarity_rejected) ... ok
+test_old_clock_and_missing_remap_rejected (__main__.Regression.test_old_clock_and_missing_remap_rejected) ... ok
+test_pending_values_not_silently_selected (__main__.Regression.test_pending_values_not_silently_selected) ... ok
+test_r8_link_led_is_free_gpio_and_saved_low (__main__.Regression.test_r8_link_led_is_free_gpio_and_saved_low) ... ok
+test_replaceable_sensor_profile_does_not_claim_auto_identification (__main__.Regression.test_replaceable_sensor_profile_does_not_claim_auto_identification) ... ok
+test_requested_rate_is_not_a_clock_selection (__main__.Regression.test_requested_rate_is_not_a_clock_selection) ... ok
+test_same_exti_line_on_different_ports_rejected (__main__.Regression.test_same_exti_line_on_different_ports_rejected) ... ok
+test_voltage_leds_cad_binding_and_oled_exact_module (__main__.Regression.test_voltage_leds_cad_binding_and_oled_exact_module) ... ok
+
+----------------------------------------------------------------------
+Ran 30 tests in 0.778s
+
+OK
+
+
+EXIT=0
+
+PASS only ENCODER_A changes pin/resource: PA0/7 -> PA5/12; remaining 17 Controller roles unchanged.
+
+PASS Acquisition/, Common/ and historical controller CAD snapshot unchanged.
+
+PASS all 4 ELF/HEX artifacts match dist/manifest.json sizes and SHA256.
+
+SHA256 Controller/board/reference_main.c 77367fcf7eeaeb696faa23275f92262f6431fbad5f8a4dea06213b85a2d6f98a
+
+SHA256 Controller/SwiftThrust_Controller_Candidate/SwiftThrust_Controller_Candidate.ioc 2446096c7f183656d52b022e6a1181c25387171ab3ebe5afd3a25886b1a5c2a5

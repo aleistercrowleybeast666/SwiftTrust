@@ -1,7 +1,6 @@
 config load ${PROJECT_ROOT}\Controller\SwiftThrust_Controller_Candidate\SwiftThrust_Controller_Candidate.ioc
 get version
 project name SwiftThrust_Controller_Candidate
-project path ${PROJECT_ROOT}\Controller
 project toolchain STM32CubeIDE
 set userconst SWIFTTHRUST_BOARD_BOUND 0
 set mode SPI1 Full_Duplex_Master
@@ -37,12 +36,20 @@ set gpio parameters PB8 GPIO_Label CAND_OLED_SCL
 set pin PB9 I2C1_SDA
 lock pin PB9 true
 set gpio parameters PB9 GPIO_Label CAND_OLED_SDA
-set pin PA0 TIM2_CH1
-lock pin PA0 true
-set gpio parameters PA0 GPIO_Label CAND_ENCODER_A
+lock pin PA0 false
+set pin PA5 TIM2_CH1
+lock pin PA5 true
+set gpio parameters PA5 GPIO_Label CAND_ENCODER_A
+set gpio parameters PA5 GPIO_PuPd GPIO_PULLUP
 set pin PA1 TIM2_CH2
 lock pin PA1 true
 set gpio parameters PA1 GPIO_Label CAND_ENCODER_B
+set gpio parameters PA1 GPIO_PuPd GPIO_PULLUP
+set ip parameters TIM2 EncoderMode TIM_ENCODERMODE_TI12
+set ip parameters TIM2 Prescaler 0
+set ip parameters TIM2 Period 65535
+set ip parameters TIM2 IC1Filter 8
+set ip parameters TIM2 IC2Filter 8
 set pin PA2 GPIO_Input
 lock pin PA2 true
 set gpio parameters PA2 GPIO_Label CAND_ENCODER_PRESS
@@ -82,6 +89,13 @@ set ip parameters ADC1 SamplingTimeCommon1 ADC_SAMPLETIME_160CYCLES_5
 set ip parameters ADC1 ScanConvMode ADC_SCAN_DISABLE
 set ip parameters ADC1 Channel-0#ChannelRegularConversion ADC_CHANNEL_VREFINT
 set gpio parameters PA2 GPIO_PuPd GPIO_PULLUP
+get ip parameters TIM2 EncoderMode
+get ip parameters TIM2 Prescaler
+get ip parameters TIM2 Period
+get ip parameters TIM2 IC1Filter
+get ip parameters TIM2 IC2Filter
+get ip parameters ADC1 ClockPrescaler
+get ip parameters ADC1 ScanConvMode
 isPluginError "Pinout & Configuration"
 isPluginError "Clock Configuration"
 get pinout

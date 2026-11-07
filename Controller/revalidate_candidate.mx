@@ -1,6 +1,13 @@
 config load ${PROJECT_ROOT}\Controller\SwiftThrust_Controller_Candidate\SwiftThrust_Controller_Candidate.ioc
 get version
 get mode active .*
+get ip parameters TIM2 EncoderMode
+get ip parameters TIM2 Prescaler
+get ip parameters TIM2 Period
+get ip parameters TIM2 IC1Filter
+get ip parameters TIM2 IC2Filter
+get ip parameters ADC1 ClockPrescaler
+get ip parameters ADC1 ScanConvMode
 isPluginError "Pinout & Configuration"
 isPluginError "Clock Configuration"
 get pinout
