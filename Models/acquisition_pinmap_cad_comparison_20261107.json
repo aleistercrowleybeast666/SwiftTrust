@@ -1,0 +1,1436 @@
+{
+  "source": "ProDoc_Acquisition_1_2026-11-07.epro2",
+  "sha256": "610b23aa5d4bedaa2fcd6038ca4c10a1d99fc2341033024915da307145c79be2",
+  "target_revision": "2026-11-01-user-requested-acquisition-pin-assignment",
+  "hardware_tested": false,
+  "scope": "schematic electrical joins and explicit PCB PAD_NET; not copper/DRC",
+  "status": "MATCH",
+  "checks": 84,
+  "mismatches": 0,
+  "results": [
+    {
+      "domain": "schematic",
+      "role": "ADC_SCK",
+      "expected_pin": "PB3",
+      "package_position": "55",
+      "expected_anchor": [
+        "R36",
+        "2"
+      ],
+      "expected_net": null,
+      "actual_labels": [],
+      "actual_members": [
+        "MCU.55:PB3",
+        "R36.2:2"
+      ],
+      "match": true
+    },
+    {
+      "domain": "schematic",
+      "role": "ADC_DOUT",
+      "expected_pin": "PB4",
+      "package_position": "56",
+      "expected_anchor": [
+        "R37",
+        "2"
+      ],
+      "expected_net": null,
+      "actual_labels": [],
+      "actual_members": [
+        "MCU.56:PB4",
+        "R37.2:2"
+      ],
+      "match": true
+    },
+    {
+      "domain": "schematic",
+      "role": "ADC_DIN",
+      "expected_pin": "PB5",
+      "package_position": "57",
+      "expected_anchor": [
+        "R38",
+        "2"
+      ],
+      "expected_net": null,
+      "actual_labels": [],
+      "actual_members": [
+        "MCU.57:PB5",
+        "R38.2:2"
+      ],
+      "match": true
+    },
+    {
+      "domain": "schematic",
+      "role": "ADC_CS",
+      "expected_pin": "PB6",
+      "package_position": "58",
+      "expected_anchor": [
+        "R35",
+        "2"
+      ],
+      "expected_net": null,
+      "actual_labels": [],
+      "actual_members": [
+        "MCU.58:PB6",
+        "R35.2:2"
+      ],
+      "match": true
+    },
+    {
+      "domain": "schematic",
+      "role": "ADC_DRDY",
+      "expected_pin": "PA15",
+      "package_position": "50",
+      "expected_anchor": [
+        "R39",
+        "2"
+      ],
+      "expected_net": null,
+      "actual_labels": [],
+      "actual_members": [
+        "MCU.50:PA15",
+        "R39.2:2"
+      ],
+      "match": true
+    },
+    {
+      "domain": "schematic",
+      "role": "ADC_CLK",
+      "expected_pin": "PA8",
+      "package_position": "41",
+      "expected_anchor": [
+        "R16",
+        "1"
+      ],
+      "expected_net": null,
+      "actual_labels": [],
+      "actual_members": [
+        "MCU.41:PA8",
+        "R16.1:1"
+      ],
+      "match": true
+    },
+    {
+      "domain": "schematic",
+      "role": "TF_CARD_DETECT",
+      "expected_pin": "PA9",
+      "package_position": "42",
+      "expected_anchor": [
+        "TF_CARD",
+        "9"
+      ],
+      "expected_net": "TF_DETECT",
+      "actual_labels": [
+        "TF_DETECT"
+      ],
+      "actual_members": [
+        "MCU.42:PA9",
+        "R31.1:1",
+        "TF_CARD.9:9"
+      ],
+      "match": true
+    },
+    {
+      "domain": "schematic",
+      "role": "DEBUG_UART_TX",
+      "expected_pin": "PA2",
+      "package_position": "16",
+      "expected_anchor": [
+        "UART",
+        "4"
+      ],
+      "expected_net": "DBG_MT",
+      "actual_labels": [
+        "DBG_MT"
+      ],
+      "actual_members": [
+        "MCU.16:PA2",
+        "UART.4:4"
+      ],
+      "match": true
+    },
+    {
+      "domain": "schematic",
+      "role": "DEBUG_UART_RX",
+      "expected_pin": "PA3",
+      "package_position": "17",
+      "expected_anchor": [
+        "UART",
+        "3"
+      ],
+      "expected_net": "DBG_MR",
+      "actual_labels": [
+        "DBG_MR"
+      ],
+      "actual_members": [
+        "MCU.17:PA3",
+        "UART.3:3"
+      ],
+      "match": true
+    },
+    {
+      "domain": "schematic",
+      "role": "RADIO_CS",
+      "expected_pin": "PB12",
+      "package_position": "33",
+      "expected_anchor": [
+        "LORA",
+        "6"
+      ],
+      "expected_net": "LORA_NCS",
+      "actual_labels": [
+        "LORA_NCS"
+      ],
+      "actual_members": [
+        "LORA.6:NSS_CTS",
+        "MCU.33:PB12",
+        "R20.1:1"
+      ],
+      "match": true
+    },
+    {
+      "domain": "schematic",
+      "role": "RADIO_SCK",
+      "expected_pin": "PB13",
+      "package_position": "34",
+      "expected_anchor": [
+        "LORA",
+        "5"
+      ],
+      "expected_net": "LORA_SCK",
+      "actual_labels": [
+        "LORA_SCK"
+      ],
+      "actual_members": [
+        "LORA.5:SCK_RTSN",
+        "MCU.34:PB13"
+      ],
+      "match": true
+    },
+    {
+      "domain": "schematic",
+      "role": "RADIO_MISO",
+      "expected_pin": "PB14",
+      "package_position": "35",
+      "expected_anchor": [
+        "LORA",
+        "3"
+      ],
+      "expected_net": "LORA_MISO",
+      "actual_labels": [
+        "LORA_MISO"
+      ],
+      "actual_members": [
+        "LORA.3:MISO_TX",
+        "MCU.35:PB14"
+      ],
+      "match": true
+    },
+    {
+      "domain": "schematic",
+      "role": "RADIO_MOSI",
+      "expected_pin": "PB15",
+      "package_position": "36",
+      "expected_anchor": [
+        "LORA",
+        "4"
+      ],
+      "expected_net": "LORA_MOSI",
+      "actual_labels": [
+        "LORA_MOSI"
+      ],
+      "actual_members": [
+        "LORA.4:MOSI_RX",
+        "MCU.36:PB15"
+      ],
+      "match": true
+    },
+    {
+      "domain": "schematic",
+      "role": "RADIO_BUSY",
+      "expected_pin": "PC6",
+      "package_position": "37",
+      "expected_anchor": [
+        "LORA",
+        "10"
+      ],
+      "expected_net": "LORA_BUSY",
+      "actual_labels": [
+        "LORA_BUSY"
+      ],
+      "actual_members": [
+        "LORA.10:BUSY",
+        "MCU.37:PC6"
+      ],
+      "match": true
+    },
+    {
+      "domain": "schematic",
+      "role": "RADIO_DIO1",
+      "expected_pin": "PC7",
+      "package_position": "38",
+      "expected_anchor": [
+        "LORA",
+        "11"
+      ],
+      "expected_net": "LORA_IT",
+      "actual_labels": [
+        "LORA_IT"
+      ],
+      "actual_members": [
+        "LORA.11:DIO1",
+        "MCU.38:PC7"
+      ],
+      "match": true
+    },
+    {
+      "domain": "schematic",
+      "role": "RADIO_NRESET",
+      "expected_pin": "PB2",
+      "package_position": "28",
+      "expected_anchor": [
+        "LORA",
+        "9"
+      ],
+      "expected_net": "LORA_NRST",
+      "actual_labels": [
+        "LORA_NRST"
+      ],
+      "actual_members": [
+        "LORA.9:NRESET",
+        "MCU.28:PB2"
+      ],
+      "match": true
+    },
+    {
+      "domain": "schematic",
+      "role": "TF_D0",
+      "expected_pin": "PC8",
+      "package_position": "39",
+      "expected_anchor": [
+        "TF_CARD",
+        "7"
+      ],
+      "expected_net": "TF_DAT0",
+      "actual_labels": [
+        "TF_DAT0"
+      ],
+      "actual_members": [
+        "MCU.39:PC8",
+        "R26.1:1",
+        "TF_CARD.7:DAT0"
+      ],
+      "match": true
+    },
+    {
+      "domain": "schematic",
+      "role": "TF_D1",
+      "expected_pin": "PC9",
+      "package_position": "40",
+      "expected_anchor": [
+        "TF_CARD",
+        "8"
+      ],
+      "expected_net": "TF_DAT1",
+      "actual_labels": [
+        "TF_DAT1"
+      ],
+      "actual_members": [
+        "MCU.40:PC9",
+        "R27.1:1",
+        "TF_CARD.8:DAT1"
+      ],
+      "match": true
+    },
+    {
+      "domain": "schematic",
+      "role": "TF_D2",
+      "expected_pin": "PC10",
+      "package_position": "51",
+      "expected_anchor": [
+        "TF_CARD",
+        "1"
+      ],
+      "expected_net": "TF_DAT2",
+      "actual_labels": [
+        "TF_DAT2"
+      ],
+      "actual_members": [
+        "MCU.51:PC10",
+        "R28.1:1",
+        "TF_CARD.1:DAT2"
+      ],
+      "match": true
+    },
+    {
+      "domain": "schematic",
+      "role": "TF_D3",
+      "expected_pin": "PC11",
+      "package_position": "52",
+      "expected_anchor": [
+        "TF_CARD",
+        "2"
+      ],
+      "expected_net": "TF_DAT3",
+      "actual_labels": [
+        "TF_DAT3"
+      ],
+      "actual_members": [
+        "MCU.52:PC11",
+        "R29.1:1",
+        "TF_CARD.2:CD/DAT3"
+      ],
+      "match": true
+    },
+    {
+      "domain": "schematic",
+      "role": "TF_CLK",
+      "expected_pin": "PC12",
+      "package_position": "53",
+      "expected_anchor": [
+        "R32",
+        "1"
+      ],
+      "expected_net": null,
+      "actual_labels": [],
+      "actual_members": [
+        "MCU.53:PC12",
+        "R32.1:1"
+      ],
+      "match": true
+    },
+    {
+      "domain": "schematic",
+      "role": "TF_CMD",
+      "expected_pin": "PD2",
+      "package_position": "54",
+      "expected_anchor": [
+        "TF_CARD",
+        "3"
+      ],
+      "expected_net": "TF_CMD",
+      "actual_labels": [
+        "TF_CMD"
+      ],
+      "actual_members": [
+        "MCU.54:PD2",
+        "R30.1:1",
+        "TF_CARD.3:CMD"
+      ],
+      "match": true
+    },
+    {
+      "domain": "schematic",
+      "role": "ACQUISITION_BATTERY",
+      "expected_pin": "PC0",
+      "package_position": "8",
+      "expected_anchor": [
+        "R14",
+        "1"
+      ],
+      "expected_net": null,
+      "actual_labels": [],
+      "actual_members": [
+        "C19.2:2",
+        "MCU.8:PC0",
+        "R14.1:1",
+        "R15.2:2"
+      ],
+      "match": true
+    },
+    {
+      "domain": "schematic",
+      "role": "LINK_LED",
+      "expected_pin": "PB10",
+      "package_position": "29",
+      "expected_anchor": [
+        "R9",
+        "2"
+      ],
+      "expected_net": "LED_LINK",
+      "actual_labels": [
+        "LED_LINK"
+      ],
+      "actual_members": [
+        "MCU.29:PB10",
+        "R9.2:2"
+      ],
+      "match": true
+    },
+    {
+      "domain": "schematic",
+      "role": "IGNITION_SIGNAL",
+      "expected_pin": "PA0",
+      "package_position": "14",
+      "expected_anchor": [
+        "R33",
+        "1"
+      ],
+      "expected_net": "PWR_O_CFG",
+      "actual_labels": [
+        "PWR_O_CFG"
+      ],
+      "actual_members": [
+        "MCU.14:PA0",
+        "R33.1:1"
+      ],
+      "match": true
+    },
+    {
+      "domain": "schematic",
+      "role": "SWDIO",
+      "expected_pin": "PA13",
+      "package_position": "46",
+      "expected_anchor": [
+        "SWD",
+        "5"
+      ],
+      "expected_net": "DIO",
+      "actual_labels": [
+        "DIO"
+      ],
+      "actual_members": [
+        "MCU.46:PA13",
+        "SWD.5:5"
+      ],
+      "match": true
+    },
+    {
+      "domain": "schematic",
+      "role": "SWCLK",
+      "expected_pin": "PA14",
+      "package_position": "49",
+      "expected_anchor": [
+        "SWD",
+        "4"
+      ],
+      "expected_net": "CLK",
+      "actual_labels": [
+        "CLK"
+      ],
+      "actual_members": [
+        "MCU.49:PA14",
+        "SWD.4:4"
+      ],
+      "match": true
+    },
+    {
+      "domain": "schematic",
+      "role": "HSE_IN",
+      "expected_pin": "PH0",
+      "package_position": "5",
+      "expected_anchor": [
+        "X1",
+        "1"
+      ],
+      "expected_net": null,
+      "actual_labels": [],
+      "actual_members": [
+        "C17.2:2",
+        "MCU.5:PH0-OSC_IN",
+        "X1.1:OSC1"
+      ],
+      "match": true
+    },
+    {
+      "domain": "schematic",
+      "role": "HSE_OUT",
+      "expected_pin": "PH1",
+      "package_position": "6",
+      "expected_anchor": [
+        "X1",
+        "2"
+      ],
+      "expected_net": null,
+      "actual_labels": [],
+      "actual_members": [
+        "C18.2:2",
+        "MCU.6:PH1-OSC_OUT",
+        "X1.2:OSC2"
+      ],
+      "match": true
+    },
+    {
+      "domain": "schematic",
+      "role": "LED_VOLT_1",
+      "expected_pin": "PA4",
+      "package_position": "20",
+      "expected_anchor": null,
+      "expected_net": "LED_V1",
+      "actual_labels": [
+        "LED_V1"
+      ],
+      "actual_members": [
+        "MCU.20:PA4",
+        "R10.2:2"
+      ],
+      "match": true
+    },
+    {
+      "domain": "schematic",
+      "role": "LED_VOLT_2",
+      "expected_pin": "PA5",
+      "package_position": "21",
+      "expected_anchor": null,
+      "expected_net": "LED_V2",
+      "actual_labels": [
+        "LED_V2"
+      ],
+      "actual_members": [
+        "MCU.21:PA5",
+        "R11.2:2"
+      ],
+      "match": true
+    },
+    {
+      "domain": "schematic",
+      "role": "LED_VOLT_3",
+      "expected_pin": "PA6",
+      "package_position": "22",
+      "expected_anchor": null,
+      "expected_net": "LED_V3",
+      "actual_labels": [
+        "LED_V3"
+      ],
+      "actual_members": [
+        "MCU.22:PA6",
+        "R12.2:2"
+      ],
+      "match": true
+    },
+    {
+      "domain": "schematic",
+      "role": "LED_VOLT_4",
+      "expected_pin": "PA7",
+      "package_position": "23",
+      "expected_anchor": null,
+      "expected_net": "LED_V4",
+      "actual_labels": [
+        "LED_V4"
+      ],
+      "actual_members": [
+        "MCU.23:PA7",
+        "R13.2:2"
+      ],
+      "match": true
+    },
+    {
+      "domain": "schematic",
+      "role": "RELEASED",
+      "expected_pin": "PC4",
+      "package_position": "24",
+      "match": true,
+      "actual_members": [
+        "MCU.24:PC4"
+      ],
+      "actual_labels": [
+        ""
+      ]
+    },
+    {
+      "domain": "schematic",
+      "role": "RELEASED",
+      "expected_pin": "PA10",
+      "package_position": "43",
+      "match": true,
+      "actual_members": [
+        "MCU.43:PA10"
+      ],
+      "actual_labels": [
+        ""
+      ]
+    },
+    {
+      "domain": "schematic",
+      "role": "RELEASED",
+      "expected_pin": "PB7",
+      "package_position": "59",
+      "match": true,
+      "actual_members": [
+        "MCU.59:PB7"
+      ],
+      "actual_labels": [
+        ""
+      ]
+    },
+    {
+      "domain": "schematic",
+      "role": "RELEASED",
+      "expected_pin": "PB8",
+      "package_position": "61",
+      "match": true,
+      "actual_members": [
+        "MCU.61:PB8"
+      ],
+      "actual_labels": [
+        ""
+      ]
+    },
+    {
+      "domain": "schematic",
+      "role": "RELEASED",
+      "expected_pin": "PB9",
+      "package_position": "62",
+      "match": true,
+      "actual_members": [
+        "MCU.62:PB9"
+      ],
+      "actual_labels": [
+        ""
+      ]
+    },
+    {
+      "domain": "schematic",
+      "role": "UART_CONNECTOR_1",
+      "expected_net": "3V3",
+      "actual_labels": [
+        "3V3"
+      ],
+      "match": true
+    },
+    {
+      "domain": "schematic",
+      "role": "UART_CONNECTOR_2",
+      "expected_net": "GND",
+      "actual_labels": [
+        "GND"
+      ],
+      "match": true
+    },
+    {
+      "domain": "schematic",
+      "role": "UART_CONNECTOR_3",
+      "expected_net": "DBG_MR",
+      "actual_labels": [
+        "DBG_MR"
+      ],
+      "match": true
+    },
+    {
+      "domain": "schematic",
+      "role": "UART_CONNECTOR_4",
+      "expected_net": "DBG_MT",
+      "actual_labels": [
+        "DBG_MT"
+      ],
+      "match": true
+    },
+    {
+      "domain": "pcb:2abda8c599859d90",
+      "role": "ADC_SCK",
+      "expected_pin": "PB3",
+      "package_position": "55",
+      "expected_anchor": [
+        "R36",
+        "2"
+      ],
+      "expected_net": null,
+      "actual_labels": [
+        "$2N104"
+      ],
+      "actual_members": [
+        "MCU.55",
+        "R36.2"
+      ],
+      "match": true
+    },
+    {
+      "domain": "pcb:2abda8c599859d90",
+      "role": "ADC_DOUT",
+      "expected_pin": "PB4",
+      "package_position": "56",
+      "expected_anchor": [
+        "R37",
+        "2"
+      ],
+      "expected_net": null,
+      "actual_labels": [
+        "$2N106"
+      ],
+      "actual_members": [
+        "MCU.56",
+        "R37.2"
+      ],
+      "match": true
+    },
+    {
+      "domain": "pcb:2abda8c599859d90",
+      "role": "ADC_DIN",
+      "expected_pin": "PB5",
+      "package_position": "57",
+      "expected_anchor": [
+        "R38",
+        "2"
+      ],
+      "expected_net": null,
+      "actual_labels": [
+        "$2N108"
+      ],
+      "actual_members": [
+        "MCU.57",
+        "R38.2"
+      ],
+      "match": true
+    },
+    {
+      "domain": "pcb:2abda8c599859d90",
+      "role": "ADC_CS",
+      "expected_pin": "PB6",
+      "package_position": "58",
+      "expected_anchor": [
+        "R35",
+        "2"
+      ],
+      "expected_net": null,
+      "actual_labels": [
+        "$2N111"
+      ],
+      "actual_members": [
+        "MCU.58",
+        "R35.2"
+      ],
+      "match": true
+    },
+    {
+      "domain": "pcb:2abda8c599859d90",
+      "role": "ADC_DRDY",
+      "expected_pin": "PA15",
+      "package_position": "50",
+      "expected_anchor": [
+        "R39",
+        "2"
+      ],
+      "expected_net": null,
+      "actual_labels": [
+        "$2N115"
+      ],
+      "actual_members": [
+        "MCU.50",
+        "R39.2"
+      ],
+      "match": true
+    },
+    {
+      "domain": "pcb:2abda8c599859d90",
+      "role": "ADC_CLK",
+      "expected_pin": "PA8",
+      "package_position": "41",
+      "expected_anchor": [
+        "R16",
+        "1"
+      ],
+      "expected_net": null,
+      "actual_labels": [
+        "$2N2"
+      ],
+      "actual_members": [
+        "MCU.41",
+        "R16.1"
+      ],
+      "match": true
+    },
+    {
+      "domain": "pcb:2abda8c599859d90",
+      "role": "TF_CARD_DETECT",
+      "expected_pin": "PA9",
+      "package_position": "42",
+      "expected_anchor": [
+        "TF_CARD",
+        "9"
+      ],
+      "expected_net": "TF_DETECT",
+      "actual_labels": [
+        "TF_DETECT"
+      ],
+      "actual_members": [
+        "MCU.42",
+        "R31.1",
+        "TF_CARD.9"
+      ],
+      "match": true
+    },
+    {
+      "domain": "pcb:2abda8c599859d90",
+      "role": "DEBUG_UART_TX",
+      "expected_pin": "PA2",
+      "package_position": "16",
+      "expected_anchor": [
+        "UART",
+        "4"
+      ],
+      "expected_net": "DBG_MT",
+      "actual_labels": [
+        "DBG_MT"
+      ],
+      "actual_members": [
+        "MCU.16",
+        "UART.4"
+      ],
+      "match": true
+    },
+    {
+      "domain": "pcb:2abda8c599859d90",
+      "role": "DEBUG_UART_RX",
+      "expected_pin": "PA3",
+      "package_position": "17",
+      "expected_anchor": [
+        "UART",
+        "3"
+      ],
+      "expected_net": "DBG_MR",
+      "actual_labels": [
+        "DBG_MR"
+      ],
+      "actual_members": [
+        "MCU.17",
+        "UART.3"
+      ],
+      "match": true
+    },
+    {
+      "domain": "pcb:2abda8c599859d90",
+      "role": "RADIO_CS",
+      "expected_pin": "PB12",
+      "package_position": "33",
+      "expected_anchor": [
+        "LORA",
+        "6"
+      ],
+      "expected_net": "LORA_NCS",
+      "actual_labels": [
+        "LORA_NCS"
+      ],
+      "actual_members": [
+        "LORA.6",
+        "MCU.33",
+        "R20.1"
+      ],
+      "match": true
+    },
+    {
+      "domain": "pcb:2abda8c599859d90",
+      "role": "RADIO_SCK",
+      "expected_pin": "PB13",
+      "package_position": "34",
+      "expected_anchor": [
+        "LORA",
+        "5"
+      ],
+      "expected_net": "LORA_SCK",
+      "actual_labels": [
+        "LORA_SCK"
+      ],
+      "actual_members": [
+        "LORA.5",
+        "MCU.34"
+      ],
+      "match": true
+    },
+    {
+      "domain": "pcb:2abda8c599859d90",
+      "role": "RADIO_MISO",
+      "expected_pin": "PB14",
+      "package_position": "35",
+      "expected_anchor": [
+        "LORA",
+        "3"
+      ],
+      "expected_net": "LORA_MISO",
+      "actual_labels": [
+        "LORA_MISO"
+      ],
+      "actual_members": [
+        "LORA.3",
+        "MCU.35"
+      ],
+      "match": true
+    },
+    {
+      "domain": "pcb:2abda8c599859d90",
+      "role": "RADIO_MOSI",
+      "expected_pin": "PB15",
+      "package_position": "36",
+      "expected_anchor": [
+        "LORA",
+        "4"
+      ],
+      "expected_net": "LORA_MOSI",
+      "actual_labels": [
+        "LORA_MOSI"
+      ],
+      "actual_members": [
+        "LORA.4",
+        "MCU.36"
+      ],
+      "match": true
+    },
+    {
+      "domain": "pcb:2abda8c599859d90",
+      "role": "RADIO_BUSY",
+      "expected_pin": "PC6",
+      "package_position": "37",
+      "expected_anchor": [
+        "LORA",
+        "10"
+      ],
+      "expected_net": "LORA_BUSY",
+      "actual_labels": [
+        "LORA_BUSY"
+      ],
+      "actual_members": [
+        "LORA.10",
+        "MCU.37"
+      ],
+      "match": true
+    },
+    {
+      "domain": "pcb:2abda8c599859d90",
+      "role": "RADIO_DIO1",
+      "expected_pin": "PC7",
+      "package_position": "38",
+      "expected_anchor": [
+        "LORA",
+        "11"
+      ],
+      "expected_net": "LORA_IT",
+      "actual_labels": [
+        "LORA_IT"
+      ],
+      "actual_members": [
+        "LORA.11",
+        "MCU.38"
+      ],
+      "match": true
+    },
+    {
+      "domain": "pcb:2abda8c599859d90",
+      "role": "RADIO_NRESET",
+      "expected_pin": "PB2",
+      "package_position": "28",
+      "expected_anchor": [
+        "LORA",
+        "9"
+      ],
+      "expected_net": "LORA_NRST",
+      "actual_labels": [
+        "LORA_NRST"
+      ],
+      "actual_members": [
+        "LORA.9",
+        "MCU.28"
+      ],
+      "match": true
+    },
+    {
+      "domain": "pcb:2abda8c599859d90",
+      "role": "TF_D0",
+      "expected_pin": "PC8",
+      "package_position": "39",
+      "expected_anchor": [
+        "TF_CARD",
+        "7"
+      ],
+      "expected_net": "TF_DAT0",
+      "actual_labels": [
+        "TF_DAT0"
+      ],
+      "actual_members": [
+        "MCU.39",
+        "R26.1",
+        "TF_CARD.7"
+      ],
+      "match": true
+    },
+    {
+      "domain": "pcb:2abda8c599859d90",
+      "role": "TF_D1",
+      "expected_pin": "PC9",
+      "package_position": "40",
+      "expected_anchor": [
+        "TF_CARD",
+        "8"
+      ],
+      "expected_net": "TF_DAT1",
+      "actual_labels": [
+        "TF_DAT1"
+      ],
+      "actual_members": [
+        "MCU.40",
+        "R27.1",
+        "TF_CARD.8"
+      ],
+      "match": true
+    },
+    {
+      "domain": "pcb:2abda8c599859d90",
+      "role": "TF_D2",
+      "expected_pin": "PC10",
+      "package_position": "51",
+      "expected_anchor": [
+        "TF_CARD",
+        "1"
+      ],
+      "expected_net": "TF_DAT2",
+      "actual_labels": [
+        "TF_DAT2"
+      ],
+      "actual_members": [
+        "MCU.51",
+        "R28.1",
+        "TF_CARD.1"
+      ],
+      "match": true
+    },
+    {
+      "domain": "pcb:2abda8c599859d90",
+      "role": "TF_D3",
+      "expected_pin": "PC11",
+      "package_position": "52",
+      "expected_anchor": [
+        "TF_CARD",
+        "2"
+      ],
+      "expected_net": "TF_DAT3",
+      "actual_labels": [
+        "TF_DAT3"
+      ],
+      "actual_members": [
+        "MCU.52",
+        "R29.1",
+        "TF_CARD.2"
+      ],
+      "match": true
+    },
+    {
+      "domain": "pcb:2abda8c599859d90",
+      "role": "TF_CLK",
+      "expected_pin": "PC12",
+      "package_position": "53",
+      "expected_anchor": [
+        "R32",
+        "1"
+      ],
+      "expected_net": null,
+      "actual_labels": [
+        "$2N100"
+      ],
+      "actual_members": [
+        "MCU.53",
+        "R32.1"
+      ],
+      "match": true
+    },
+    {
+      "domain": "pcb:2abda8c599859d90",
+      "role": "TF_CMD",
+      "expected_pin": "PD2",
+      "package_position": "54",
+      "expected_anchor": [
+        "TF_CARD",
+        "3"
+      ],
+      "expected_net": "TF_CMD",
+      "actual_labels": [
+        "TF_CMD"
+      ],
+      "actual_members": [
+        "MCU.54",
+        "R30.1",
+        "TF_CARD.3"
+      ],
+      "match": true
+    },
+    {
+      "domain": "pcb:2abda8c599859d90",
+      "role": "ACQUISITION_BATTERY",
+      "expected_pin": "PC0",
+      "package_position": "8",
+      "expected_anchor": [
+        "R14",
+        "1"
+      ],
+      "expected_net": null,
+      "actual_labels": [
+        "$2N37"
+      ],
+      "actual_members": [
+        "C19.2",
+        "MCU.8",
+        "R14.1",
+        "R15.2"
+      ],
+      "match": true
+    },
+    {
+      "domain": "pcb:2abda8c599859d90",
+      "role": "LINK_LED",
+      "expected_pin": "PB10",
+      "package_position": "29",
+      "expected_anchor": [
+        "R9",
+        "2"
+      ],
+      "expected_net": "LED_LINK",
+      "actual_labels": [
+        "LED_LINK"
+      ],
+      "actual_members": [
+        "MCU.29",
+        "R9.2"
+      ],
+      "match": true
+    },
+    {
+      "domain": "pcb:2abda8c599859d90",
+      "role": "IGNITION_SIGNAL",
+      "expected_pin": "PA0",
+      "package_position": "14",
+      "expected_anchor": [
+        "R33",
+        "1"
+      ],
+      "expected_net": "PWR_O_CFG",
+      "actual_labels": [
+        "PWR_O_CFG"
+      ],
+      "actual_members": [
+        "MCU.14",
+        "R33.1"
+      ],
+      "match": true
+    },
+    {
+      "domain": "pcb:2abda8c599859d90",
+      "role": "SWDIO",
+      "expected_pin": "PA13",
+      "package_position": "46",
+      "expected_anchor": [
+        "SWD",
+        "5"
+      ],
+      "expected_net": "DIO",
+      "actual_labels": [
+        "DIO"
+      ],
+      "actual_members": [
+        "MCU.46",
+        "SWD.5"
+      ],
+      "match": true
+    },
+    {
+      "domain": "pcb:2abda8c599859d90",
+      "role": "SWCLK",
+      "expected_pin": "PA14",
+      "package_position": "49",
+      "expected_anchor": [
+        "SWD",
+        "4"
+      ],
+      "expected_net": "CLK",
+      "actual_labels": [
+        "CLK"
+      ],
+      "actual_members": [
+        "MCU.49",
+        "SWD.4"
+      ],
+      "match": true
+    },
+    {
+      "domain": "pcb:2abda8c599859d90",
+      "role": "HSE_IN",
+      "expected_pin": "PH0",
+      "package_position": "5",
+      "expected_anchor": [
+        "X1",
+        "1"
+      ],
+      "expected_net": null,
+      "actual_labels": [
+        "$2N44"
+      ],
+      "actual_members": [
+        "C17.2",
+        "MCU.5",
+        "X1.1"
+      ],
+      "match": true
+    },
+    {
+      "domain": "pcb:2abda8c599859d90",
+      "role": "HSE_OUT",
+      "expected_pin": "PH1",
+      "package_position": "6",
+      "expected_anchor": [
+        "X1",
+        "2"
+      ],
+      "expected_net": null,
+      "actual_labels": [
+        "$2N43"
+      ],
+      "actual_members": [
+        "C18.2",
+        "MCU.6",
+        "X1.2"
+      ],
+      "match": true
+    },
+    {
+      "domain": "pcb:2abda8c599859d90",
+      "role": "LED_VOLT_1",
+      "expected_pin": "PA4",
+      "package_position": "20",
+      "expected_anchor": null,
+      "expected_net": "LED_V1",
+      "actual_labels": [
+        "LED_V1"
+      ],
+      "actual_members": [
+        "MCU.20",
+        "R10.2"
+      ],
+      "match": true
+    },
+    {
+      "domain": "pcb:2abda8c599859d90",
+      "role": "LED_VOLT_2",
+      "expected_pin": "PA5",
+      "package_position": "21",
+      "expected_anchor": null,
+      "expected_net": "LED_V2",
+      "actual_labels": [
+        "LED_V2"
+      ],
+      "actual_members": [
+        "MCU.21",
+        "R11.2"
+      ],
+      "match": true
+    },
+    {
+      "domain": "pcb:2abda8c599859d90",
+      "role": "LED_VOLT_3",
+      "expected_pin": "PA6",
+      "package_position": "22",
+      "expected_anchor": null,
+      "expected_net": "LED_V3",
+      "actual_labels": [
+        "LED_V3"
+      ],
+      "actual_members": [
+        "MCU.22",
+        "R12.2"
+      ],
+      "match": true
+    },
+    {
+      "domain": "pcb:2abda8c599859d90",
+      "role": "LED_VOLT_4",
+      "expected_pin": "PA7",
+      "package_position": "23",
+      "expected_anchor": null,
+      "expected_net": "LED_V4",
+      "actual_labels": [
+        "LED_V4"
+      ],
+      "actual_members": [
+        "MCU.23",
+        "R13.2"
+      ],
+      "match": true
+    },
+    {
+      "domain": "pcb:2abda8c599859d90",
+      "role": "RELEASED",
+      "expected_pin": "PC4",
+      "package_position": "24",
+      "match": true,
+      "actual_members": [],
+      "actual_labels": [
+        ""
+      ]
+    },
+    {
+      "domain": "pcb:2abda8c599859d90",
+      "role": "RELEASED",
+      "expected_pin": "PA10",
+      "package_position": "43",
+      "match": true,
+      "actual_members": [],
+      "actual_labels": [
+        ""
+      ]
+    },
+    {
+      "domain": "pcb:2abda8c599859d90",
+      "role": "RELEASED",
+      "expected_pin": "PB7",
+      "package_position": "59",
+      "match": true,
+      "actual_members": [],
+      "actual_labels": [
+        ""
+      ]
+    },
+    {
+      "domain": "pcb:2abda8c599859d90",
+      "role": "RELEASED",
+      "expected_pin": "PB8",
+      "package_position": "61",
+      "match": true,
+      "actual_members": [],
+      "actual_labels": [
+        ""
+      ]
+    },
+    {
+      "domain": "pcb:2abda8c599859d90",
+      "role": "RELEASED",
+      "expected_pin": "PB9",
+      "package_position": "62",
+      "match": true,
+      "actual_members": [],
+      "actual_labels": [
+        ""
+      ]
+    },
+    {
+      "domain": "pcb:2abda8c599859d90",
+      "role": "UART_CONNECTOR_1",
+      "expected_net": "3V3",
+      "actual_labels": [
+        "3V3"
+      ],
+      "match": true
+    },
+    {
+      "domain": "pcb:2abda8c599859d90",
+      "role": "UART_CONNECTOR_2",
+      "expected_net": "GND",
+      "actual_labels": [
+        "GND"
+      ],
+      "match": true
+    },
+    {
+      "domain": "pcb:2abda8c599859d90",
+      "role": "UART_CONNECTOR_3",
+      "expected_net": "DBG_MR",
+      "actual_labels": [
+        "DBG_MR"
+      ],
+      "match": true
+    },
+    {
+      "domain": "pcb:2abda8c599859d90",
+      "role": "UART_CONNECTOR_4",
+      "expected_net": "DBG_MT",
+      "actual_labels": [
+        "DBG_MT"
+      ],
+      "match": true
+    }
+  ]
+}

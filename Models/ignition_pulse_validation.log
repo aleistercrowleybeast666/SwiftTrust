@@ -1,4 +1,4 @@
-2026-11-01T04:46:27.059450+00:00
+2026-11-07T11:49:49.720332+00:00
 Host register model only; no electrical or hardware timing claim.
 PASS actual F4 pulse driver on register model: 50 checks; enabled 1s one-shot, reset-low, busy rejection, autonomous end, early stop, clock divider, permanent NMI cutoff
 SHA256 Acquisition/ports/st_ignition_f4.c 0de691f1d6beeb64b71788e014add9c66d675afa4d9ff4553bb2a9f56ac82d3c

@@ -1,4 +1,4 @@
-2026-11-01T04:46:03.829834+00:00
+2026-11-07T11:49:19.031598+00:00
 Host-only synthetic regression. No MCU/RF/SD/OLED hardware accessed.
 PASS ADS1220 actual capture/HAL model: 189 assertions; 3-byte DMA, IRQ identity, timestamps, gaps, idle faults, abort, generation/STOP fencing, SPI/CS timing, CSS discard/calibration invalidation, HAL rebind. No hardware accessed.
 

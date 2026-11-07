@@ -1,0 +1,76 @@
+$ python -X utf8 -B Models/check_acquisition_pinmap.py
+test_assignment_has_no_duplicate_pad_or_exti (__main__.PinAssignmentTests.test_assignment_has_no_duplicate_pad_or_exti) ... ok
+test_both_schematic_and_pcb_must_match (__main__.PinAssignmentTests.test_both_schematic_and_pcb_must_match) ... ok
+test_completed_1107_pcb_matches_firmware_and_saved_report (__main__.PinAssignmentTests.test_completed_1107_pcb_matches_firmware_and_saved_report) ... ok
+test_completed_1107_sensor_connectors_and_named_pads (__main__.PinAssignmentTests.test_completed_1107_sensor_connectors_and_named_pads) ... ok
+test_final_source_hash_and_all_schematic_pcb_assignments (__main__.PinAssignmentTests.test_final_source_hash_and_all_schematic_pcb_assignments) ... ok
+test_missing_pcb_evidence_is_not_a_pass (__main__.PinAssignmentTests.test_missing_pcb_evidence_is_not_a_pass) ... ok
+test_observed_1031_source_is_not_claimed_final (__main__.PinAssignmentTests.test_observed_1031_source_is_not_claimed_final) ... ok
+test_pcb_keyed_ids_ignore_deleted_owners_and_empty_nets (__main__.PinAssignmentTests.test_pcb_keyed_ids_ignore_deleted_owners_and_empty_nets) ... ok
+test_released_pads_and_connector_order_checked (__main__.PinAssignmentTests.test_released_pads_and_connector_order_checked) ... ok
+test_shorted_mcu_pads_are_rejected (__main__.PinAssignmentTests.test_shorted_mcu_pads_are_rejected) ... ok
+test_synthetic_matching_input (__main__.PinAssignmentTests.test_synthetic_matching_input) ... ok
+test_target_matches_both_firmware_pin_tables (__main__.PinAssignmentTests.test_target_matches_both_firmware_pin_tables) ... ok
+
+----------------------------------------------------------------------
+Ran 12 tests in 0.051s
+
+OK
+
+EXIT=0
+
+$ python -X utf8 -B Models/validate_candidates.py
+test_5v_nominal_bridge_math_only (__main__.Regression.test_5v_nominal_bridge_math_only) ... ok
+test_acquisition_new_pin_assignment_and_official_af_numbers (__main__.Regression.test_acquisition_new_pin_assignment_and_official_af_numbers) ... ok
+test_actual_cube_saved_pinout_matches_plan (__main__.Regression.test_actual_cube_saved_pinout_matches_plan) ... ok
+test_all_exact_package_pins (__main__.Regression.test_all_exact_package_pins) ... ok
+test_analog_cad_contract_stays_physically_unverified (__main__.Regression.test_analog_cad_contract_stays_physically_unverified) ... ok
+test_avdd_out_of_ads1220_range_rejected (__main__.Regression.test_avdd_out_of_ads1220_range_rejected) ... ok
+test_bsp_host_syntax_and_target_rejection (__main__.Regression.test_bsp_host_syntax_and_target_rejection) ... ok
+test_bypass_gain_and_rail_limits (__main__.Regression.test_bypass_gain_and_rail_limits) ... ok
+test_candidate_tolerance_budget_example (__main__.Regression.test_candidate_tolerance_budget_example) ... ok
+test_differential_full_scale_still_limits (__main__.Regression.test_differential_full_scale_still_limits) ... ok
+test_dma_plan_in_official_database (__main__.Regression.test_dma_plan_in_official_database) ... ok
+test_dma_stream_conflict_even_when_channel_differs (__main__.Regression.test_dma_stream_conflict_even_when_channel_differs) ... ok
+test_dma_wrong_channel_rejected (__main__.Regression.test_dma_wrong_channel_rejected) ... ok
+test_duplicate_physical_pin_rejected (__main__.Regression.test_duplicate_physical_pin_rejected) ... ok
+test_excitation_direct_input_fails (__main__.Regression.test_excitation_direct_input_fails) ... ok
+test_executable_reference_pinout_and_reserved_pins (__main__.Regression.test_executable_reference_pinout_and_reserved_pins) ... ok
+test_gp_pinout_rejects_n_substitution (__main__.Regression.test_gp_pinout_rejects_n_substitution) ... ok
+test_high_gain_bridge_common_mode_fails (__main__.Regression.test_high_gain_bridge_common_mode_fails) ... ok
+test_ignition_single_pulse_saved_in_cube (__main__.Regression.test_ignition_single_pulse_saved_in_cube) ... ok
+test_invalid_alternate_function_rejected (__main__.Regression.test_invalid_alternate_function_rejected) ... ok
+test_old_acquisition_roles_and_drdy_polarity_rejected (__main__.Regression.test_old_acquisition_roles_and_drdy_polarity_rejected) ... ok
+test_old_clock_and_missing_remap_rejected (__main__.Regression.test_old_clock_and_missing_remap_rejected) ... ok
+test_pending_values_not_silently_selected (__main__.Regression.test_pending_values_not_silently_selected) ... ok
+test_r8_link_led_is_free_gpio_and_saved_low (__main__.Regression.test_r8_link_led_is_free_gpio_and_saved_low) ... ok
+test_replaceable_sensor_profile_does_not_claim_auto_identification (__main__.Regression.test_replaceable_sensor_profile_does_not_claim_auto_identification) ... ok
+test_requested_rate_is_not_a_clock_selection (__main__.Regression.test_requested_rate_is_not_a_clock_selection) ... ok
+test_same_exti_line_on_different_ports_rejected (__main__.Regression.test_same_exti_line_on_different_ports_rejected) ... ok
+test_voltage_leds_cad_binding_and_oled_exact_module (__main__.Regression.test_voltage_leds_cad_binding_and_oled_exact_module) ... ok
+
+----------------------------------------------------------------------
+Ran 28 tests in 0.799s
+
+OK
+
+
+EXIT=0
+
+$ python -X utf8 -B Models/check_hardware_contract.py --source-dir C:\Users\chdxm\Downloads
+PASS historical 2026-10-29 extraction matches original snapshots/SHA256; not current acquisition GPIO acceptance
+test_adc_supply_reference_and_clock (__main__.HardwareContract.test_adc_supply_reference_and_clock) ... ok
+test_ads_series_resistors_and_single_differential_input (__main__.HardwareContract.test_ads_series_resistors_and_single_differential_input) ... ok
+test_bad_clock_recipes_rejected (__main__.HardwareContract.test_bad_clock_recipes_rejected) ... ok
+test_both_battery_dividers_and_led (__main__.HardwareContract.test_both_battery_dividers_and_led) ... ok
+test_clock_recipe_matches_actual_application (__main__.HardwareContract.test_clock_recipe_matches_actual_application) ... ok
+test_rotation_mirror_and_electrical_pin_origin (__main__.HardwareContract.test_rotation_mirror_and_electrical_pin_origin) ... ok
+test_runtime_clock_failure_has_strong_bounded_handoff (__main__.HardwareContract.test_runtime_clock_failure_has_strong_bounded_handoff) ... ok
+test_swd_and_controller_uart_are_distinct (__main__.HardwareContract.test_swd_and_controller_uart_are_distinct) ... ok
+
+----------------------------------------------------------------------
+Ran 8 tests in 0.004s
+
+OK
+
+EXIT=0

@@ -1,5 +1,7 @@
 # Models
 
+最新完成PCB的检查见[2026-11-07合并前复核](MERGE_REVIEW_20261107.md)：MCU引脚84/84匹配，双端回归与ARM编译通过；`SENSOR_IN1/2`外部针序已更新，记录在参考应用文档。11-07快照与比较结果单独归档，不覆盖旧CAD证据。
+
 本目录包含离线回归、硬件契约、日志导出工具和交付证据。当前版本入口见 [REFERENCE_APPLICATION.md](REFERENCE_APPLICATION.md) 与 [2026-11-01引脚迁移报告](ACQUISITION_PIN_REMAP_20261101.md)。`reference_pins.csv`为当前双板引脚契约，采集端新分配来自用户设计目标；`hardware_*_20261029.json`是历史快照，`hardware_acquisition_20261031_observed.json`是尚未修改引脚的CAD实际数据。最终11-01 epro2已通过84项原理图/PCB焊盘网络匹配，证据为`hardware_acquisition_20261101_final.json`及比较报告。
 
 主机测试：`run_host_tests.py`（英文加`--english`）、`check_link_runtime.py`、`check_reference.py`、`check_ignition_f4.py`、`check_ads1220_capture.py`、`check_hardware_contract.py`（历史CAD）、`check_acquisition_pinmap.py`、`validate_candidates.py`。目标编译：`build_reference.py --artifacts`。导出日志：`export_stlog.py <BIN> <新CSV>`，兼容历史双通道及ADS1220单通道STLOG001。

@@ -1,10 +1,12 @@
 # SwiftThrust R8 双板应用：2026-11-01 采集端引脚契约
 
-当前运行目标为两端 EIDE **ReferenceApp**，初始化入口为各自 `board/reference_main.c`。采集端按2026-11-01用户明确的新引脚分配运行，遥控端保持2026-10-29硬件契约。最终`ProDoc_Acquisition_1_2026-11-01.epro2`的原理图与PCB焊盘网络已核对一致。候选 IOC 已同步用于资源检查，不是运行代码的生成入口。LinkCheck 是历史组件链接目标，不能烧录为应用。
+当前运行目标为两端 EIDE **ReferenceApp**，初始化入口为各自 `board/reference_main.c`。采集端按2026-11-01用户明确的新引脚分配运行，遥控端保持2026-10-29硬件契约。11-01及最新完成的`ProDoc_Acquisition_1_2026-11-07.epro2`均已核对原理图与PCB焊盘网络；最新合并前复核见[2026-11-07报告](MERGE_REVIEW_20261107.md)。候选 IOC 已同步用于资源检查，不是运行代码的生成入口。LinkCheck 是历史组件链接目标，不能烧录为应用。
 
 本次只进行了源码修改、CAD 解析、离线模型测试和目标编译。没有访问探针、串口、实板或执行负载；CAD 接线确认不表示电气、噪声、吞吐或输出安全测试通过。
 
 ## 硬件来源与 GPIO
+
+最新11-07工程快照为`hardware_acquisition_20261107_final.json`，源文件SHA256为`610b23aa5d4bedaa2fcd6038ca4c10a1d99fc2341033024915da307145c79be2`；84项固件引脚比较全部匹配，见`acquisition_pinmap_cad_comparison_20261107.json`。本次未改变MCU分配。外部`SENSOR_IN1/2`的1～4脚更新为 **A−、A+、5V、GND**，原理图与PCB一致；用户允许外部线序调整，接线应按此新版制作。以下11-01及更早快照继续保留历史来源。
 
 `acquisition_pin_assignment_20261101.json`保存用户明确的新设计目标；`hardware_*_20261029.json`保持原样作为历史事实。`hardware_acquisition_20261031_observed.json`保留迁移前实际读取的旧接线；最终快照为`hardware_acquisition_20261101_final.json`，源文件SHA256为`839d88fe635155fbf0e7a4a1c8594dda41facc43cd6e28ba2d72c761692ddfb4`。
 

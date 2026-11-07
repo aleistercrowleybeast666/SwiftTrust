@@ -176,6 +176,35 @@ class PinAssignmentTests(unittest.TestCase):
         self.assertEqual(report['mismatches'], 0)
         self.assertEqual(report['checks'], 84)
 
+    def test_completed_1107_pcb_matches_firmware_and_saved_report(self):
+        final = json.loads((ROOT/'Models/hardware_acquisition_20261107_final.json').read_text(encoding='utf8'))
+        self.assertEqual(final['source'], 'ProDoc_Acquisition_1_2026-11-07.epro2')
+        self.assertEqual(final['sha256'], '610b23aa5d4bedaa2fcd6038ca4c10a1d99fc2341033024915da307145c79be2')
+        self.assertFalse(final['hardware_tested'])
+        report = compare(final)
+        saved = json.loads((ROOT/'Models/acquisition_pinmap_cad_comparison_20261107.json').read_text(encoding='utf8'))
+        self.assertEqual(report, saved)
+        self.assertEqual(report['status'], 'MATCH')
+        self.assertEqual(report['checks'], 84)
+        self.assertEqual(report['mismatches'], 0)
+
+    def test_completed_1107_sensor_connectors_and_named_pads(self):
+        final = json.loads((ROOT/'Models/hardware_acquisition_20261107_final.json').read_text(encoding='utf8'))
+        self.assertEqual(len(final['pcb']['boards']), 1)
+        pads = {(p['reference'], p['number']): p for p in final['pcb']['boards'][0]['pads']}
+        schematic = {(p['reference'], p['number']): p for p in final['pins']}
+        # The finished PCB intentionally changes the external sensor pin order.
+        for reference in ['SENSOR_IN1', 'SENSOR_IN2']:
+            for number, net in [('1', 'A-'), ('2', 'A+'), ('3', '5V'), ('4', 'GND')]:
+                self.assertEqual(schematic[reference, number]['net_labels'], [net])
+                self.assertEqual(pads[reference, number]['net'], net)
+        checked = 0
+        for key, pin in schematic.items():
+            if key in pads and pin['net_labels']:
+                self.assertIn(pads[key]['net'], pin['net_labels'], str(key))
+                checked += 1
+        self.assertEqual(checked, 217)
+
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)

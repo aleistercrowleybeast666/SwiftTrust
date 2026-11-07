@@ -1,9 +1,9 @@
-2026-11-01T04:46:04.355430+00:00
+2026-11-07T11:49:19.044232+00:00
 Actual EIDE ReferenceApp application targets; complete main/HAL/IRQ integration, offline build only.
 No hardware access. Objects in auto-removed temp directories; optional sparse HEX/ELF retained.
 PASS 155 official SDK inputs match checked-in manifest SHA256.
 BOARD Acquisition
-[ INFO ] start building at 2026-11-01 12:46:05
+[ INFO ] start building at 2026-11-07 19:49:19
 
 [ TOOL ] arm-none-eabi-gcc.exe (Arm GNU Toolchain 14.3.Rel1 (Build arm-14.174)) 14.3.1 20250623
 
@@ -52,30 +52,30 @@ BOARD Acquisition
 >> [ 33%] CC 'stm32f4xx_hal_gpio.c'
 >> [ 35%] CC 'stm32f4xx_hal_pwr.c'
 >> [ 37%] CC 'stm32f4xx_hal_pwr_ex.c'
->> [ 38%] CC 'stm32f4xx_hal_rcc_ex.c'
->> [ 40%] CC 'stm32f4xx_hal_rcc.c'
+>> [ 38%] CC 'stm32f4xx_hal_rcc.c'
+>> [ 40%] CC 'stm32f4xx_hal_rcc_ex.c'
 >> [ 41%] CC 'stm32f4xx_hal_sd.c'
 >> [ 43%] CC 'stm32f4xx_hal_spi.c'
 >> [ 45%] CC 'stm32f4xx_hal_tim_ex.c'
 >> [ 46%] CC 'stm32f4xx_hal_tim.c'
->> [ 48%] CC 'stm32f4xx_hal_uart.c'
->> [ 50%] CC 'system_stm32f4xx.c'
->> [ 51%] CC 'stm32f4xx_ll_sdmmc.c'
+>> [ 48%] CC 'stm32f4xx_ll_sdmmc.c'
+>> [ 50%] CC 'stm32f4xx_hal_uart.c'
+>> [ 51%] CC 'system_stm32f4xx.c'
 >> [ 53%] AS 'startup_stm32f411xe.s'
 >> [ 54%] CC 'st_block.c'
->> [ 56%] CC 'st_nv.c'
->> [ 58%] CC 'st_link2.c'
->> [ 59%] CC 'st_diskio.c'
+>> [ 56%] CC 'st_link2.c'
+>> [ 58%] CC 'st_diskio.c'
+>> [ 59%] CC 'st_nv.c'
 >> [ 61%] CC 'st_sdio_hal.c'
 >> [ 62%] CC 'st_ads_hal.c'
 >> [ 64%] CC 'st_radio_hal.c'
->> [ 66%] CC 'st_cal_service.c'
->> [ 67%] CC 'st_cal.c'
+>> [ 66%] CC 'st_cal.c'
+>> [ 67%] CC 'st_cal_service.c'
 >> [ 69%] CC 'st_cal_input.c'
 >> [ 70%] CC 'st_cal_view.c'
 >> [ 72%] CC 'st_cal_endpoint.c'
->> [ 74%] CC 'st_cal_fatfs.c'
->> [ 75%] CC 'st_cal_system.c'
+>> [ 74%] CC 'st_cal_system.c'
+>> [ 75%] CC 'st_cal_fatfs.c'
 >> [ 77%] CC 'st_link_runtime.c'
 >> [ 79%] CC 'st_reference.c'
 >> [ 80%] CC 'reference_main.c'
@@ -83,13 +83,13 @@ BOARD Acquisition
 >> [ 83%] CC 'st_journal.c'
 >> [ 85%] CC 'st_console.c'
 >> [ 87%] CC 'st_flash_journal.c'
->> [ 88%] CC 'aes.c'
->> [ 90%] CC 'st_ignition.c'
+>> [ 88%] CC 'st_ignition.c'
+>> [ 90%] CC 'aes.c'
 >> [ 91%] CC 'st_auto_link.c'
 >> [ 93%] CC 'st_ignition_f4.c'
 >> [ 95%] CC 'st_battery.c'
->> [ 96%] CC 'st_task.c'
->> [ 98%] CC 'st_frame.c'
+>> [ 96%] CC 'st_frame.c'
+>> [ 98%] CC 'st_task.c'
 >> [100%] CC 'st_session_zero.c'
 
 [ INFO ] start linking ...
@@ -109,7 +109,7 @@ file path: "<TEMP>\Acquisition\SwiftThrust_Acquisition.hex"
 
 file path: "<TEMP>\Acquisition\SwiftThrust_Acquisition.bin"
 
-[ DONE ] build successfully !, elapsed time 0:0:23
+[ DONE ] build successfully !, elapsed time 0:0:30
 
 
    text	   data	    bss	    dec	    hex	filename
@@ -203,7 +203,7 @@ SHA256 Controller/include/st_controller_bsp.h 363e2672f6563b39813364cb96dd76a53d
 SHA256 Controller/include/st_ui.h 271053b0a615626fc1589f663cd293aeebfbf6d294ea2e895248c47635b36b76
 SHA256 Controller/ports/st_g0_oled.h 4df686d9b35d953204b1ed779c9c26abd41d5942586ce58527eafcfa5093b091
 BOARD Controller
-[ INFO ] start building at 2026-11-01 12:46:30
+[ INFO ] start building at 2026-11-07 19:49:52
 
 [ TOOL ] arm-none-eabi-gcc.exe (Arm GNU Toolchain 14.3.Rel1 (Build arm-14.174)) 14.3.1 20250623
 
@@ -223,8 +223,8 @@ BOARD Controller
 >> [  7%] CC 'st_ui.c'
 >> [  8%] CC 'st_g0_oled.c'
 >> [ 10%] CC 'st_core.c'
->> [ 12%] CC 'st_radio.c'
->> [ 14%] CC 'st_protocol.c'
+>> [ 12%] CC 'st_protocol.c'
+>> [ 14%] CC 'st_radio.c'
 >> [ 16%] CC 'st_debug.c'
 >> [ 17%] CC 'st_debug_uart_hal.c'
 >> [ 19%] CC 'stm32g0xx_hal.c'
@@ -254,14 +254,14 @@ BOARD Controller
 >> [ 62%] CC 'st_link2.c'
 >> [ 64%] CC 'st_nv.c'
 >> [ 66%] CC 'st_radio_hal.c'
->> [ 67%] CC 'st_cal_service.c'
->> [ 69%] CC 'st_cal.c'
+>> [ 67%] CC 'st_cal.c'
+>> [ 69%] CC 'st_cal_service.c'
 >> [ 71%] CC 'st_cal_view.c'
 >> [ 73%] CC 'st_cal_ui.c'
 >> [ 75%] CC 'st_cal_remote.c'
 >> [ 76%] CC 'st_link_runtime.c'
->> [ 78%] CC 'st_reference.c'
->> [ 80%] CC 'reference_main.c'
+>> [ 78%] CC 'reference_main.c'
+>> [ 80%] CC 'st_reference.c'
 >> [ 82%] CC 'st_pairing.c'
 >> [ 83%] CC 'st_journal.c'
 >> [ 85%] CC 'st_console.c'
@@ -269,8 +269,8 @@ BOARD Controller
 >> [ 89%] CC 'aes.c'
 >> [ 91%] CC 'st_ignition.c'
 >> [ 92%] CC 'st_auto_link.c'
->> [ 94%] CC 'st_frame.c'
->> [ 96%] CC 'st_task.c'
+>> [ 94%] CC 'st_task.c'
+>> [ 96%] CC 'st_frame.c'
 >> [ 98%] CC 'st_session_zero.c'
 >> [100%] CC 'st_battery.c'
 
@@ -290,7 +290,7 @@ file path: "<TEMP>\Controller\SwiftThrust_Controller.hex"
 
 file path: "<TEMP>\Controller\SwiftThrust_Controller.bin"
 
-[ DONE ] build successfully !, elapsed time 0:0:14
+[ DONE ] build successfully !, elapsed time 0:0:18
 
 
    text	   data	    bss	    dec	    hex	filename
